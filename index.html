@@ -1,0 +1,883 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Kézikönyv Szerkesztő</title>
+<style>
+:root {
+  --bg: #0f0f13;
+  --bg2: #17171e;
+  --bg3: #1e1e28;
+  --bg4: #252532;
+  --border: #2e2e3e;
+  --border2: #3a3a50;
+  --text: #e8e8f0;
+  --text2: #9090aa;
+  --text3: #5a5a72;
+  --accent: #7c6af7;
+  --accent2: #9d8fff;
+  --accent-soft: rgba(124,106,247,0.12);
+  --green: #4ade80;
+  --green-soft: rgba(74,222,128,0.1);
+  --red: #f87171;
+  --amber: #fbbf24;
+  --mono: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', ui-monospace, monospace;
+  --sans: 'DM Sans', system-ui, sans-serif;
+  --radius: 8px;
+  --sidebar-w: 220px;
+  --editor-w: 420px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; overflow: hidden; }
+body { font-family: var(--sans); background: var(--bg); color: var(--text); display: flex; flex-direction: column; }
+
+/* ── Top bar ── */
+#topbar {
+  height: 46px; min-height: 46px;
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 0;
+  padding: 0 14px; gap: 10px;
+  z-index: 10;
+}
+#topbar .logo { font-size: 13px; font-weight: 600; color: var(--accent2); letter-spacing: -.02em; margin-right: 6px; }
+#topbar .sep { width: 1px; height: 20px; background: var(--border); margin: 0 4px; }
+#topbar select {
+  background: var(--bg3); border: 1px solid var(--border2); color: var(--text);
+  padding: 4px 10px; border-radius: var(--radius); font-size: 13px; cursor: pointer;
+}
+#topbar select:focus { outline: 2px solid var(--accent); }
+.btn {
+  padding: 5px 14px; border-radius: var(--radius); font-size: 13px; font-weight: 500;
+  cursor: pointer; border: 1px solid var(--border2); background: var(--bg3); color: var(--text);
+  transition: all .15s; white-space: nowrap;
+}
+.btn:hover { border-color: var(--accent); color: var(--accent2); background: var(--accent-soft); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.btn.primary:hover { background: var(--accent2); border-color: var(--accent2); }
+.btn.green { background: var(--green-soft); border-color: var(--green); color: var(--green); }
+.btn.green:hover { background: var(--green); color: #000; }
+#topbar .spacer { flex: 1; }
+#status { font-size: 12px; color: var(--text3); }
+#status.saved { color: var(--green); }
+#status.unsaved { color: var(--amber); }
+
+/* ── Main layout ── */
+#main { flex: 1; display: flex; overflow: hidden; }
+
+/* ── Sidebar ── */
+#sidebar {
+  width: var(--sidebar-w); min-width: var(--sidebar-w);
+  background: var(--bg2);
+  border-right: 1px solid var(--border);
+  display: flex; flex-direction: column;
+  overflow: hidden;
+}
+#sidebar-header {
+  padding: 10px 12px 8px;
+  border-bottom: 1px solid var(--border);
+  font-size: 11px; font-weight: 600; color: var(--text3);
+  text-transform: uppercase; letter-spacing: .08em;
+  display: flex; align-items: center; gap: 6px;
+}
+#file-list { flex: 1; overflow-y: auto; padding: 6px 0; }
+.file-item {
+  padding: 7px 14px 7px 28px; font-size: 13px; cursor: pointer;
+  color: var(--text2); position: relative;
+  border-left: 2px solid transparent;
+  transition: all .1s;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.file-item:hover { background: var(--bg3); color: var(--text); }
+.file-item.active {
+  background: var(--accent-soft); color: var(--accent2);
+  border-left-color: var(--accent);
+}
+.file-item .num {
+  position: absolute; left: 10px;
+  font-size: 10px; color: var(--text3); font-family: var(--mono);
+}
+.file-item.unsaved::after { content: '●'; position: absolute; right: 10px; color: var(--amber); font-size: 10px; }
+#drop-zone {
+  padding: 16px 12px; text-align: center; font-size: 12px; color: var(--text3);
+  border-top: 1px solid var(--border);
+  cursor: pointer; transition: all .2s;
+}
+#drop-zone:hover, #drop-zone.drag-over { color: var(--accent2); background: var(--accent-soft); }
+#drop-zone .icon { font-size: 20px; margin-bottom: 4px; }
+
+/* ── Editor ── */
+#editor-pane {
+  width: var(--editor-w); min-width: 280px; max-width: 50%;
+  display: flex; flex-direction: column;
+  background: var(--bg);
+  border-right: 1px solid var(--border);
+  resize: horizontal;
+  overflow: hidden;
+}
+#editor-header {
+  padding: 8px 14px; border-bottom: 1px solid var(--border);
+  font-size: 12px; color: var(--text3); background: var(--bg2);
+  display: flex; align-items: center; gap: 8px;
+}
+#editor-filename { font-family: var(--mono); color: var(--text2); font-size: 12px; }
+#editor-header .spacer { flex:1; }
+#editor-wrap { flex: 1; overflow: hidden; position: relative; }
+#editor {
+  width: 100%; height: 100%;
+  background: transparent; border: none; outline: none; resize: none;
+  color: var(--text); font-family: var(--mono); font-size: 13px; line-height: 1.65;
+  padding: 16px; tab-size: 2;
+  white-space: pre;
+  overflow-wrap: normal;
+  overflow-x: auto;
+}
+/* Line numbers overlay */
+#line-nums {
+  position: absolute; top: 0; left: 0; bottom: 0;
+  width: 36px; padding: 16px 0;
+  font-family: var(--mono); font-size: 13px; line-height: 1.65;
+  color: var(--text3); text-align: right;
+  pointer-events: none; overflow: hidden;
+  background: var(--bg2); border-right: 1px solid var(--border);
+  user-select: none;
+}
+#line-nums.visible ~ #editor { padding-left: 52px; }
+
+/* ── Preview ── */
+#preview-pane {
+  flex: 1; display: flex; flex-direction: column; overflow: hidden;
+  background: var(--bg);
+}
+#preview-header {
+  padding: 8px 14px; border-bottom: 1px solid var(--border);
+  font-size: 12px; color: var(--text3); background: var(--bg2);
+  display: flex; align-items: center; gap: 8px;
+}
+#preview-mode-btns { display: flex; gap: 4px; }
+.mode-btn {
+  padding: 3px 10px; border-radius: 5px; font-size: 12px; cursor: pointer;
+  border: 1px solid transparent; color: var(--text3); background: transparent;
+  transition: all .1s;
+}
+.mode-btn:hover { color: var(--text); }
+.mode-btn.active { background: var(--bg3); border-color: var(--border2); color: var(--text); }
+#preview-frame {
+  flex: 1; border: none; background: #fff;
+}
+#preview-placeholder {
+  flex: 1; display: flex; align-items: center; justify-content: center;
+  flex-direction: column; gap: 12px; color: var(--text3);
+}
+#preview-placeholder .big { font-size: 32px; }
+
+/* ── Empty state ── */
+#empty-state {
+  flex: 1; display: flex; align-items: center; justify-content: center;
+  flex-direction: column; gap: 16px; color: var(--text3);
+  padding: 40px;
+}
+#empty-state .big { font-size: 48px; }
+#empty-state h2 { font-size: 18px; font-weight: 500; color: var(--text2); }
+#empty-state p { font-size: 14px; text-align: center; max-width: 340px; line-height: 1.6; }
+#empty-state .steps { text-align: left; font-size: 13px; line-height: 2; }
+#empty-state .steps span { color: var(--accent2); font-weight: 600; }
+
+/* ── Toast ── */
+#toast {
+  position: fixed; bottom: 20px; right: 20px;
+  background: var(--bg3); border: 1px solid var(--border2);
+  color: var(--text); padding: 10px 18px; border-radius: var(--radius);
+  font-size: 13px; opacity: 0; pointer-events: none;
+  transition: opacity .2s; z-index: 999;
+}
+#toast.show { opacity: 1; }
+#toast.ok { border-color: var(--green); color: var(--green); }
+#toast.err { border-color: var(--red); color: var(--red); }
+
+/* ── Scrollbars ── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+
+/* ── Image drop overlay ── */
+#img-drop-overlay {
+  display: none;
+  position: absolute; inset: 0;
+  background: rgba(124,106,247,0.18);
+  border: 2px dashed var(--accent);
+  border-radius: var(--radius);
+  z-index: 20;
+  align-items: center; justify-content: center;
+  pointer-events: none;
+}
+#img-drop-overlay.active { display: flex; }
+#img-drop-msg {
+  background: var(--bg3); border: 1px solid var(--accent);
+  color: var(--accent2); padding: 12px 24px; border-radius: var(--radius);
+  font-size: 15px; font-weight: 600;
+}
+#editor-wrap.drag-active { outline: 2px dashed var(--accent); outline-offset: -2px; }
+
+/* ── Syntax highlighting (textarea overlay) ── */
+.keyword { color: #c792ea; }
+.heading { color: var(--accent2); font-weight: bold; }
+.bold { color: #ffcb6b; }
+.code { color: #89ddff; }
+.link { color: var(--green); }
+.callout { color: #f78c6c; }
+</style>
+</head>
+<body>
+
+<!-- Top bar -->
+<div id="topbar">
+  <span class="logo">📖 Kézikönyv</span>
+  <div class="sep"></div>
+  <select id="project-select" title="Projekt">
+    <option value="">— válassz projektet —</option>
+  </select>
+  <div class="sep"></div>
+  <button class="btn" onclick="saveCurrentFile()" title="Ctrl+S — letölti a fájlt, másold vissza a sections/ mappába">💾 Mentés (.md)</button>
+  <button class="btn green" onclick="buildAndDownload()">⬇ Build &amp; Letöltés</button>
+  <div class="spacer"></div>
+  <span id="status" title="Nyisd meg Chrome-ban, file:// protokollon is működik">Nincs betöltve projekt</span>
+</div>
+
+<!-- Main -->
+<div id="main">
+
+  <!-- Sidebar -->
+  <div id="sidebar">
+    <div id="sidebar-header">
+      📁 Fejezetek
+    </div>
+    <div id="file-list">
+      <div style="padding:20px 14px;font-size:12px;color:var(--text3);text-align:center">
+        Tölts be egy projektet
+      </div>
+    </div>
+    <div id="drop-zone" onclick="document.getElementById('folder-input').click()">
+      <div class="icon">📂</div>
+      <div>Kattints a projekt<br>mappa betöltéséhez</div>
+      <input id="folder-input" type="file" webkitdirectory mozdirectory multiple
+        style="display:none" onchange="loadFromInput(this)"/>
+    </div>
+  </div>
+
+  <!-- Empty / Editor+Preview -->
+  <div id="empty-state">
+    <div class="big">📂</div>
+    <h2>Nincs betöltve projekt</h2>
+    <p>Kattints a bal alsó sarokban a <strong>📂 ikonra</strong>, és válaszd ki a projekt mappáját.</p>
+    <div class="steps">
+      <div><span>1.</span> Kattints a 📂 ikonra lent balra</div>
+      <div><span>2.</span> Válaszd ki a <code>projektek/minicopy</code> mappát</div>
+      <div><span>3.</span> A fejezetek megjelennek a bal oldalsávban</div>
+    </div>
+    <button class="btn primary" style="margin-top:8px" onclick="document.getElementById('folder-input').click()">📂 Projekt mappa megnyitása</button>
+  </div>
+
+  <div id="editor-pane" style="display:none">
+    <div id="editor-header">
+      <span id="editor-filename">—</span>
+      <div class="spacer"></div>
+      <button class="btn" onclick="document.getElementById('img-file-input').click()"
+        title="Kép beillesztése fájlból (drag&drop és Ctrl+V is működik)"
+        style="padding:3px 10px;font-size:12px">🖼 Kép</button>
+      <input id="img-file-input" type="file" accept="image/*" style="display:none"
+        onchange="handleImgFileInput(this)"/>
+      <span id="editor-info" style="font-size:11px;color:var(--text3)"></span>
+    </div>
+    <div id="editor-wrap">
+      <div id="line-nums" class="visible"></div>
+      <textarea id="editor" spellcheck="false" placeholder="Nyiss meg egy fejezetet..."></textarea>
+      <div id="img-drop-overlay">
+        <div id="img-drop-msg">🖼 Engedd el a képet</div>
+      </div>
+    </div>
+  </div>
+
+  <div id="preview-pane" style="display:none">
+    <div id="preview-header">
+      <div id="preview-mode-btns">
+        <button class="mode-btn active" onclick="setPreviewMode('section')" id="mode-section">Fejezet</button>
+        <button class="mode-btn" onclick="setPreviewMode('full')" id="mode-full">Teljes dok</button>
+      </div>
+      <div class="spacer"></div>
+      <span style="font-size:11px;color:var(--text3)" id="preview-info"></span>
+    </div>
+    <iframe id="preview-frame"></iframe>
+  </div>
+
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ── State ─────────────────────────────────────────────────────────────────────
+const state = {
+  projects: {},      // name -> { config, css, js, logo, files: {name: {meta, content, handle, dirty}} }
+  currentProject: null,
+  currentFile: null,
+  previewMode: 'section',
+  previewTimer: null,
+};
+
+// ── Toast ─────────────────────────────────────────────────────────────────────
+function toast(msg, type='ok', dur=2500) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = 'show ' + type;
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => t.className = '', dur);
+}
+
+// ── Status ────────────────────────────────────────────────────────────────────
+function setStatus(msg, cls='') {
+  const s = document.getElementById('status');
+  s.textContent = msg; s.className = cls;
+}
+
+// ── Folder loading ────────────────────────────────────────────────────────────
+// ── Fájl input alapú betöltés (file:// protokollon is működik) ──────────────
+async function loadFromInput(input) {
+  const files = Array.from(input.files);
+  if (!files.length) return;
+
+  // Projekt neve a gyökér mappa nevéből
+  // webkitRelativePath: "minicopy/sections/01_bejelentkezes.md"
+  const rootName = files[0].webkitRelativePath.split('/')[0];
+  const project = {
+    name: rootName,
+    config: {}, css: '', logo: '',
+    files: {}, fileOrder: [],
+    fileObjects: {}
+  };
+
+  for (const file of files) {
+    const parts = file.webkitRelativePath.split('/');
+    const fname = parts[parts.length - 1];
+    const parentFolder = parts.length >= 2 ? parts[parts.length - 2] : '';
+
+    // Eset 1: minicopy/config.json  (gyökér mappa lett kiválasztva)
+    // Eset 2: minicopy/sections/01_.md
+    // Eset 3: sections/01_.md  (sections mappa lett kiválasztva)
+    // Eset 4: 01_.md  (közvetlenül az md fájlok lettek kiválasztva)
+
+    if (fname === 'config.json') {
+      try { project.config = JSON.parse(await file.text()); } catch(e) {}
+    }
+    if (fname === 'style.css' && parentFolder !== 'sections') {
+      project.css = await file.text();
+    }
+    if (fname === 'logo.txt') {
+      project.logo = (await file.text()).trim();
+    }
+
+    // md fájl: bárhol van, ha .md kiterjesztésű és nem README
+    if (fname.endsWith('.md') && fname !== 'README.md') {
+      const text = await file.text();
+      const { meta, content } = parseFrontmatter(text);
+      project.files[fname] = { meta, content, raw: text, dirty: false, fileObj: file };
+      project.fileObjects[fname] = file;
+    }
+  }
+
+  project.fileOrder = Object.keys(project.files).sort();
+
+  if (!project.css) project.css = getDefaultCSS();
+
+  if (project.fileOrder.length === 0) {
+    toast('Nem találtam md fájlokat a sections/ mappában!', 'err', 4000);
+    input.value = '';
+    return;
+  }
+
+  state.projects[rootName] = project;
+  state.currentProject = rootName;
+
+  const sel = document.getElementById('project-select');
+  if (![...sel.options].find(o => o.value === rootName)) {
+    const opt = document.createElement('option');
+    opt.value = rootName;
+    opt.textContent = project.config.title || rootName;
+    sel.appendChild(opt);
+  }
+  sel.value = rootName;
+
+  renderSidebar();
+  showEditorPane();
+  openFile(project.fileOrder[0]);
+  setStatus('Betöltve: ' + rootName);
+  toast('✓ Betöltve: ' + project.fileOrder.length + ' fejezet');
+  input.value = '';
+}
+
+// ── Parsers ───────────────────────────────────────────────────────────────────
+function parseFrontmatter(text) {
+  if (!text.startsWith('---')) return { meta: {}, content: text };
+  const end = text.indexOf('\n---', 3);
+  if (end === -1) return { meta: {}, content: text };
+  const meta = {};
+  text.slice(3, end).trim().split('\n').forEach(line => {
+    const i = line.indexOf(':');
+    if (i > -1) meta[line.slice(0,i).trim()] = line.slice(i+1).trim();
+  });
+  return { meta, content: text.slice(end+4).trim() };
+}
+
+// ── Sidebar ───────────────────────────────────────────────────────────────────
+function renderSidebar() {
+  const proj = state.projects[state.currentProject];
+  if (!proj) return;
+  const list = document.getElementById('file-list');
+  list.innerHTML = '';
+  proj.fileOrder.forEach(fn => {
+    const f = proj.files[fn];
+    const title = f.meta.title || fn.replace(/^\d+_?/, '').replace('.md','');
+    const num = fn.match(/^(\d+)/)?.[1] || '';
+    const div = document.createElement('div');
+    div.className = 'file-item' + (fn === state.currentFile ? ' active' : '') + (f.dirty ? ' unsaved' : '');
+    div.innerHTML = `<span class="num">${num}</span>${title}`;
+    div.onclick = () => openFile(fn);
+    div.title = fn;
+    list.appendChild(div);
+  });
+}
+
+// ── File open ─────────────────────────────────────────────────────────────────
+function openFile(fn) {
+  if (state.currentFile === fn) return;
+  state.currentFile = fn;
+  const proj = state.projects[state.currentProject];
+  const f = proj.files[fn];
+  const editor = document.getElementById('editor');
+  editor.value = f.raw;
+  document.getElementById('editor-filename').textContent = fn;
+  renderSidebar();
+  updateLineNums();
+  schedulePreview();
+  editor.focus();
+}
+
+// ── Editor ────────────────────────────────────────────────────────────────────
+function showEditorPane() {
+  document.getElementById('empty-state').style.display = 'none';
+  document.getElementById('editor-pane').style.display = 'flex';
+  document.getElementById('preview-pane').style.display = 'flex';
+}
+
+document.getElementById('editor').addEventListener('input', () => {
+  if (!state.currentFile || !state.currentProject) return;
+  const proj = state.projects[state.currentProject];
+  const f = proj.files[state.currentFile];
+  const text = document.getElementById('editor').value;
+  f.raw = text;
+  const { meta, content } = parseFrontmatter(text);
+  f.meta = meta; f.content = content; f.dirty = true;
+  renderSidebar();
+  setStatus('Nem mentett változás', 'unsaved');
+  updateLineNums();
+  schedulePreview();
+});
+
+document.getElementById('editor').addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && e.key === 's') { e.preventDefault(); saveCurrentFile(); }
+  if (e.key === 'Tab') {
+    e.preventDefault();
+    const ta = e.target;
+    const s = ta.selectionStart, end = ta.selectionEnd;
+    ta.value = ta.value.slice(0,s) + '  ' + ta.value.slice(end);
+    ta.selectionStart = ta.selectionEnd = s + 2;
+  }
+});
+
+function updateLineNums() {
+  const ta = document.getElementById('editor');
+  const lines = ta.value.split('\n').length;
+  const ln = document.getElementById('line-nums');
+  ln.innerHTML = Array.from({length: lines}, (_,i) => `<div>${i+1}</div>`).join('');
+}
+
+document.getElementById('editor').addEventListener('scroll', () => {
+  document.getElementById('line-nums').scrollTop = document.getElementById('editor').scrollTop;
+});
+
+// ── Kép beillesztés: Ctrl+V vágólapból ───────────────────────────────────────
+document.getElementById('editor').addEventListener('paste', async (e) => {
+  const items = Array.from(e.clipboardData?.items || []);
+
+  // 1. Próbál image/* típust (Chrome, Firefox normál esetben)
+  let imgItem = items.find(it => it.type.startsWith('image/'));
+
+  // 2. Fallback: "Files" kind (Snipping Tool, fájlkezelőből másolt kép)
+  if (!imgItem) {
+    imgItem = items.find(it => it.kind === 'file');
+  }
+
+  if (!imgItem) return; // nem kép → normál paste megengedett
+
+  const file = imgItem.getAsFile();
+  if (!file) return;
+
+  // Ha a fájl típusa nem kép, kihagyjuk
+  if (file.type && !file.type.startsWith('image/')) return;
+
+  e.preventDefault();
+  await insertImageFromFile(file);
+});
+
+// ── Kép beillesztés: drag & drop a szerkesztőbe ───────────────────────────────
+const editorWrap = document.getElementById('editor-wrap');
+const imgOverlay = document.getElementById('img-drop-overlay');
+
+editorWrap.addEventListener('dragover', e => {
+  const hasImg = Array.from(e.dataTransfer.types).includes('Files');
+  if (!hasImg) return;
+  e.preventDefault();
+  e.stopPropagation();
+  imgOverlay.classList.add('active');
+  editorWrap.classList.add('drag-active');
+});
+
+editorWrap.addEventListener('dragleave', e => {
+  if (!editorWrap.contains(e.relatedTarget)) {
+    imgOverlay.classList.remove('active');
+    editorWrap.classList.remove('drag-active');
+  }
+});
+
+editorWrap.addEventListener('drop', async e => {
+  imgOverlay.classList.remove('active');
+  editorWrap.classList.remove('drag-active');
+  const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
+  if (!files.length) return;
+  e.preventDefault();
+  e.stopPropagation();
+  for (const file of files) {
+    await insertImageFromFile(file);
+  }
+});
+
+// ── Közös kép beillesztő ─────────────────────────────────────────────────────
+async function insertImageFromFile(file) {
+  if (!state.currentFile) {
+    toast('Előbb nyiss meg egy fejezetet!', 'err'); return;
+  }
+
+  // Kép → base64
+  const base64 = await new Promise((res, rej) => {
+    const reader = new FileReader();
+    reader.onload = () => res(reader.result);
+    reader.onerror = rej;
+    reader.readAsDataURL(file);
+  });
+
+  // Alt szöveg: fájlnév kiterjesztés nélkül, vagy "screenshot"
+  const altText = file.name ? file.name.replace(/\.[^.]+$/, '') : 'screenshot';
+
+  // Md szintaxis
+  const mdImg = `\n![${altText}](${base64})\n*${altText}*\n`;
+
+  // Beillesztés a kurzor pozíciójába
+  const ta = document.getElementById('editor');
+  const pos = ta.selectionStart;
+  const before = ta.value.slice(0, pos);
+  const after = ta.value.slice(ta.selectionEnd);
+
+  // Keressük a sor elejét — a kép saját sorba kerüljön
+  const insertAt = before.endsWith('\n') || before === '' ? before : before + '\n';
+  ta.value = insertAt + mdImg + after;
+  ta.selectionStart = ta.selectionEnd = insertAt.length + mdImg.length;
+
+  // Trigger input event hogy az állapot frissüljön
+  ta.dispatchEvent(new Event('input'));
+  updateLineNums();
+  toast('✓ Kép beillesztve');
+}
+
+async function handleImgFileInput(input) {
+  const file = input.files[0];
+  if (!file) return;
+  await insertImageFromFile(file);
+  input.value = '';
+}
+
+// ── Save ──────────────────────────────────────────────────────────────────────
+function saveCurrentFile() {
+  if (!state.currentFile || !state.currentProject) return;
+  const proj = state.projects[state.currentProject];
+  const f = proj.files[state.currentFile];
+
+  // Letöltés mint .md fájl — ez mindig működik file://-ból is
+  const blob = new Blob([f.raw], { type: 'text/markdown' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = state.currentFile;
+  a.click();
+  URL.revokeObjectURL(url);
+
+  f.dirty = false;
+  renderSidebar();
+  setStatus('Letöltve', 'saved');
+  setTimeout(() => setStatus(''), 3000);
+  toast('💾 Mentve: ' + state.currentFile + ' — másold vissza a sections/ mappába');
+}
+
+// ── Project select ────────────────────────────────────────────────────────────
+document.getElementById('project-select').addEventListener('change', e => {
+  const name = e.target.value;
+  if (name && state.projects[name]) {
+    state.currentProject = name;
+    state.currentFile = null;
+    renderSidebar();
+    const proj = state.projects[name];
+    if (proj.fileOrder.length > 0) openFile(proj.fileOrder[0]);
+  }
+});
+
+// ── Preview ───────────────────────────────────────────────────────────────────
+function schedulePreview() {
+  clearTimeout(state.previewTimer);
+  state.previewTimer = setTimeout(renderPreview, 400);
+}
+
+function setPreviewMode(mode) {
+  state.previewMode = mode;
+  document.getElementById('mode-section').className = 'mode-btn' + (mode==='section' ? ' active' : '');
+  document.getElementById('mode-full').className = 'mode-btn' + (mode==='full' ? ' active' : '');
+  renderPreview();
+}
+
+function renderPreview() {
+  if (!state.currentProject) return;
+  const proj = state.projects[state.currentProject];
+  const frame = document.getElementById('preview-frame');
+  const info = document.getElementById('preview-info');
+
+  let html;
+  if (state.previewMode === 'section') {
+    const f = state.currentFile ? proj.files[state.currentFile] : null;
+    if (!f) return;
+    const sectionHtml = mdToHtml(f.content);
+    const secId = f.meta.id || 'section';
+    html = buildPreviewHtml(proj, `<section class="section" id="${secId}">${sectionHtml}</section>`, false);
+    info.textContent = f.meta.title || state.currentFile;
+  } else {
+    const parts = proj.fileOrder.map(fn => {
+      const f = proj.files[fn];
+      const tag = proj.fileOrder.indexOf(fn) === 0 ? 'header class="hero"' : 'section class="section"';
+      const close = proj.fileOrder.indexOf(fn) === 0 ? 'header' : 'section';
+      return `<${tag} id="${f.meta.id || fn}">${mdToHtml(f.content)}</${close}>`;
+    });
+    html = buildPreviewHtml(proj, parts.join('\n'), true);
+    info.textContent = 'Teljes dokumentum';
+  }
+
+  frame.srcdoc = html;
+}
+
+function buildPreviewHtml(proj, mainContent, full) {
+  const css = proj.css || getDefaultCSS();
+  const title = proj.config.title || 'Előnézet';
+  const logoTag = proj.logo ? `<img src="${proj.logo}" alt="${proj.config.logo_alt||''}" style="max-height:32px"/>` : '';
+
+  const navHtml = full ? buildNavHtml(proj) : '';
+  const wrapStyle = full ? '' : 'grid-template-columns:1fr;';
+
+  return `<!DOCTYPE html>
+<html lang="${proj.config.lang||'hu'}">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>${title}</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Lexend:wght@500;600;700&display=swap" rel="stylesheet"/>
+<style>${css}</style>
+</head>
+<body>
+<div class="wrap" style="${wrapStyle}">
+${full ? `<aside>
+  <div class="aside-top">
+    <div class="brand"><div class="brand-logo">${logoTag}</div>
+      <h1>${proj.config.subtitle||title}</h1>
+      <p>${proj.config.description||''}</p>
+    </div>
+  </div>
+  <div class="aside-scroll"><nav aria-label="Tartalomjegyzék">${navHtml}</nav></div>
+</aside>` : ''}
+<main>${mainContent}</main>
+</div>
+</body></html>`;
+}
+
+function buildNavHtml(proj) {
+  const groups = proj.config.nav_groups;
+  const idTitle = {};
+  proj.fileOrder.forEach(fn => {
+    const f = proj.files[fn];
+    if (f.meta.id) idTitle[f.meta.id] = f.meta.title || f.meta.id;
+  });
+  const allIds = new Set(Object.keys(idTitle));
+
+  if (!groups) {
+    return '<ul class="nav-acc-root">' +
+      proj.fileOrder.map(fn => {
+        const f = proj.files[fn];
+        const id = f.meta.id || fn;
+        const title = f.meta.title || id;
+        return `<li><a href="#${id}">${title}</a></li>`;
+      }).join('') + '</ul>';
+  }
+
+  let html = '<ul class="nav-acc-root">';
+  groups.forEach(g => {
+    const existing = (g.sections||[]).filter(id => allIds.has(id));
+    if (!existing.length) return;
+    html += `<li><details class="nav-acc" data-nav-acc open>
+      <summary>${g.name}</summary>
+      <div class="nav-acc-panel"><ul aria-label="${g.name}">
+        ${existing.map(id => `<li><a href="#${id}">${idTitle[id]||id}</a></li>`).join('')}
+      </ul></div></details></li>`;
+  });
+  html += '</ul>';
+  return html;
+}
+
+// ── Markdown → HTML ───────────────────────────────────────────────────────────
+function mdToHtml(md) {
+  if (!md) return '';
+  const lines = md.split('\n');
+  const html = [];
+  let i = 0, inOl = false, inUl = false, shotStack = false;
+
+  const closeLists = () => {
+    if (inOl) { html.push('</ol>'); inOl = false; }
+    if (inUl) { html.push('</ul>'); inUl = false; }
+  };
+
+  const inline = t => t
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/`(.+?)`/g, '<code>$1</code>')
+    .replace(/\[(.+?)\]\((.+?)\)/g, '<a href="$2">$1</a>')
+    .replace(/(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)/g, '<em>$1</em>');
+
+  const slug = t => t.replace(/<[^>]+>/g,'').toLowerCase()
+    .replace(/[^a-z0-9\-áéíóöőúüű]/g,'-').replace(/-+/g,'-').replace(/^-|-$/g,'');
+
+  while (i < lines.length) {
+    const line = lines[i], s = line.trim();
+    if (s === '<!-- shot-stack -->') { closeLists(); html.push('<figure class="shot shot-stack">'); shotStack=true; i++; continue; }
+    if (s === '<!-- /shot-stack -->') { html.push('</figure>'); shotStack=false; i++; continue; }
+
+    const img = s.match(/^!\[([^\]]*)\]\(([^)]+)\)$/);
+    if (img) {
+      closeLists();
+      if (!shotStack) html.push('<figure class="shot">');
+      html.push(`  <img src="${img[2]}" alt="${img[1]}" />`);
+      if (i+1 < lines.length) {
+        const cap = lines[i+1].trim().match(/^\*(.+)\*$/);
+        if (cap) {
+          html.push(`  <figcaption>${cap[1]}</figcaption>`);
+          if (!shotStack) html.push('</figure>'); else { html.push('</figure>'); shotStack=false; }
+          i+=2; continue;
+        }
+      }
+      if (!shotStack) html.push('</figure>');
+      i++; continue;
+    }
+
+    if (line.startsWith('> ')) { closeLists(); html.push(`<div class="callout"><p>${inline(line.slice(2))}</p></div>`); i++; continue; }
+    if (s.startsWith('# ')) { closeLists(); html.push(`<h2>${inline(s.slice(2))}</h2>`); i++; continue; }
+    if (s.startsWith('## ')) { closeLists(); const t=inline(s.slice(3)); html.push(`<h3 id="${slug(t)}" style="margin:18px 0 10px;font-size:15px;color:var(--brand-pink-deep)">${t}</h3>`); i++; continue; }
+    if (s.startsWith('### ')) { closeLists(); const t=inline(s.slice(4)); html.push(`<h4 id="${slug(t)}" style="margin:14px 0 8px;font-size:14px">${t}</h4>`); i++; continue; }
+
+    const ol = s.match(/^(\d+)\. (.+)/);
+    if (ol) { if(inUl)closeLists(); if(!inOl){html.push('<ol class="steps">');inOl=true;} html.push(`<li>${inline(ol[2])}</li>`); i++; continue; }
+
+    const ul = s.match(/^[-*] (.+)/);
+    if (ul) { if(inOl)closeLists(); if(!inUl){html.push('<ul>');inUl=true;} html.push(`<li>${inline(ul[1])}</li>`); i++; continue; }
+
+    if (s.includes('|') && i+1<lines.length && /^[\|\-\s:]+$/.test(lines[i+1].trim())) {
+      closeLists();
+      const heads = s.replace(/^\||\|$/g,'').split('|').map(h=>h.trim());
+      html.push('<table style="border-collapse:collapse;width:100%;font-size:14px;margin:12px 0"><thead><tr>');
+      heads.forEach(h => html.push(`<th style="border:1px solid var(--border);padding:8px 10px;background:var(--neutral-100);text-align:left">${inline(h)}</th>`));
+      html.push('</tr></thead><tbody>');
+      i+=2;
+      while(i<lines.length && lines[i].includes('|')) {
+        const cells = lines[i].replace(/^\||\|$/g,'').split('|').map(c=>c.trim());
+        html.push('<tr>'+cells.map(c=>`<td style="border:1px solid var(--border);padding:8px 10px">${inline(c)}</td>`).join('')+'</tr>');
+        i++;
+      }
+      html.push('</tbody></table>'); continue;
+    }
+
+    if (s.startsWith('```')) {
+      closeLists();
+      const code=[]; i++;
+      while(i<lines.length && !lines[i].trim().startsWith('```')){code.push(lines[i]);i++;}
+      html.push(`<pre><code>${code.join('\n').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</code></pre>`);
+      i++; continue;
+    }
+
+    if (!s) { closeLists(); i++; continue; }
+    closeLists();
+    if (s) html.push(`<p>${inline(s)}</p>`);
+    i++;
+  }
+  closeLists();
+  return html.join('\n');
+}
+
+// ── Build & Download ──────────────────────────────────────────────────────────
+function buildAndDownload() {
+  if (!state.currentProject) { toast('Nincs betöltve projekt!', 'err'); return; }
+  const proj = state.projects[state.currentProject];
+
+  // Check unsaved
+  const dirty = proj.fileOrder.filter(fn => proj.files[fn].dirty);
+  if (dirty.length > 0) {
+    if (!confirm(`${dirty.length} fájl nincs mentve. Így is buildelj?`)) return;
+  }
+
+  const parts = proj.fileOrder.map((fn, idx) => {
+    const f = proj.files[fn];
+    const id = f.meta.id || fn;
+    const tag = idx === 0 ? 'header class="hero"' : 'section class="section"';
+    const close = idx === 0 ? 'header' : 'section';
+    return `<${tag} id="${id}">${mdToHtml(f.content)}</${close}>`;
+  });
+
+  const html = buildPreviewHtml(proj, parts.join('\n\n'), true);
+  const blob = new Blob([html], {type:'text/html'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = proj.config.output || (state.currentProject + '.html');
+  a.click();
+  URL.revokeObjectURL(url);
+  toast('✓ HTML letöltve!');
+}
+
+// ── Default CSS fallback ──────────────────────────────────────────────────────
+function getDefaultCSS() {
+  return `:root{--primary-50:oklch(98.2% 0.018 155.826);--primary-100:oklch(96.2% 0.044 156.743);--primary-200:oklch(92.5% 0.084 155.995);--primary-500:oklch(72.3% 0.219 149.579);--primary-600:oklch(62.7% 0.194 149.214);--primary-700:oklch(52.7% 0.154 150.069);--neutral-50:oklch(98.4% 0.003 247.858);--neutral-100:oklch(96.8% 0.007 247.896);--neutral-200:oklch(92.9% 0.013 255.508);--neutral-500:oklch(55.4% 0.046 257.417);--neutral-600:oklch(44.6% 0.043 257.281);--neutral-700:oklch(37.2% 0.044 257.287);--neutral-900:oklch(20.8% 0.042 265.755);--brand-blue:#00a3d5;--brand-pink:#ec008c;--brand-pink-deep:#c40075;--bg:var(--neutral-50);--bg-elev:#ffffff;--bg-card:#ffffff;--text:var(--neutral-900);--muted:var(--neutral-600);--accent:var(--brand-pink-deep);--accent-soft:color-mix(in srgb,var(--brand-pink) 16%,white);--border:var(--neutral-200);--radius:14px;--shadow:0 10px 30px oklch(20.8% 0.042 265.755 / 0.08);--font:"Inter",ui-sans-serif,system-ui,sans-serif;--font-head:"Lexend",ui-sans-serif,system-ui,sans-serif;--mono:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace}*{box-sizing:border-box}html{scroll-behavior:smooth}main [id]{scroll-margin-top:18px}body{margin:0;font-family:var(--font);color:var(--text);background:var(--bg);line-height:1.55}main p{font-size:16px}main ul,main ol{font-size:16px}a{color:var(--accent);text-decoration:none}a:hover{color:var(--brand-pink);text-decoration:underline}.wrap{max-width:1400px;margin:0 auto;padding:28px 20px;display:grid;grid-template-columns:300px 1fr;gap:24px}@media(max-width:920px){.wrap{grid-template-columns:1fr;padding:20px 16px 56px}aside{position:static!important}}aside{position:sticky;top:18px;align-self:start;max-height:calc(100vh - 36px);overflow:hidden;display:flex;flex-direction:column;border:1px solid color-mix(in srgb,var(--brand-pink) 14%,var(--border));background:var(--bg-elev);border-radius:var(--radius);padding:14px 10px;box-shadow:var(--shadow)}.aside-scroll{overflow-y:auto;overflow-x:hidden;padding-right:4px;flex:1 1 auto;scrollbar-width:thin}.brand{padding:10px 8px 14px;border-bottom:1px solid var(--border);margin-bottom:10px}.brand h1{font-family:var(--font-head);font-size:1.0625rem;font-weight:700;line-height:1.25;margin:8px 0 2px;letter-spacing:-0.02em;color:var(--brand-pink-deep)}.brand p{margin:0;color:var(--muted);font-size:13px}.brand-logo{display:flex;align-items:center;gap:10px}.nav-acc-root{list-style:none;margin:0;padding:4px 4px 2px}.nav-acc-root>li{margin:5px 0}nav a{display:block;padding:10px 10px;border-radius:10px;color:var(--text);border:1px solid transparent}nav a:hover{text-decoration:none;background:var(--accent-soft);border-color:color-mix(in srgb,var(--border) 70%,transparent)}nav details.nav-acc{border:none;border-radius:12px;background:var(--bg-card)}nav details.nav-acc>summary{list-style:none;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 10px;border-radius:12px;cursor:pointer;color:var(--brand-pink-deep);font-weight:600;font-size:14px;user-select:none}nav details.nav-acc>summary::-webkit-details-marker{display:none}nav details.nav-acc>summary::after{content:"";width:7px;height:7px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(45deg);margin-top:-4px;flex-shrink:0;opacity:.85;transition:transform .18s ease,margin .18s ease}nav details.nav-acc[open]>summary::after{transform:rotate(225deg);margin-top:2px}nav details.nav-acc>summary:hover{background:var(--accent-soft)}nav .nav-acc-panel{padding:0 8px 8px 10px}nav .nav-acc-panel ul{list-style:none;margin:0;padding:2px 0 2px 10px;border-left:1px solid var(--border)}nav .nav-acc-panel li{margin:3px 0}nav .nav-acc-panel a{padding:8px 10px;font-size:14px;font-weight:400}.hero,.section{border:1px solid var(--border);background:var(--bg-card);border-radius:var(--radius);padding:18px;box-shadow:var(--shadow);margin-bottom:18px}.hero h1{font-family:var(--font-head);font-size:clamp(1.28rem,2.4vw,1.55rem);font-weight:600;line-height:1.22;margin:0 0 8px;letter-spacing:-0.02em;color:var(--brand-pink-deep)}main h1,main h2,main h3{color:var(--brand-pink-deep)}main h4,main h6{color:var(--text)}main ul li::marker,main ol li::marker{color:var(--brand-pink-deep)}.shot{margin:0 0 16px;border:1px solid var(--border);border-radius:12px;overflow:hidden;background:var(--bg-card);box-shadow:0 8px 28px oklch(20.8% 0.042 265.755 / 0.08)}.shot img{display:block;width:auto;height:auto;max-width:100%;margin:0 auto}.shot figcaption{padding:8px 14px;font-size:13px;color:var(--muted);background:color-mix(in srgb,var(--neutral-100) 60%,transparent);border-top:1px solid var(--border)}.shot.shot-stack img+img{border-top:1px solid var(--border)}.callout{margin:14px 0;padding:12px 14px;background:linear-gradient(135deg,color-mix(in srgb,var(--brand-pink-deep) 14%,#fff) 0%,color-mix(in srgb,var(--brand-pink-deep) 6%,#fff) 55%,#fff 100%);border:none;border-left:4px solid var(--brand-pink-deep);border-radius:14px}.steps{padding-left:18px}code{font-family:var(--mono);font-size:.92em;background:var(--neutral-100);padding:.12em .35em;border-radius:6px;border:1px solid var(--border)}`;
+}
+
+// ── Drag & drop folder ────────────────────────────────────────────────────────
+// Drag & drop — a böngésző biztonsági okokból nem enged mappát olvasni drag-ból
+// ezért a folder input a megbízható módszer
+document.addEventListener('dragover', e => e.preventDefault());
+document.addEventListener('drop', e => {
+  e.preventDefault();
+  // Irányítjuk a mappás inputhoz
+  toast('Kattints a 📂 ikonra a mappa betöltéséhez', '', 2500);
+});
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+updateLineNums();
+</script>
+</body>
+</html>
