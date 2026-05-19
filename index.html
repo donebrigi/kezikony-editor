@@ -2008,7 +2008,9 @@ function renderNavGroupsEditor() {
       <input type="text" value="${g.name}" placeholder="Csoport neve"
         style="flex:1;background:var(--bg);border:1px solid var(--border2);color:var(--text);padding:4px 8px;border-radius:5px;font-size:13px"
         oninput="updateGroupName(${gi}, this.value)"/>
-      <button class="btn-sm" onclick="addSubgroup(${gi})" title="+ Alcsoport" style="font-size:11px;white-space:nowrap">+ Alcsoport</button>
+      <button class="btn-sm" onclick="moveGroup(${gi},-1)" title="Csoport feljebb" style="font-size:12px">↑</button>
+      <button class="btn-sm" onclick="moveGroup(${gi},1)" title="Csoport lejjebb" style="font-size:12px">↓</button>
+      <button class="btn-sm" onclick="addSubgroup(${gi})" title="+ Alcsoport" style="font-size:11px;white-space:nowrap">+ Alcs.</button>
       <button class="btn-sm del" onclick="removeNavGroup(${gi})">🗑</button>`;
     groupDiv.appendChild(header);
 
@@ -2040,6 +2042,8 @@ function renderNavGroupsEditor() {
         <input type="text" value="${sg.name}" placeholder="Alcsoport neve"
           style="flex:1;background:var(--bg);border:1px solid var(--border2);color:var(--text);padding:3px 7px;border-radius:5px;font-size:12px"
           oninput="updateSubgroupName(${gi}, ${si}, this.value)"/>
+        <button class="btn-sm" onclick="moveSubgroup(${gi},${si},-1)" title="Feljebb" style="font-size:12px">↑</button>
+        <button class="btn-sm" onclick="moveSubgroup(${gi},${si},1)" title="Lejjebb" style="font-size:12px">↓</button>
         <button class="btn-sm del" onclick="removeSubgroup(${gi},${si})" style="font-size:11px">🗑</button>`;
       sgDiv.appendChild(sgHeader);
 
@@ -2229,6 +2233,28 @@ function removeNavGroup(idx) {
   const proj = state.projects[state.currentProject];
   if (!proj?.config?.nav_groups) return;
   proj.config.nav_groups.splice(idx, 1);
+  renderNavGroupsEditor();
+}
+
+function moveGroup(idx, dir) {
+  const proj = state.projects[state.currentProject];
+  const groups = proj?.config?.nav_groups;
+  if (!groups) return;
+  const newIdx = idx + dir;
+  if (newIdx < 0 || newIdx >= groups.length) return;
+  const [moved] = groups.splice(idx, 1);
+  groups.splice(newIdx, 0, moved);
+  renderNavGroupsEditor();
+}
+
+function moveSubgroup(gi, si, dir) {
+  const proj = state.projects[state.currentProject];
+  const subs = proj?.config?.nav_groups?.[gi]?.subgroups;
+  if (!subs) return;
+  const newIdx = si + dir;
+  if (newIdx < 0 || newIdx >= subs.length) return;
+  const [moved] = subs.splice(si, 1);
+  subs.splice(newIdx, 0, moved);
   renderNavGroupsEditor();
 }
 
