@@ -1676,7 +1676,7 @@ function mdToHtml(md) {
     }
 
     if (line.startsWith('> ')) { closeLists(); html.push(`<div class="callout"><p>${inline(line.slice(2))}</p></div>`); i++; continue; }
-    if (s.startsWith('# ')) { closeLists(); html.push(`<h2>${inline(s.slice(2))}</h2>`); i++; continue; }
+    if (s.startsWith('# ')) { closeLists(); const t=inline(s.slice(2)); html.push(`<h2 id="${slug(t)}">${t}</h2>`); i++; continue; }
     if (s.startsWith('## ')) { closeLists(); const t=inline(s.slice(3)); html.push(`<h3 id="${slug(t)}" style="margin:18px 0 10px;color:var(--brand-pink-deep)">${t}</h3>`); i++; continue; }
     if (s.startsWith('### ')) { closeLists(); const t=inline(s.slice(4)); html.push(`<h4 id="${slug(t)}" style="margin:14px 0 8px">${t}</h4>`); i++; continue; }
     if (s.startsWith('#### ')) { closeLists(); const t=inline(s.slice(5)); html.push(`<h5 id="${slug(t)}" style="margin:12px 0 6px">${t}</h5>`); i++; continue; }
