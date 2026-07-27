@@ -611,6 +611,7 @@ body { font-family: var(--sans); background: var(--bg); color: var(--text); disp
       </div>
       <div class="spacer"></div>
       <span style="font-size:11px;color:var(--text3)" id="preview-info"></span>
+      <button class="mode-btn" onclick="renderPreview()" title="Csak az előnézet frissítése (az oldal nem töltődik újra)">🔄 Frissítés</button>
     </div>
     <iframe id="preview-frame"></iframe>
   </div>
@@ -1091,7 +1092,17 @@ async function loadFromInput(input) {
     }
   }
 
-  project.fileOrder = Object.keys(project.files).sort();
+  // Ha a config.json tartalmaz mentett sorrendet (lásd fejezet drag&drop átrendezés),
+  // azt használjuk — csak ábécésorrendbe rendezünk, ha nincs ilyen mentve.
+  const savedOrder = Array.isArray(project.config.fileOrder) ? project.config.fileOrder : null;
+  if (savedOrder) {
+    const known = new Set(Object.keys(project.files));
+    const ordered = savedOrder.filter(fn => known.has(fn));
+    const missing = Object.keys(project.files).filter(fn => !ordered.includes(fn)).sort();
+    project.fileOrder = ordered.concat(missing);
+  } else {
+    project.fileOrder = Object.keys(project.files).sort();
+  }
   if (!project.css) project.css = getDefaultCSS();
 
   if (project.fileOrder.length === 0) {
@@ -2641,10 +2652,94 @@ function moveSubgroup(gi, si, dir) {
   renderNavGroupsEditor();
 }
 
+// ── config.json lemezre mentése ───────────────────────────────────────────────
+// Eddig az összerakott navigáció (nav_groups) csak a böngésző IndexedDB-jébe és a
+// legenerált (build-elt) HTML-be került bele — a projekt forrás config.json fájlja,
+// amit pl. GitHub-ra tölts fel, nem frissült. Ez a funkció a config.json-t is
+// lemezre írja / letölti, hogy a menü-összeállítás ne vesszen el egy új munkamenetben.
+function serializeConfig(proj) {
+  const c = proj.config || {};
+  const out = {
+    title: c.title, subtitle: c.subtitle, description: c.description,
+    lang: c.lang, output: c.output
+  };
+  if (c.logo_alt) out.logo_alt = c.logo_alt;
+  if (c.nav_groups) out.nav_groups = c.nav_groups;
+  // A fejezetek sorrendje: enélkül betöltéskor mindig ábécésorrendbe rendeződnének
+  // vissza a fájlnevek alapján, és a kézzel átrendezett sorrend elveszne.
+  if (proj.fileOrder && proj.fileOrder.length) out.fileOrder = proj.fileOrder;
+  return JSON.stringify(out, null, 2);
+}
+
+async function saveConfigToDisk(showToast = true) {
+  if (!state.currentProject) return;
+  const proj = state.projects[state.currentProject];
+  const json = serializeConfig(proj);
+
+  // 1. Már megjegyzett fájl handle (korábbi mentésből vagy mappa-hozzáférésből) — dialóg nélkül ír
+  if (proj.configHandle) {
+    try {
+      const writable = await proj.configHandle.createWritable();
+      await writable.write(json);
+      await writable.close();
+      if (showToast) toast('✓ config.json elmentve');
+      return;
+    } catch(e) {
+      console.warn('config.json handle write failed, újra kérjük:', e);
+      proj.configHandle = null;
+    }
+  }
+
+  // 2. Ha van mappa írási jog — létrehozzuk/frissítjük dialóg nélkül, és megjegyezzük a handle-t
+  if (proj.dirHandle) {
+    try {
+      const fh = await proj.dirHandle.getFileHandle('config.json', { create: true });
+      const writable = await fh.createWritable();
+      await writable.write(json);
+      await writable.close();
+      proj.configHandle = fh;
+      if (showToast) toast('✓ config.json elmentve a mappába');
+      return;
+    } catch(e) {
+      console.warn('config.json direct write failed:', e);
+    }
+  }
+
+  // 3. Mentés másként dialóg — csak első alkalommal, utána a handle-t megjegyezzük
+  if (window.showSaveFilePicker) {
+    try {
+      const fh = await window.showSaveFilePicker({
+        suggestedName: 'config.json',
+        types: [{ description: 'JSON fájl', accept: { 'application/json': ['.json'] } }],
+        startIn: 'documents'
+      });
+      const writable = await fh.createWritable();
+      await writable.write(json);
+      await writable.close();
+      proj.configHandle = fh;
+      if (showToast) toast('💾 config.json mentve: ' + fh.name);
+      return;
+    } catch(e) {
+      if (e.name === 'AbortError') return;
+      console.warn('config.json showSaveFilePicker failed:', e);
+    }
+  }
+
+  // 4. Fallback: sima letöltés
+  const blob = new Blob([json], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'config.json'; a.click();
+  URL.revokeObjectURL(url);
+  if (showToast) toast('💾 config.json letöltve');
+}
+
 async function saveNavGroups() {
   await persistState();
   renderPreview();
-  toast('✓ Navigáció mentve');
+  // A menü lemezre mentése: ha van mappa írási jog, csendben frissíti a config.json-t;
+  // különben mentés-dialógot nyit (majd megjegyzi a fájlt), vagy letölti a config.json-t.
+  await saveConfigToDisk();
 }
 
 
@@ -2722,7 +2817,10 @@ function setupDrag(div, fn) {
         proj.fileOrder.splice(b, 0, dragSrcFile);
         renderSidebar();
         await persistState();
-        toast('↕ Sorrend módosítva');
+        // Az új sorrendet a config.json-ba is kiírjuk, hogy betöltéskor (más gépen/böngészőben,
+        // vagy a GitHub-ra feltöltött fájlokból) is a beállított sorrend legyen érvényben,
+        // ne az ábécésorrend.
+        await saveConfigToDisk();
       }
     } else {
       // Másik projektből másolás
@@ -3227,8 +3325,14 @@ async function requestFolderAccess() {
       proj.outputHandle = await dirHandle.getFileHandle(outputName, { create: true });
     } catch(e) {}
 
+    // config.json handle — így a nav_groups (menü) mentése is dialóg nélkül, közvetlenül a mappába írhat
+    try {
+      proj.configHandle = await dirHandle.getFileHandle('config.json', { create: true });
+    } catch(e) {}
+
     // Gomb eltüntetése, státusz frissítése
-    document.getElementById('folder-access-btn').style.display = 'none';
+    const folderBtn = document.getElementById('folder-access-btn');
+    if (folderBtn) folderBtn.style.display = 'none';
     setStatus('Írási jog megadva ✓', 'saved');
     setTimeout(() => setStatus(''), 2500);
     toast('✓ Írási jog megadva — Ctrl+S közvetlenül ment');
