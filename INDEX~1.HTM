@@ -326,6 +326,46 @@ body { font-family: var(--sans); background: var(--bg); color: var(--text); disp
 .css-actions { display:flex; gap:8px; margin-top:8px; align-items:center; }
 .css-actions .hint { font-size:11px; color:var(--text3); flex:1; }
 
+/* CSS tab — egyszerű/kód váltó */
+.css-mode-toggle { display:flex; gap:6px; margin-bottom:14px; }
+.css-mode-btn {
+  padding:5px 12px; border-radius:6px; font-size:12px; cursor:pointer;
+  border:1px solid var(--border2); background:var(--bg3); color:var(--text2); transition:all .1s;
+}
+.css-mode-btn:hover { color:var(--text); }
+.css-mode-btn.active { background:var(--accent-soft); border-color:var(--accent); color:var(--accent2); }
+
+/* Design (egyszerű) form */
+.design-field { margin-bottom:16px; }
+.design-field label {
+  display:block; font-size:12px; color:var(--text2); margin-bottom:6px; font-weight:500;
+}
+.design-field label .hint { font-weight:400; color:var(--text3); }
+.design-field .color-row { display:flex; align-items:center; gap:8px; }
+.design-field input[type=color] {
+  width:38px; height:32px; padding:0; border:1px solid var(--border2); border-radius:6px;
+  background:var(--bg); cursor:pointer; flex-shrink:0;
+}
+.design-field .hex-input {
+  flex:1; padding:6px 10px; background:var(--bg); border:1px solid var(--border2);
+  color:var(--text); border-radius:var(--radius); font-size:12px; font-family:var(--mono);
+  box-sizing:border-box; text-transform:uppercase;
+}
+.design-field .hex-input:focus { outline:2px solid var(--accent); border-color:transparent; }
+.design-field input[type=range] { accent-color:var(--accent); }
+.design-field select {
+  width:100%; padding:7px 10px; background:var(--bg); border:1px solid var(--border2);
+  color:var(--text); border-radius:var(--radius); font-size:13px; box-sizing:border-box; cursor:pointer;
+}
+.design-field select:focus { outline:2px solid var(--accent); border-color:transparent; }
+.fontsize-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.fontsize-item label { font-size:11px; color:var(--text3); margin-bottom:4px; font-weight:400; }
+.fontsize-item input[type=number] {
+  width:100%; padding:6px 10px; background:var(--bg); border:1px solid var(--border2);
+  color:var(--text); border-radius:var(--radius); font-size:13px; box-sizing:border-box; font-family:var(--mono);
+}
+.fontsize-item input[type=number]:focus { outline:2px solid var(--accent); border-color:transparent; }
+
 /* Másolás tab */
 #copy-source-select {
   width:100%; padding:7px 10px; background:var(--bg); border:1px solid var(--border2);
@@ -734,13 +774,108 @@ body { font-family: var(--sans); background: var(--bg); color: var(--text); disp
     <!-- TAB: CSS -->
     <div class="tab-panel" id="tab-css">
       <div style="font-size:12px;color:var(--text3);margin-bottom:8px">
-        Aktív projekt CSS-e: <strong id="css-proj-name" style="color:var(--accent2)"></strong>
+        Aktív projekt megjelenése: <strong id="css-proj-name" style="color:var(--accent2)"></strong>
       </div>
-      <textarea id="proj-css-editor" spellcheck="false" placeholder="/* Projekt CSS... */"></textarea>
-      <div class="css-actions">
-        <span class="hint">Gépelés közben az előnézet élőben frissül.</span>
-        <button class="btn" onclick="resetToDefaultCss()" style="font-size:12px">↺ Alapértelmezett</button>
-        <button class="btn primary" onclick="saveCss()" style="font-size:12px">✓ Alkalmaz</button>
+
+      <div class="css-mode-toggle">
+        <button class="css-mode-btn active" id="css-mode-simple-btn" type="button" onclick="setCssMode('simple')">🎨 Egyszerű</button>
+        <button class="css-mode-btn" id="css-mode-code-btn" type="button" onclick="setCssMode('code')">&lt;/&gt; Kód (haladó)</button>
+      </div>
+
+      <!-- Egyszerű, magyar nyelvű beállító felület -->
+      <div id="css-simple-panel">
+        <div class="design-field">
+          <label>Kiemelő szín <span class="hint">(linkek, címek, gombok)</span></label>
+          <div class="color-row">
+            <input type="color" id="df-accent" oninput="onDesignFieldChange()"/>
+            <input type="text" class="hex-input" id="df-accent-hex" oninput="onHexChange('accent', this.value)"/>
+          </div>
+        </div>
+        <div class="design-field">
+          <label>Oldal háttérszíne</label>
+          <div class="color-row">
+            <input type="color" id="df-bg" oninput="onDesignFieldChange()"/>
+            <input type="text" class="hex-input" id="df-bg-hex" oninput="onHexChange('bg', this.value)"/>
+          </div>
+        </div>
+        <div class="design-field">
+          <label>Kártya / panel háttere</label>
+          <div class="color-row">
+            <input type="color" id="df-card" oninput="onDesignFieldChange()"/>
+            <input type="text" class="hex-input" id="df-card-hex" oninput="onHexChange('card', this.value)"/>
+          </div>
+        </div>
+        <div class="design-field">
+          <label>Szöveg színe</label>
+          <div class="color-row">
+            <input type="color" id="df-text" oninput="onDesignFieldChange()"/>
+            <input type="text" class="hex-input" id="df-text-hex" oninput="onHexChange('text', this.value)"/>
+          </div>
+        </div>
+        <div class="design-field">
+          <label>Másodlagos szöveg színe <span class="hint">(leírások, meta infó)</span></label>
+          <div class="color-row">
+            <input type="color" id="df-muted" oninput="onDesignFieldChange()"/>
+            <input type="text" class="hex-input" id="df-muted-hex" oninput="onHexChange('muted', this.value)"/>
+          </div>
+        </div>
+        <div class="design-field">
+          <label>Szegély színe</label>
+          <div class="color-row">
+            <input type="color" id="df-border" oninput="onDesignFieldChange()"/>
+            <input type="text" class="hex-input" id="df-border-hex" oninput="onHexChange('border', this.value)"/>
+          </div>
+        </div>
+        <div class="design-field">
+          <label>Sarok lekerekítés <span class="hint" id="df-radius-val">14px</span></label>
+          <input type="range" id="df-radius" min="0" max="28" step="1" oninput="onDesignFieldChange()" style="width:100%"/>
+        </div>
+        <div class="design-field">
+          <label>Betűtípus stílus</label>
+          <select id="df-fontpair" onchange="onDesignFieldChange()">
+            <option value="modern">Modern (Inter + Lexend)</option>
+            <option value="friendly">Barátságos (Nunito + Poppins)</option>
+            <option value="classic">Klasszikus (Georgia)</option>
+            <option value="clean">Letisztult (rendszer betűtípus)</option>
+            <option value="mono">Gépelt (monospace)</option>
+          </select>
+        </div>
+        <div class="design-field">
+          <label>Betűméretek <span class="hint">(px)</span></label>
+          <div class="fontsize-grid">
+            <div class="fontsize-item">
+              <label for="df-fs-p">Bekezdés</label>
+              <input type="number" id="df-fs-p" min="10" max="28" step="1" oninput="onDesignFieldChange()"/>
+            </div>
+            <div class="fontsize-item">
+              <label for="df-fs-h1">Címsor 1 (H1)</label>
+              <input type="number" id="df-fs-h1" min="14" max="48" step="1" oninput="onDesignFieldChange()"/>
+            </div>
+            <div class="fontsize-item">
+              <label for="df-fs-h2">Címsor 2 (H2)</label>
+              <input type="number" id="df-fs-h2" min="12" max="40" step="1" oninput="onDesignFieldChange()"/>
+            </div>
+            <div class="fontsize-item">
+              <label for="df-fs-h3">Címsor 3 (H3)</label>
+              <input type="number" id="df-fs-h3" min="12" max="32" step="1" oninput="onDesignFieldChange()"/>
+            </div>
+          </div>
+        </div>
+        <div class="css-actions">
+          <span class="hint">A módosítások élőben frissítik az előnézetet.</span>
+          <button class="btn" onclick="resetToDefaultCss()" style="font-size:12px">↺ Alapértelmezett</button>
+          <button class="btn primary" onclick="applyDesignForm(true)" style="font-size:12px">✓ Mentés</button>
+        </div>
+      </div>
+
+      <!-- Haladó, nyers CSS kód szerkesztő -->
+      <div id="css-code-panel" style="display:none">
+        <textarea id="proj-css-editor" spellcheck="false" placeholder="/* Projekt CSS... */"></textarea>
+        <div class="css-actions">
+          <span class="hint">Gépelés közben az előnézet élőben frissül.</span>
+          <button class="btn" onclick="resetToDefaultCss()" style="font-size:12px">↺ Alapértelmezett</button>
+          <button class="btn primary" onclick="saveCss()" style="font-size:12px">✓ Alkalmaz</button>
+        </div>
       </div>
     </div>
 
@@ -1378,13 +1513,21 @@ function buildPreviewHtml(proj, mainContent, full) {
       </div>` : '';
   const searchScript = full ? ['<scr','ipt>'].join('') + SEARCH_JS + ['</',  'script>'].join('') : '';
 
+  // A betűtípus-link a projekt design-blokkjában kiválasztott betűtípus-párhoz igazodik
+  // (lásd az Egyszerű megjelenés-szerkesztőt); rendszer-betűtípusnál nincs szükség Google Fonts-ra.
+  const designInfo = parseDesignBlock(proj.css || '');
+  const fontPairForLink = FONT_PAIRS[(designInfo && designInfo.fontPair) || 'modern'] || FONT_PAIRS.modern;
+  const fontLinkTag = fontPairForLink.google
+    ? `<link href="https://fonts.googleapis.com/css2?${fontPairForLink.google}&display=swap" rel="stylesheet"/>`
+    : '';
+
   return `<!DOCTYPE html>
 <html lang="${proj.config.lang||'hu'}">
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>${title}</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Lexend:wght@500;600;700&display=swap" rel="stylesheet"/>
+${fontLinkTag}
 <style>${css}</style>
 </head>
 <body>
@@ -1673,6 +1816,185 @@ function getDefaultCSS() {
 .doc-searchbar .meta{color:#999;font-size:13px;white-space:nowrap;margin-left:2px}
 mark.doc-hit{background:color-mix(in srgb,var(--brand-pink,#ec008c) 15%,white);color:inherit;padding:0 2px;border-radius:3px;border:1px solid color-mix(in srgb,var(--brand-pink,#ec008c) 28%,white)}
 mark.doc-hit.doc-hit-active{background:color-mix(in srgb,var(--brand-pink,#ec008c) 25%,white);box-shadow:0 0 0 2px color-mix(in srgb,var(--brand-pink,#ec008c) 20%,transparent)}`;
+}
+
+// ── Egyszerű megjelenés-szerkesztő (design form) ──────────────────────────────
+// A cél, hogy a nyers CSS kód helyett néhány magyar nyelvű mezővel (szín, sarok
+// lekerekítés, betűtípus) is be lehessen állítani a kézikönyv kinézetét. A
+// kiválasztott értékeket NEM a meglévő CSS-be írjuk bele (az bármi lehet, akár
+// kézzel írt egyedi kód is) — helyette egy jól elkülöníthető, jelölt :root blokkot
+// fűzünk a CSS végére, ami a CSS cascade szabályai szerint felülírja a korábbi
+// (azonos nevű) egyéni tulajdonságokat. Így a haladó CSS kód is megmarad érintetlenül.
+const FONT_PAIRS = {
+  modern:   { label: 'Modern (Inter + Lexend)',        font: `'Inter',ui-sans-serif,system-ui,sans-serif`,                head: `'Lexend',ui-sans-serif,system-ui,sans-serif`,                google: 'family=Inter:wght@400;500;600;700&family=Lexend:wght@500;600;700' },
+  friendly: { label: 'Barátságos (Nunito + Poppins)',  font: `'Nunito',ui-sans-serif,system-ui,sans-serif`,                head: `'Poppins',ui-sans-serif,system-ui,sans-serif`,               google: 'family=Nunito:wght@400;600;700&family=Poppins:wght@600;700' },
+  classic:  { label: 'Klasszikus (Georgia)',           font: `Georgia,'Times New Roman',serif`,                            head: `Georgia,'Times New Roman',serif`,                            google: null },
+  clean:    { label: 'Letisztult (rendszer betűtípus)', font: `ui-sans-serif,system-ui,-apple-system,sans-serif`,          head: `ui-sans-serif,system-ui,-apple-system,sans-serif`,           google: null },
+  mono:     { label: 'Gépelt (monospace)',             font: `'JetBrains Mono',ui-monospace,monospace`,                    head: `'JetBrains Mono',ui-monospace,monospace`,                    google: 'family=JetBrains+Mono:wght@400;500;600;700' }
+};
+
+const DESIGN_BLOCK_RE = /\/\*\s*@kezikonyv-design-start(?:\s+font-pair=(\w+))?\s*\*\/[\s\S]*?\/\*\s*@kezikonyv-design-end\s*\*\//;
+
+function stripDesignBlock(cssText) {
+  return (cssText || '').replace(DESIGN_BLOCK_RE, '').trim();
+}
+
+function parseDesignBlock(cssText) {
+  const m = (cssText || '').match(DESIGN_BLOCK_RE);
+  if (!m) return null;
+  const body = m[0];
+  const grab = (name) => {
+    const mm = body.match(new RegExp('--' + name + '\\s*:\\s*([^;]+);'));
+    return mm ? mm[1].trim() : null;
+  };
+  const vars = {
+    accent: grab('accent'),
+    bg: grab('bg'),
+    card: grab('bg-card'),
+    text: grab('text'),
+    muted: grab('muted'),
+    border: grab('border'),
+    radius: grab('radius'),
+    fsP: grab('fs-p'),
+    fsH1: grab('fs-h1'),
+    fsH2: grab('fs-h2'),
+    fsH3: grab('fs-h3')
+  };
+  Object.keys(vars).forEach(k => { if (vars[k] === null) delete vars[k]; });
+  return { vars, fontPair: m[1] || 'modern' };
+}
+
+// Számhoz px mértékegységet fűz, ha még nincs rajta (radius/betűméret mezőknél).
+function withPx(val, fallback) {
+  const v = val || fallback;
+  return /px|em|rem|%/.test(v) ? v : v + 'px';
+}
+
+function buildDesignBlock(vars, fontPairKey) {
+  const fp = FONT_PAIRS[fontPairKey] || FONT_PAIRS.modern;
+  const radius = withPx(vars.radius, '14');
+  const fsP = withPx(vars.fsP, '16');
+  const fsH1 = withPx(vars.fsH1, '24');
+  const fsH2 = withPx(vars.fsH2, '22');
+  const fsH3 = withPx(vars.fsH3, '19');
+  return `/* @kezikonyv-design-start font-pair=${fontPairKey} */
+:root{
+  --bg:${vars.bg};
+  --bg-elev:${vars.card};
+  --bg-card:${vars.card};
+  --text:${vars.text};
+  --muted:${vars.muted};
+  --accent:${vars.accent};
+  --brand-pink-deep:${vars.accent};
+  --brand-pink:color-mix(in srgb, ${vars.accent} 75%, white);
+  --accent-soft:color-mix(in srgb, ${vars.accent} 12%, white);
+  --border:${vars.border};
+  --radius:${radius};
+  --font:${fp.font};
+  --font-head:${fp.head};
+  --fs-p:${fsP};
+  --fs-h1:${fsH1};
+  --fs-h2:${fsH2};
+  --fs-h3:${fsH3};
+}
+main p{font-size:var(--fs-p)}
+.hero h1,main h1{font-size:var(--fs-h1)}
+main h2{font-size:var(--fs-h2)}
+main h3{font-size:var(--fs-h3)}
+/* @kezikonyv-design-end */`;
+}
+
+// Alapértelmezett kinézet megközelítő hex/px értékei (az eredeti CSS oklch-alapú
+// színskálájának hozzávetőleges megfelelői), csak addig, amíg a projekt még nem
+// kapott saját design-blokkot.
+const DESIGN_FALLBACK_VARS = {
+  accent: '#c40075', bg: '#fafafa', card: '#ffffff',
+  text: '#1e2433', muted: '#6b7280', border: '#e2e5ea', radius: '14',
+  fsP: '16', fsH1: '24', fsH2: '22', fsH3: '19'
+};
+
+function setCssMode(mode) {
+  document.getElementById('css-mode-simple-btn').classList.toggle('active', mode === 'simple');
+  document.getElementById('css-mode-code-btn').classList.toggle('active', mode === 'code');
+  document.getElementById('css-simple-panel').style.display = mode === 'simple' ? '' : 'none';
+  document.getElementById('css-code-panel').style.display = mode === 'code' ? '' : 'none';
+  if (!state.currentProject) return;
+  const proj = state.projects[state.currentProject];
+  if (mode === 'simple') {
+    loadDesignForm();
+  } else {
+    document.getElementById('proj-css-editor').value = proj.css || getDefaultCSS();
+  }
+}
+
+function loadDesignForm() {
+  if (!state.currentProject) return;
+  const proj = state.projects[state.currentProject];
+  const parsed = parseDesignBlock(proj.css || '');
+  const vars = Object.assign({}, DESIGN_FALLBACK_VARS, parsed ? parsed.vars : {});
+  const setColorField = (id, hex) => {
+    document.getElementById(id).value = hex;
+    document.getElementById(id + '-hex').value = hex;
+  };
+  setColorField('df-accent', vars.accent);
+  setColorField('df-bg', vars.bg);
+  setColorField('df-card', vars.card);
+  setColorField('df-text', vars.text);
+  setColorField('df-muted', vars.muted);
+  setColorField('df-border', vars.border);
+  const radiusNum = parseInt(vars.radius, 10) || 14;
+  document.getElementById('df-radius').value = radiusNum;
+  document.getElementById('df-radius-val').textContent = radiusNum + 'px';
+  document.getElementById('df-fontpair').value = (parsed && parsed.fontPair) || 'modern';
+  document.getElementById('df-fs-p').value = parseInt(vars.fsP, 10) || 16;
+  document.getElementById('df-fs-h1').value = parseInt(vars.fsH1, 10) || 24;
+  document.getElementById('df-fs-h2').value = parseInt(vars.fsH2, 10) || 22;
+  document.getElementById('df-fs-h3').value = parseInt(vars.fsH3, 10) || 19;
+}
+
+function onHexChange(field, val) {
+  if (/^#[0-9a-fA-F]{6}$/.test(val)) {
+    document.getElementById('df-' + field).value = val;
+    onDesignFieldChange();
+  }
+}
+
+function onDesignFieldChange() {
+  // A színválasztó (natív color picker) és a mellette lévő hex mező mindig szinkronban marad.
+  ['accent','bg','card','text','muted','border'].forEach(k => {
+    document.getElementById('df-' + k + '-hex').value = document.getElementById('df-' + k).value;
+  });
+  document.getElementById('df-radius-val').textContent = document.getElementById('df-radius').value + 'px';
+  clearTimeout(state._designTimer);
+  state._designTimer = setTimeout(() => applyDesignForm(false), 150);
+}
+
+function applyDesignForm(doSaveAndToast) {
+  if (!state.currentProject) return;
+  const proj = state.projects[state.currentProject];
+  const vars = {
+    accent: document.getElementById('df-accent').value,
+    bg: document.getElementById('df-bg').value,
+    card: document.getElementById('df-card').value,
+    text: document.getElementById('df-text').value,
+    muted: document.getElementById('df-muted').value,
+    border: document.getElementById('df-border').value,
+    radius: document.getElementById('df-radius').value,
+    fsP: document.getElementById('df-fs-p').value,
+    fsH1: document.getElementById('df-fs-h1').value,
+    fsH2: document.getElementById('df-fs-h2').value,
+    fsH3: document.getElementById('df-fs-h3').value
+  };
+  const fontPair = document.getElementById('df-fontpair').value;
+  const base = stripDesignBlock(proj.css || getDefaultCSS());
+  proj.css = base + '\n' + buildDesignBlock(vars, fontPair);
+  const codeEditor = document.getElementById('proj-css-editor');
+  if (codeEditor) codeEditor.value = proj.css;
+  renderPreview();
+  if (doSaveAndToast) {
+    persistState();
+    toast('✓ Megjelenés mentve');
+  }
 }
 
 // ── Drag & drop folder ────────────────────────────────────────────────────────
@@ -2338,6 +2660,8 @@ function loadCssEditor() {
   document.getElementById('css-proj-name').textContent = proj.config.title || state.currentProject;
   document.getElementById('proj-css-editor').value = proj.css || getDefaultCSS();
   document.getElementById('proj-css-editor').disabled = false;
+  // A tab megnyitásakor mindig az egyszerű, magyar nyelvű felületet mutatjuk alapból.
+  setCssMode('simple');
 }
 
 function saveCss() {
@@ -2349,9 +2673,10 @@ function saveCss() {
 }
 
 function resetToDefaultCss() {
-  if (!confirm('Visszaállítja az alapértelmezett CSS-t?')) return;
+  if (!confirm('Visszaállítja az alapértelmezett megjelenést?')) return;
   document.getElementById('proj-css-editor').value = getDefaultCSS();
   saveCss();
+  loadDesignForm();
 }
 
 document.getElementById('proj-css-editor').addEventListener('input', () => {
