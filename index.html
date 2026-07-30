@@ -588,6 +588,7 @@ body { font-family: var(--sans); background: var(--bg); color: var(--text); disp
       <button class="fmt-btn" onclick="fmtList('- ')" title="Felsorolás">• Lista</button>
       <button class="fmt-btn" onclick="fmtList('1. ')" title="Számozott lista">1. Lista</button>
       <button class="fmt-btn" onclick="fmtLine('> ')" title="Kiemelő doboz">&gt; Callout</button>
+      <button class="fmt-btn" onclick="fmtAccordion()" title="Lenyíló elem (harmonika) beszúrása">⬇ Harmonika</button>
       <div class="fmt-sep"></div>
       <button class="fmt-btn" onclick="fmtLink()" title="Link beszúrása">🔗 Link</button>
       <button class="fmt-btn" onclick="fmtCodeBlock()" title="Kód blokk">```kód```</button>
@@ -825,6 +826,20 @@ body { font-family: var(--sans); background: var(--bg); color: var(--text); disp
           <div class="color-row">
             <input type="color" id="df-border" oninput="onDesignFieldChange()"/>
             <input type="text" class="hex-input" id="df-border-hex" oninput="onHexChange('border', this.value)"/>
+          </div>
+        </div>
+        <div class="design-field">
+          <label>Kiemelt doboz háttere <span class="hint">(a &gt; jellel kezdett megjegyzés)</span></label>
+          <div class="color-row">
+            <input type="color" id="df-callout-bg" oninput="onDesignFieldChange()"/>
+            <input type="text" class="hex-input" id="df-callout-bg-hex" oninput="onHexChange('callout-bg', this.value)"/>
+          </div>
+        </div>
+        <div class="design-field">
+          <label>Kiemelt doboz szövege</label>
+          <div class="color-row">
+            <input type="color" id="df-callout-text" oninput="onDesignFieldChange()"/>
+            <input type="text" class="hex-input" id="df-callout-text-hex" oninput="onHexChange('callout-text', this.value)"/>
           </div>
         </div>
         <div class="design-field">
@@ -1637,7 +1652,7 @@ function mdToHtml(md) {
   if (!md) return '';
   const lines = md.split('\n');
   const html = [];
-  let i = 0, inOl = false, inUl = false, shotStack = false;
+  let i = 0, inOl = false, inUl = false, shotStack = false, inAccordion = false, accItemOpen = false;
 
   const closeLists = () => {
     if (inOl) { html.push('</ol>'); inOl = false; }
@@ -1657,6 +1672,17 @@ function mdToHtml(md) {
     const line = lines[i], s = line.trim();
     if (s === '<!-- shot-stack -->') { closeLists(); html.push('<figure class="shot shot-stack">'); shotStack=true; i++; continue; }
     if (s === '<!-- /shot-stack -->') { html.push('</figure>'); shotStack=false; i++; continue; }
+
+    // Accordion (lenyíló/harmonika elemek): <!-- accordion --> ... +++ Cím ... <!-- /accordion -->
+    if (s === '<!-- accordion -->') { closeLists(); html.push('<div class="accordion">'); inAccordion=true; accItemOpen=false; i++; continue; }
+    if (s === '<!-- /accordion -->') { if (accItemOpen) { html.push('</div></details>'); accItemOpen=false; } html.push('</div>'); inAccordion=false; i++; continue; }
+    if (inAccordion && s.startsWith('+++ ')) {
+      closeLists();
+      if (accItemOpen) html.push('</div></details>');
+      const t = inline(s.slice(4));
+      html.push(`<details class="acc-item"><summary>${t}</summary><div class="acc-body">`);
+      accItemOpen = true; i++; continue;
+    }
 
     const img = s.match(/^!\[([^\]]*)\]\(([^)]+)\)$/);
     if (img) {
@@ -1716,6 +1742,10 @@ function mdToHtml(md) {
     i++;
   }
   closeLists();
+  // Ha valaki elfelejtette lezárni az accordion-t, itt biztonságból bezárjuk,
+  // nehogy hibás (nyitva maradt) HTML kerüljön az előnézetbe/exportba.
+  if (accItemOpen) html.push('</div></details>');
+  if (inAccordion) html.push('</div>');
   return html.join('\n');
 }
 
@@ -1825,7 +1855,7 @@ mark.doc-hit.doc-hit-active{background:color-mix(in srgb,var(--brand-pink,#ec008
 }
 
 function getDefaultCSS() {
-  return `:root{--primary-50:oklch(98.2% 0.018 155.826);--primary-100:oklch(96.2% 0.044 156.743);--primary-200:oklch(92.5% 0.084 155.995);--primary-500:oklch(72.3% 0.219 149.579);--primary-600:oklch(62.7% 0.194 149.214);--primary-700:oklch(52.7% 0.154 150.069);--neutral-50:oklch(98.4% 0.003 247.858);--neutral-100:oklch(96.8% 0.007 247.896);--neutral-200:oklch(92.9% 0.013 255.508);--neutral-500:oklch(55.4% 0.046 257.417);--neutral-600:oklch(44.6% 0.043 257.281);--neutral-700:oklch(37.2% 0.044 257.287);--neutral-900:oklch(20.8% 0.042 265.755);--brand-blue:#00a3d5;--brand-pink:#ec008c;--brand-pink-deep:#c40075;--bg:var(--neutral-50);--bg-elev:#ffffff;--bg-card:#ffffff;--text:var(--neutral-900);--muted:var(--neutral-600);--accent:var(--brand-pink-deep);--accent-soft:color-mix(in srgb,var(--brand-pink) 16%,white);--border:var(--neutral-200);--radius:14px;--shadow:0 10px 30px oklch(20.8% 0.042 265.755 / 0.08);--font:"Inter",ui-sans-serif,system-ui,sans-serif;--font-head:"Lexend",ui-sans-serif,system-ui,sans-serif;--mono:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace}*{box-sizing:border-box}html{scroll-behavior:smooth}main [id]{scroll-margin-top:18px}body{margin:0;font-family:var(--font);color:var(--text);background:var(--bg);line-height:1.55}main p{font-size:16px}main ul,main ol{font-size:16px}a{color:var(--accent);text-decoration:none}a:hover{color:var(--brand-pink);text-decoration:underline}.wrap{max-width:1400px;margin:0 auto;padding:28px 20px;display:grid;grid-template-columns:300px 1fr;gap:24px}@media(max-width:920px){.wrap{grid-template-columns:1fr;padding:20px 16px 56px}aside{position:static!important}}aside{position:sticky;top:18px;align-self:start;max-height:calc(100vh - 36px);overflow:hidden;display:flex;flex-direction:column;border:1px solid color-mix(in srgb,var(--brand-pink) 14%,var(--border));background:var(--bg-elev);border-radius:var(--radius);padding:14px 10px;box-shadow:var(--shadow)}.aside-scroll{overflow-y:auto;overflow-x:hidden;padding-right:4px;flex:1 1 auto;scrollbar-width:thin}.brand{padding:10px 8px 14px;border-bottom:1px solid var(--border);margin-bottom:10px}.brand h1{font-family:var(--font-head);font-size:1.0625rem;font-weight:700;line-height:1.25;margin:8px 0 2px;letter-spacing:-0.02em;color:var(--brand-pink-deep)}.brand p{margin:0;color:var(--muted);font-size:13px}.brand-logo{display:flex;align-items:center;gap:10px}.nav-acc-root{list-style:none;margin:0;padding:4px 4px 2px}.nav-acc-root>li{margin:5px 0}nav a{display:block;padding:10px 10px;border-radius:10px;color:var(--text);border:1px solid transparent}nav a:hover{text-decoration:none;background:var(--accent-soft);border-color:color-mix(in srgb,var(--border) 70%,transparent)}nav details.nav-acc{border:none;border-radius:12px;background:var(--bg-card)}nav details.nav-acc>summary{list-style:none;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 10px;border-radius:12px;cursor:pointer;color:var(--brand-pink-deep);font-weight:600;font-size:14px;user-select:none}nav details.nav-acc>summary::-webkit-details-marker{display:none}nav details.nav-acc>summary::after{content:"";width:7px;height:7px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(45deg);margin-top:-4px;flex-shrink:0;opacity:.85;transition:transform .18s ease,margin .18s ease}nav details.nav-acc[open]>summary::after{transform:rotate(225deg);margin-top:2px}nav details.nav-acc>summary:hover{background:var(--accent-soft)}nav .nav-acc-panel{padding:0 8px 8px 10px}nav .nav-acc-panel ul{list-style:none;margin:0;padding:2px 0 2px 10px;border-left:1px solid var(--border)}nav .nav-acc-panel li{margin:3px 0}nav .nav-acc-panel a{padding:8px 10px;font-size:14px;font-weight:400}.hero,.section{border:1px solid var(--border);background:var(--bg-card);border-radius:var(--radius);padding:18px;box-shadow:var(--shadow);margin-bottom:18px}.hero h1{font-family:var(--font-head);font-size:clamp(1.28rem,2.4vw,1.55rem);font-weight:600;line-height:1.22;margin:0 0 8px;letter-spacing:-0.02em;color:var(--brand-pink-deep)}main h1,main h2,main h3{color:var(--brand-pink-deep)}main h4,main h5,main h6{color:var(--text)}main h3{font-size:15px}main h4{font-size:14px}main h5{font-size:13px}main ul li::marker,main ol li::marker{color:var(--brand-pink-deep)}.shot{margin:0 0 16px;border:1px solid var(--border);border-radius:12px;overflow:hidden;background:var(--bg-card);box-shadow:0 8px 28px oklch(20.8% 0.042 265.755 / 0.08)}.shot img{display:block;width:auto;height:auto;max-width:100%;margin:0 auto}.shot figcaption{padding:8px 14px;font-size:13px;color:var(--muted);background:color-mix(in srgb,var(--neutral-100) 60%,transparent);border-top:1px solid var(--border)}.shot.shot-stack img+img{border-top:1px solid var(--border)}.callout{margin:14px 0;padding:12px 14px;background:linear-gradient(135deg,color-mix(in srgb,var(--brand-pink-deep) 14%,#fff) 0%,color-mix(in srgb,var(--brand-pink-deep) 6%,#fff) 55%,#fff 100%);border:none;border-left:4px solid var(--brand-pink-deep);border-radius:14px}.steps{padding-left:18px}code{font-family:var(--mono);font-size:.92em;background:var(--neutral-100);padding:.12em .35em;border-radius:6px;border:1px solid var(--border)}
+  return `:root{--primary-50:oklch(98.2% 0.018 155.826);--primary-100:oklch(96.2% 0.044 156.743);--primary-200:oklch(92.5% 0.084 155.995);--primary-500:oklch(72.3% 0.219 149.579);--primary-600:oklch(62.7% 0.194 149.214);--primary-700:oklch(52.7% 0.154 150.069);--neutral-50:oklch(98.4% 0.003 247.858);--neutral-100:oklch(96.8% 0.007 247.896);--neutral-200:oklch(92.9% 0.013 255.508);--neutral-500:oklch(55.4% 0.046 257.417);--neutral-600:oklch(44.6% 0.043 257.281);--neutral-700:oklch(37.2% 0.044 257.287);--neutral-900:oklch(20.8% 0.042 265.755);--brand-blue:#00a3d5;--brand-pink:#ec008c;--brand-pink-deep:#c40075;--bg:var(--neutral-50);--bg-elev:#ffffff;--bg-card:#ffffff;--text:var(--neutral-900);--muted:var(--neutral-600);--accent:var(--brand-pink-deep);--accent-soft:color-mix(in srgb,var(--brand-pink) 16%,white);--border:var(--neutral-200);--radius:14px;--shadow:0 10px 30px oklch(20.8% 0.042 265.755 / 0.08);--font:"Inter",ui-sans-serif,system-ui,sans-serif;--font-head:"Lexend",ui-sans-serif,system-ui,sans-serif;--mono:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;--callout-bg:color-mix(in srgb,var(--brand-pink-deep) 12%,var(--bg-card));--callout-text:var(--text);--callout-border:var(--brand-pink-deep)}*{box-sizing:border-box}html{scroll-behavior:smooth}main [id]{scroll-margin-top:18px}body{margin:0;font-family:var(--font);color:var(--text);background:var(--bg);line-height:1.55}main p{font-size:16px}main ul,main ol{font-size:16px}a{color:var(--accent);text-decoration:none}a:hover{color:var(--brand-pink);text-decoration:underline}.wrap{max-width:1400px;margin:0 auto;padding:28px 20px;display:grid;grid-template-columns:300px 1fr;gap:24px}@media(max-width:920px){.wrap{grid-template-columns:1fr;padding:20px 16px 56px}aside{position:static!important}}aside{position:sticky;top:18px;align-self:start;max-height:calc(100vh - 36px);overflow:hidden;display:flex;flex-direction:column;border:1px solid color-mix(in srgb,var(--brand-pink) 14%,var(--border));background:var(--bg-elev);border-radius:var(--radius);padding:14px 10px;box-shadow:var(--shadow)}.aside-scroll{overflow-y:auto;overflow-x:hidden;padding-right:4px;flex:1 1 auto;scrollbar-width:thin}.brand{padding:10px 8px 14px;border-bottom:1px solid var(--border);margin-bottom:10px}.brand h1{font-family:var(--font-head);font-size:1.0625rem;font-weight:700;line-height:1.25;margin:8px 0 2px;letter-spacing:-0.02em;color:var(--brand-pink-deep)}.brand p{margin:0;color:var(--muted);font-size:13px}.brand-logo{display:flex;align-items:center;gap:10px}.nav-acc-root{list-style:none;margin:0;padding:4px 4px 2px}.nav-acc-root>li{margin:5px 0}nav a{display:block;padding:10px 10px;border-radius:10px;color:var(--text);border:1px solid transparent}nav a:hover{text-decoration:none;background:var(--accent-soft);border-color:color-mix(in srgb,var(--border) 70%,transparent)}nav details.nav-acc{border:none;border-radius:12px;background:var(--bg-card)}nav details.nav-acc>summary{list-style:none;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 10px;border-radius:12px;cursor:pointer;color:var(--brand-pink-deep);font-weight:600;font-size:14px;user-select:none}nav details.nav-acc>summary::-webkit-details-marker{display:none}nav details.nav-acc>summary::after{content:"";width:7px;height:7px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(45deg);margin-top:-4px;flex-shrink:0;opacity:.85;transition:transform .18s ease,margin .18s ease}nav details.nav-acc[open]>summary::after{transform:rotate(225deg);margin-top:2px}nav details.nav-acc>summary:hover{background:var(--accent-soft)}nav .nav-acc-panel{padding:0 8px 8px 10px}nav .nav-acc-panel ul{list-style:none;margin:0;padding:2px 0 2px 10px;border-left:1px solid var(--border)}nav .nav-acc-panel li{margin:3px 0}nav .nav-acc-panel a{padding:8px 10px;font-size:14px;font-weight:400}.hero,.section{border:1px solid var(--border);background:var(--bg-card);border-radius:var(--radius);padding:18px;box-shadow:var(--shadow);margin-bottom:18px}.hero h1{font-family:var(--font-head);font-size:clamp(1.28rem,2.4vw,1.55rem);font-weight:600;line-height:1.22;margin:0 0 8px;letter-spacing:-0.02em;color:var(--brand-pink-deep)}main h1,main h2,main h3{color:var(--brand-pink-deep)}main h4,main h5,main h6{color:var(--text)}main h3{font-size:15px}main h4{font-size:14px}main h5{font-size:13px}.accordion{margin:14px 0;display:flex;flex-direction:column;gap:8px}.acc-item{border:1px solid var(--border);border-radius:10px;overflow:hidden;background:var(--bg-card)}.acc-item>summary{list-style:none;cursor:pointer;padding:12px 14px;font-weight:600;color:var(--brand-pink-deep);display:flex;align-items:center;justify-content:space-between;gap:10px}.acc-item>summary::-webkit-details-marker{display:none}.acc-item>summary::after{content:"";width:8px;height:8px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(45deg);margin-top:-4px;flex-shrink:0;transition:transform .18s ease,margin .18s ease}.acc-item[open]>summary::after{transform:rotate(225deg);margin-top:2px}.acc-item>summary:hover{background:var(--accent-soft)}.acc-body{padding:0 14px 14px;font-size:15px}.acc-body p:first-child{margin-top:0}.acc-body p:last-child{margin-bottom:0}main ul li::marker,main ol li::marker{color:var(--brand-pink-deep)}.shot{margin:0 0 16px;border:1px solid var(--border);border-radius:12px;overflow:hidden;background:var(--bg-card);box-shadow:0 8px 28px oklch(20.8% 0.042 265.755 / 0.08)}.shot img{display:block;width:auto;height:auto;max-width:100%;margin:0 auto}.shot figcaption{padding:8px 14px;font-size:13px;color:var(--muted);background:color-mix(in srgb,var(--neutral-100) 60%,transparent);border-top:1px solid var(--border)}.shot.shot-stack img+img{border-top:1px solid var(--border)}.callout{margin:14px 0;padding:12px 14px;background:var(--callout-bg);color:var(--callout-text);border:none;border-left:4px solid var(--callout-border);border-radius:14px}.steps{padding-left:18px}code{font-family:var(--mono);font-size:.92em;background:var(--neutral-100);padding:.12em .35em;border-radius:6px;border:1px solid var(--border)}
 .doc-searchbar{margin-top:12px;display:flex;flex-direction:column;gap:0;padding:0;border:1px solid #e2e4e9;background:#fff;border-radius:14px;box-shadow:0 2px 12px rgba(0,0,0,0.07);overflow:hidden}
 .doc-searchbar input[type=search]{width:100%;height:42px;padding:0 14px;border:none;border-bottom:1px solid #e2e4e9;background:#fff;color:#1a1a2e;outline:none;font-size:14px;box-sizing:border-box;-webkit-appearance:none}
 .doc-searchbar input[type=search]::placeholder{color:#aaa;font-size:14px}
@@ -1880,7 +1910,9 @@ function parseDesignBlock(cssText) {
     fsH2: grab('fs-h2'),
     fsH3: grab('fs-h3'),
     fsH4: grab('fs-h4'),
-    fsH5: grab('fs-h5')
+    fsH5: grab('fs-h5'),
+    calloutBg: grab('callout-bg'),
+    calloutText: grab('callout-text')
   };
   Object.keys(vars).forEach(k => { if (vars[k] === null) delete vars[k]; });
   return { vars, fontPair: m[1] || 'modern' };
@@ -1892,6 +1924,25 @@ function withPx(val, fallback) {
   return /px|em|rem|%/.test(v) ? v : v + 'px';
 }
 
+// Egyszerű hex szín keverés (a kiemelt doboz alapértelmezett háttérszínének kiszámolásához,
+// hogy sötét témánál is automatikusan olvasható legyen — nem CSS color-mix, mert azt itt
+// JS-ben, a form kitöltésekor kell előre kiszámolni).
+function hexToRgb(hex) {
+  hex = (hex || '#000000').replace('#', '');
+  if (hex.length === 3) hex = hex.split('').map(c => c + c).join('');
+  const num = parseInt(hex, 16) || 0;
+  return { r: (num >> 16) & 255, g: (num >> 8) & 255, b: num & 255 };
+}
+function mixHex(hexA, hexB, pctA) {
+  const a = hexToRgb(hexA), b = hexToRgb(hexB);
+  const t = pctA / 100;
+  const clamp = v => Math.max(0, Math.min(255, Math.round(v)));
+  const r = clamp(a.r * t + b.r * (1 - t));
+  const g = clamp(a.g * t + b.g * (1 - t));
+  const bl = clamp(a.b * t + b.b * (1 - t));
+  return '#' + [r, g, bl].map(v => v.toString(16).padStart(2, '0')).join('');
+}
+
 function buildDesignBlock(vars, fontPairKey) {
   const fp = FONT_PAIRS[fontPairKey] || FONT_PAIRS.modern;
   const radius = withPx(vars.radius, '14');
@@ -1901,6 +1952,8 @@ function buildDesignBlock(vars, fontPairKey) {
   const fsH3 = withPx(vars.fsH3, '15');
   const fsH4 = withPx(vars.fsH4, '14');
   const fsH5 = withPx(vars.fsH5, '13');
+  const calloutBg = vars.calloutBg || mixHex(vars.accent, vars.card, 12);
+  const calloutText = vars.calloutText || vars.text;
   return `/* @kezikonyv-design-start font-pair=${fontPairKey} */
 :root{
   --bg:${vars.bg};
@@ -1911,7 +1964,7 @@ function buildDesignBlock(vars, fontPairKey) {
   --accent:${vars.accent};
   --brand-pink-deep:${vars.accent};
   --brand-pink:color-mix(in srgb, ${vars.accent} 75%, white);
-  --accent-soft:color-mix(in srgb, ${vars.accent} 12%, white);
+  --accent-soft:color-mix(in srgb, ${vars.accent} 12%, ${vars.card});
   --border:${vars.border};
   --radius:${radius};
   --font:${fp.font};
@@ -1922,6 +1975,9 @@ function buildDesignBlock(vars, fontPairKey) {
   --fs-h3:${fsH3};
   --fs-h4:${fsH4};
   --fs-h5:${fsH5};
+  --callout-bg:${calloutBg};
+  --callout-text:${calloutText};
+  --callout-border:${vars.accent};
 }
 main p{font-size:var(--fs-p)}
 .hero h1,main h1{font-size:var(--fs-h1)}
@@ -1981,6 +2037,10 @@ function loadDesignForm() {
   document.getElementById('df-fs-h3').value = parseInt(vars.fsH3, 10) || 15;
   document.getElementById('df-fs-h4').value = parseInt(vars.fsH4, 10) || 14;
   document.getElementById('df-fs-h5').value = parseInt(vars.fsH5, 10) || 13;
+  // Ha a kiemelt doboz színe még nincs kifejezetten beállítva, a jelenlegi kiemelő szín +
+  // kártya háttér keverékét mutatjuk — így sötét témánál is eleve olvasható értéket lát a form.
+  setColorField('df-callout-bg', vars.calloutBg || mixHex(vars.accent, vars.card, 12));
+  setColorField('df-callout-text', vars.calloutText || vars.text);
 }
 
 function onHexChange(field, val) {
@@ -1992,7 +2052,7 @@ function onHexChange(field, val) {
 
 function onDesignFieldChange() {
   // A színválasztó (natív color picker) és a mellette lévő hex mező mindig szinkronban marad.
-  ['accent','bg','card','text','muted','border'].forEach(k => {
+  ['accent','bg','card','text','muted','border','callout-bg','callout-text'].forEach(k => {
     document.getElementById('df-' + k + '-hex').value = document.getElementById('df-' + k).value;
   });
   document.getElementById('df-radius-val').textContent = document.getElementById('df-radius').value + 'px';
@@ -2016,7 +2076,9 @@ function applyDesignForm(doSaveAndToast) {
     fsH2: document.getElementById('df-fs-h2').value,
     fsH3: document.getElementById('df-fs-h3').value,
     fsH4: document.getElementById('df-fs-h4').value,
-    fsH5: document.getElementById('df-fs-h5').value
+    fsH5: document.getElementById('df-fs-h5').value,
+    calloutBg: document.getElementById('df-callout-bg').value,
+    calloutText: document.getElementById('df-callout-text').value
   };
   const fontPair = document.getElementById('df-fontpair').value;
   const base = stripDesignBlock(proj.css || getDefaultCSS());
@@ -3642,6 +3704,31 @@ function fmtCodeBlock() {
   ta.selectionEnd = start + 4 + sel.length;
   ta.focus();
   ta.dispatchEvent(new Event('input'));
+}
+
+// Lenyíló elemek (accordion / harmonika) beszúrása egy induló sablonnal.
+// Szintaxis: <!-- accordion --> ... +++ Cím ... <!-- /accordion --> — lásd mdToHtml.
+function fmtAccordion() {
+  const ta = getEditor();
+  const pos = ta.selectionStart;
+  const before = ta.value.slice(0, pos);
+  const after = ta.value.slice(ta.selectionEnd);
+  const insertAt = before.endsWith('\n') || before === '' ? before : before + '\n';
+  const block =
+`<!-- accordion -->
++++ Első kérdés vagy cím
+Ide jön az első elem szövege.
+
++++ Második kérdés vagy cím
+Ide jön a második elem szövege.
+<!-- /accordion -->
+`;
+  ta.value = insertAt + block + after;
+  ta.selectionStart = ta.selectionEnd = insertAt.length + block.length;
+  ta.focus();
+  ta.dispatchEvent(new Event('input'));
+  updateLineNums();
+  toast('✓ Harmonika beszúrva — a "+++ " sorok a lenyíló elemek címei');
 }
 
 // Keyboard shortcuts
