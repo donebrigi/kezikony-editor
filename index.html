@@ -326,6 +326,46 @@ body { font-family: var(--sans); background: var(--bg); color: var(--text); disp
 .css-actions { display:flex; gap:8px; margin-top:8px; align-items:center; }
 .css-actions .hint { font-size:11px; color:var(--text3); flex:1; }
 
+/* CSS tab — egyszerű/kód váltó */
+.css-mode-toggle { display:flex; gap:6px; margin-bottom:14px; }
+.css-mode-btn {
+  padding:5px 12px; border-radius:6px; font-size:12px; cursor:pointer;
+  border:1px solid var(--border2); background:var(--bg3); color:var(--text2); transition:all .1s;
+}
+.css-mode-btn:hover { color:var(--text); }
+.css-mode-btn.active { background:var(--accent-soft); border-color:var(--accent); color:var(--accent2); }
+
+/* Design (egyszerű) form */
+.design-field { margin-bottom:16px; }
+.design-field label {
+  display:block; font-size:12px; color:var(--text2); margin-bottom:6px; font-weight:500;
+}
+.design-field label .hint { font-weight:400; color:var(--text3); }
+.design-field .color-row { display:flex; align-items:center; gap:8px; }
+.design-field input[type=color] {
+  width:38px; height:32px; padding:0; border:1px solid var(--border2); border-radius:6px;
+  background:var(--bg); cursor:pointer; flex-shrink:0;
+}
+.design-field .hex-input {
+  flex:1; padding:6px 10px; background:var(--bg); border:1px solid var(--border2);
+  color:var(--text); border-radius:var(--radius); font-size:12px; font-family:var(--mono);
+  box-sizing:border-box; text-transform:uppercase;
+}
+.design-field .hex-input:focus { outline:2px solid var(--accent); border-color:transparent; }
+.design-field input[type=range] { accent-color:var(--accent); }
+.design-field select {
+  width:100%; padding:7px 10px; background:var(--bg); border:1px solid var(--border2);
+  color:var(--text); border-radius:var(--radius); font-size:13px; box-sizing:border-box; cursor:pointer;
+}
+.design-field select:focus { outline:2px solid var(--accent); border-color:transparent; }
+.fontsize-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.fontsize-item label { font-size:11px; color:var(--text3); margin-bottom:4px; font-weight:400; }
+.fontsize-item input[type=number] {
+  width:100%; padding:6px 10px; background:var(--bg); border:1px solid var(--border2);
+  color:var(--text); border-radius:var(--radius); font-size:13px; box-sizing:border-box; font-family:var(--mono);
+}
+.fontsize-item input[type=number]:focus { outline:2px solid var(--accent); border-color:transparent; }
+
 /* Másolás tab */
 #copy-source-select {
   width:100%; padding:7px 10px; background:var(--bg); border:1px solid var(--border2);
@@ -571,6 +611,7 @@ body { font-family: var(--sans); background: var(--bg); color: var(--text); disp
       </div>
       <div class="spacer"></div>
       <span style="font-size:11px;color:var(--text3)" id="preview-info"></span>
+      <button class="mode-btn" onclick="renderPreview()" title="Csak az előnézet frissítése (az oldal nem töltődik újra)">🔄 Frissítés</button>
     </div>
     <iframe id="preview-frame"></iframe>
   </div>
@@ -734,13 +775,116 @@ body { font-family: var(--sans); background: var(--bg); color: var(--text); disp
     <!-- TAB: CSS -->
     <div class="tab-panel" id="tab-css">
       <div style="font-size:12px;color:var(--text3);margin-bottom:8px">
-        Aktív projekt CSS-e: <strong id="css-proj-name" style="color:var(--accent2)"></strong>
+        Aktív projekt megjelenése: <strong id="css-proj-name" style="color:var(--accent2)"></strong>
       </div>
-      <textarea id="proj-css-editor" spellcheck="false" placeholder="/* Projekt CSS... */"></textarea>
-      <div class="css-actions">
-        <span class="hint">Gépelés közben az előnézet élőben frissül.</span>
-        <button class="btn" onclick="resetToDefaultCss()" style="font-size:12px">↺ Alapértelmezett</button>
-        <button class="btn primary" onclick="saveCss()" style="font-size:12px">✓ Alkalmaz</button>
+
+      <div class="css-mode-toggle">
+        <button class="css-mode-btn active" id="css-mode-simple-btn" type="button" onclick="setCssMode('simple')">🎨 Egyszerű</button>
+        <button class="css-mode-btn" id="css-mode-code-btn" type="button" onclick="setCssMode('code')">&lt;/&gt; Kód (haladó)</button>
+      </div>
+
+      <!-- Egyszerű, magyar nyelvű beállító felület -->
+      <div id="css-simple-panel">
+        <div class="design-field">
+          <label>Kiemelő szín <span class="hint">(linkek, címek, gombok)</span></label>
+          <div class="color-row">
+            <input type="color" id="df-accent" oninput="onDesignFieldChange()"/>
+            <input type="text" class="hex-input" id="df-accent-hex" oninput="onHexChange('accent', this.value)"/>
+          </div>
+        </div>
+        <div class="design-field">
+          <label>Oldal háttérszíne</label>
+          <div class="color-row">
+            <input type="color" id="df-bg" oninput="onDesignFieldChange()"/>
+            <input type="text" class="hex-input" id="df-bg-hex" oninput="onHexChange('bg', this.value)"/>
+          </div>
+        </div>
+        <div class="design-field">
+          <label>Kártya / panel háttere</label>
+          <div class="color-row">
+            <input type="color" id="df-card" oninput="onDesignFieldChange()"/>
+            <input type="text" class="hex-input" id="df-card-hex" oninput="onHexChange('card', this.value)"/>
+          </div>
+        </div>
+        <div class="design-field">
+          <label>Szöveg színe</label>
+          <div class="color-row">
+            <input type="color" id="df-text" oninput="onDesignFieldChange()"/>
+            <input type="text" class="hex-input" id="df-text-hex" oninput="onHexChange('text', this.value)"/>
+          </div>
+        </div>
+        <div class="design-field">
+          <label>Másodlagos szöveg színe <span class="hint">(leírások, meta infó)</span></label>
+          <div class="color-row">
+            <input type="color" id="df-muted" oninput="onDesignFieldChange()"/>
+            <input type="text" class="hex-input" id="df-muted-hex" oninput="onHexChange('muted', this.value)"/>
+          </div>
+        </div>
+        <div class="design-field">
+          <label>Szegély színe</label>
+          <div class="color-row">
+            <input type="color" id="df-border" oninput="onDesignFieldChange()"/>
+            <input type="text" class="hex-input" id="df-border-hex" oninput="onHexChange('border', this.value)"/>
+          </div>
+        </div>
+        <div class="design-field">
+          <label>Sarok lekerekítés <span class="hint" id="df-radius-val">14px</span></label>
+          <input type="range" id="df-radius" min="0" max="28" step="1" oninput="onDesignFieldChange()" style="width:100%"/>
+        </div>
+        <div class="design-field">
+          <label>Betűtípus stílus</label>
+          <select id="df-fontpair" onchange="onDesignFieldChange()">
+            <option value="modern">Modern (Inter + Lexend)</option>
+            <option value="friendly">Barátságos (Nunito + Poppins)</option>
+            <option value="classic">Klasszikus (Georgia)</option>
+            <option value="clean">Letisztult (rendszer betűtípus)</option>
+            <option value="mono">Gépelt (monospace)</option>
+          </select>
+        </div>
+        <div class="design-field">
+          <label>Betűméretek <span class="hint">(px)</span></label>
+          <div class="fontsize-grid">
+            <div class="fontsize-item">
+              <label for="df-fs-p">Bekezdés</label>
+              <input type="number" id="df-fs-p" min="10" max="28" step="1" oninput="onDesignFieldChange()"/>
+            </div>
+            <div class="fontsize-item">
+              <label for="df-fs-h1">Címsor 1 (H1)</label>
+              <input type="number" id="df-fs-h1" min="14" max="48" step="1" oninput="onDesignFieldChange()"/>
+            </div>
+            <div class="fontsize-item">
+              <label for="df-fs-h2">Címsor 2 (H2)</label>
+              <input type="number" id="df-fs-h2" min="12" max="40" step="1" oninput="onDesignFieldChange()"/>
+            </div>
+            <div class="fontsize-item">
+              <label for="df-fs-h3">Címsor 3 (H3)</label>
+              <input type="number" id="df-fs-h3" min="12" max="32" step="1" oninput="onDesignFieldChange()"/>
+            </div>
+            <div class="fontsize-item">
+              <label for="df-fs-h4">Címsor 4 (H4)</label>
+              <input type="number" id="df-fs-h4" min="10" max="28" step="1" oninput="onDesignFieldChange()"/>
+            </div>
+            <div class="fontsize-item">
+              <label for="df-fs-h5">Címsor 5 (H5)</label>
+              <input type="number" id="df-fs-h5" min="10" max="24" step="1" oninput="onDesignFieldChange()"/>
+            </div>
+          </div>
+        </div>
+        <div class="css-actions">
+          <span class="hint">A módosítások élőben frissítik az előnézetet.</span>
+          <button class="btn" onclick="resetToDefaultCss()" style="font-size:12px">↺ Alapértelmezett</button>
+          <button class="btn primary" onclick="applyDesignForm(true)" style="font-size:12px">✓ Mentés</button>
+        </div>
+      </div>
+
+      <!-- Haladó, nyers CSS kód szerkesztő -->
+      <div id="css-code-panel" style="display:none">
+        <textarea id="proj-css-editor" spellcheck="false" placeholder="/* Projekt CSS... */"></textarea>
+        <div class="css-actions">
+          <span class="hint">Gépelés közben az előnézet élőben frissül.</span>
+          <button class="btn" onclick="resetToDefaultCss()" style="font-size:12px">↺ Alapértelmezett</button>
+          <button class="btn primary" onclick="saveCss()" style="font-size:12px">✓ Alkalmaz</button>
+        </div>
       </div>
     </div>
 
@@ -956,7 +1100,17 @@ async function loadFromInput(input) {
     }
   }
 
-  project.fileOrder = Object.keys(project.files).sort();
+  // Ha a config.json tartalmaz mentett sorrendet (lásd fejezet drag&drop átrendezés),
+  // azt használjuk — csak ábécésorrendbe rendezünk, ha nincs ilyen mentve.
+  const savedOrder = Array.isArray(project.config.fileOrder) ? project.config.fileOrder : null;
+  if (savedOrder) {
+    const known = new Set(Object.keys(project.files));
+    const ordered = savedOrder.filter(fn => known.has(fn));
+    const missing = Object.keys(project.files).filter(fn => !ordered.includes(fn)).sort();
+    project.fileOrder = ordered.concat(missing);
+  } else {
+    project.fileOrder = Object.keys(project.files).sort();
+  }
   if (!project.css) project.css = getDefaultCSS();
 
   if (project.fileOrder.length === 0) {
@@ -1053,10 +1207,14 @@ document.getElementById('editor').addEventListener('input', () => {
   const text = document.getElementById('editor').value;
   f.raw = text;
   const { meta, content } = parseFrontmatter(text);
-  f.meta = meta; f.content = content; f.dirty = true;
-  renderSidebar();
+  f.meta = meta; f.content = content;
+  const wasDirty = f.dirty;
+  f.dirty = true;
   setStatus('Nem mentett változás', 'unsaved');
-  updateLineNums();
+  // A teljes sidebar-lista csak akkor kell újraépüljön, amikor a "nem mentett" (●) jelzés
+  // ténylegesen megjelenik — nem minden egyes billentyűleütésnél.
+  if (!wasDirty) renderSidebar();
+  scheduleLineNumsUpdate();
   schedulePreview();
 });
 
@@ -1076,6 +1234,18 @@ function updateLineNums() {
   const lines = ta.value.split('\n').length;
   const ln = document.getElementById('line-nums');
   ln.innerHTML = Array.from({length: lines}, (_,i) => `<div>${i+1}</div>`).join('');
+}
+
+// Gépelés közben az overlay frissítését a következő animációs keretre toljuk,
+// hogy a beírt karakter azonnal megjelenjen és ne a sorszám-lista újraépítése
+// blokkolja a billentyűleütés visszajelzését.
+let _lineNumsRAF = null;
+function scheduleLineNumsUpdate() {
+  if (_lineNumsRAF) return;
+  _lineNumsRAF = requestAnimationFrame(() => {
+    _lineNumsRAF = null;
+    updateLineNums();
+  });
 }
 
 document.getElementById('editor').addEventListener('scroll', () => {
@@ -1138,19 +1308,63 @@ editorWrap.addEventListener('drop', async e => {
   }
 });
 
+// ── Kép tömörítés beillesztéskor (WebP, méret + minőség korlát) ──────────────
+// Cél: a szerkesztőben és az IndexedDB-ben ne halmozódjon fel nyers, tömörítetlen
+// base64 kép — ez a fő oka a sok kép után jelentkező szerkesztési lassulásnak.
+const PASTE_IMG_MAX_WIDTH = 1440;
+const PASTE_IMG_QUALITY = 0.85;
+
+async function compressImageForInsert(file) {
+  // Csak raszteres képeket tömörítünk; SVG-t és GIF-et (animáció miatt) érintetlenül hagyjuk.
+  if (file.type === 'image/svg+xml' || file.type === 'image/gif') {
+    return await new Promise((res, rej) => {
+      const reader = new FileReader();
+      reader.onload = () => res(reader.result);
+      reader.onerror = rej;
+      reader.readAsDataURL(file);
+    });
+  }
+
+  try {
+    const bitmap = await createImageBitmap(file);
+    let w = bitmap.width, h = bitmap.height;
+    if (w > PASTE_IMG_MAX_WIDTH) {
+      h = Math.round(h * PASTE_IMG_MAX_WIDTH / w);
+      w = PASTE_IMG_MAX_WIDTH;
+    }
+    const canvas = document.createElement('canvas');
+    canvas.width = w; canvas.height = h;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(bitmap, 0, 0, w, h);
+    const webpUrl = canvas.toDataURL('image/webp', PASTE_IMG_QUALITY);
+
+    // Ha a böngésző nem támogatja a WebP kódolást, toDataURL csendben PNG-t ad vissza —
+    // ilyenkor is jó, mert legalább a méretkorlátozás (resize) érvényesült.
+    // Csak akkor használjuk, ha ténylegesen kisebb, mint az eredeti fájl.
+    if (webpUrl.length < file.size * 1.37) { // base64 ≈ 1.37x a bináris méretnek
+      return webpUrl;
+    }
+  } catch(e) {
+    console.warn('Kép tömörítés sikertelen, eredeti fájl beillesztése:', e);
+  }
+
+  // Fallback: eredeti fájl base64-ként, ha a tömörítés nem sikerült vagy nem hozott javulást
+  return await new Promise((res, rej) => {
+    const reader = new FileReader();
+    reader.onload = () => res(reader.result);
+    reader.onerror = rej;
+    reader.readAsDataURL(file);
+  });
+}
+
 // ── Közös kép beillesztő ─────────────────────────────────────────────────────
 async function insertImageFromFile(file) {
   if (!state.currentFile) {
     toast('Előbb nyiss meg egy fejezetet!', 'err'); return;
   }
 
-  // Kép → base64
-  const base64 = await new Promise((res, rej) => {
-    const reader = new FileReader();
-    reader.onload = () => res(reader.result);
-    reader.onerror = rej;
-    reader.readAsDataURL(file);
-  });
+  // Kép → tömörített base64 (WebP, max 1440px, q85)
+  const base64 = await compressImageForInsert(file);
 
   // Alt szöveg: fájlnév kiterjesztés nélkül, vagy "screenshot"
   const altText = file.name ? file.name.replace(/\.[^.]+$/, '') : 'screenshot';
@@ -1318,13 +1532,21 @@ function buildPreviewHtml(proj, mainContent, full) {
       </div>` : '';
   const searchScript = full ? ['<scr','ipt>'].join('') + SEARCH_JS + ['</',  'script>'].join('') : '';
 
+  // A betűtípus-link a projekt design-blokkjában kiválasztott betűtípus-párhoz igazodik
+  // (lásd az Egyszerű megjelenés-szerkesztőt); rendszer-betűtípusnál nincs szükség Google Fonts-ra.
+  const designInfo = parseDesignBlock(proj.css || '');
+  const fontPairForLink = FONT_PAIRS[(designInfo && designInfo.fontPair) || 'modern'] || FONT_PAIRS.modern;
+  const fontLinkTag = fontPairForLink.google
+    ? `<link href="https://fonts.googleapis.com/css2?${fontPairForLink.google}&display=swap" rel="stylesheet"/>`
+    : '';
+
   return `<!DOCTYPE html>
 <html lang="${proj.config.lang||'hu'}">
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>${title}</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Lexend:wght@500;600;700&display=swap" rel="stylesheet"/>
+${fontLinkTag}
 <style>${css}</style>
 </head>
 <body>
@@ -1454,9 +1676,10 @@ function mdToHtml(md) {
     }
 
     if (line.startsWith('> ')) { closeLists(); html.push(`<div class="callout"><p>${inline(line.slice(2))}</p></div>`); i++; continue; }
-    if (s.startsWith('# ')) { closeLists(); html.push(`<h2>${inline(s.slice(2))}</h2>`); i++; continue; }
-    if (s.startsWith('## ')) { closeLists(); const t=inline(s.slice(3)); html.push(`<h3 id="${slug(t)}" style="margin:18px 0 10px;font-size:15px;color:var(--brand-pink-deep)">${t}</h3>`); i++; continue; }
-    if (s.startsWith('### ')) { closeLists(); const t=inline(s.slice(4)); html.push(`<h4 id="${slug(t)}" style="margin:14px 0 8px;font-size:14px">${t}</h4>`); i++; continue; }
+    if (s.startsWith('# ')) { closeLists(); const t=inline(s.slice(2)); html.push(`<h2 id="${slug(t)}">${t}</h2>`); i++; continue; }
+    if (s.startsWith('## ')) { closeLists(); const t=inline(s.slice(3)); html.push(`<h3 id="${slug(t)}" style="margin:18px 0 10px;color:var(--brand-pink-deep)">${t}</h3>`); i++; continue; }
+    if (s.startsWith('### ')) { closeLists(); const t=inline(s.slice(4)); html.push(`<h4 id="${slug(t)}" style="margin:14px 0 8px">${t}</h4>`); i++; continue; }
+    if (s.startsWith('#### ')) { closeLists(); const t=inline(s.slice(5)); html.push(`<h5 id="${slug(t)}" style="margin:12px 0 6px">${t}</h5>`); i++; continue; }
 
     const ol = s.match(/^(\d+)\. (.+)/);
     if (ol) { if(inUl)closeLists(); if(!inOl){html.push('<ol class="steps">');inOl=true;} html.push(`<li>${inline(ol[2])}</li>`); i++; continue; }
@@ -1602,7 +1825,7 @@ mark.doc-hit.doc-hit-active{background:color-mix(in srgb,var(--brand-pink,#ec008
 }
 
 function getDefaultCSS() {
-  return `:root{--primary-50:oklch(98.2% 0.018 155.826);--primary-100:oklch(96.2% 0.044 156.743);--primary-200:oklch(92.5% 0.084 155.995);--primary-500:oklch(72.3% 0.219 149.579);--primary-600:oklch(62.7% 0.194 149.214);--primary-700:oklch(52.7% 0.154 150.069);--neutral-50:oklch(98.4% 0.003 247.858);--neutral-100:oklch(96.8% 0.007 247.896);--neutral-200:oklch(92.9% 0.013 255.508);--neutral-500:oklch(55.4% 0.046 257.417);--neutral-600:oklch(44.6% 0.043 257.281);--neutral-700:oklch(37.2% 0.044 257.287);--neutral-900:oklch(20.8% 0.042 265.755);--brand-blue:#00a3d5;--brand-pink:#ec008c;--brand-pink-deep:#c40075;--bg:var(--neutral-50);--bg-elev:#ffffff;--bg-card:#ffffff;--text:var(--neutral-900);--muted:var(--neutral-600);--accent:var(--brand-pink-deep);--accent-soft:color-mix(in srgb,var(--brand-pink) 16%,white);--border:var(--neutral-200);--radius:14px;--shadow:0 10px 30px oklch(20.8% 0.042 265.755 / 0.08);--font:"Inter",ui-sans-serif,system-ui,sans-serif;--font-head:"Lexend",ui-sans-serif,system-ui,sans-serif;--mono:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace}*{box-sizing:border-box}html{scroll-behavior:smooth}main [id]{scroll-margin-top:18px}body{margin:0;font-family:var(--font);color:var(--text);background:var(--bg);line-height:1.55}main p{font-size:16px}main ul,main ol{font-size:16px}a{color:var(--accent);text-decoration:none}a:hover{color:var(--brand-pink);text-decoration:underline}.wrap{max-width:1400px;margin:0 auto;padding:28px 20px;display:grid;grid-template-columns:300px 1fr;gap:24px}@media(max-width:920px){.wrap{grid-template-columns:1fr;padding:20px 16px 56px}aside{position:static!important}}aside{position:sticky;top:18px;align-self:start;max-height:calc(100vh - 36px);overflow:hidden;display:flex;flex-direction:column;border:1px solid color-mix(in srgb,var(--brand-pink) 14%,var(--border));background:var(--bg-elev);border-radius:var(--radius);padding:14px 10px;box-shadow:var(--shadow)}.aside-scroll{overflow-y:auto;overflow-x:hidden;padding-right:4px;flex:1 1 auto;scrollbar-width:thin}.brand{padding:10px 8px 14px;border-bottom:1px solid var(--border);margin-bottom:10px}.brand h1{font-family:var(--font-head);font-size:1.0625rem;font-weight:700;line-height:1.25;margin:8px 0 2px;letter-spacing:-0.02em;color:var(--brand-pink-deep)}.brand p{margin:0;color:var(--muted);font-size:13px}.brand-logo{display:flex;align-items:center;gap:10px}.nav-acc-root{list-style:none;margin:0;padding:4px 4px 2px}.nav-acc-root>li{margin:5px 0}nav a{display:block;padding:10px 10px;border-radius:10px;color:var(--text);border:1px solid transparent}nav a:hover{text-decoration:none;background:var(--accent-soft);border-color:color-mix(in srgb,var(--border) 70%,transparent)}nav details.nav-acc{border:none;border-radius:12px;background:var(--bg-card)}nav details.nav-acc>summary{list-style:none;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 10px;border-radius:12px;cursor:pointer;color:var(--brand-pink-deep);font-weight:600;font-size:14px;user-select:none}nav details.nav-acc>summary::-webkit-details-marker{display:none}nav details.nav-acc>summary::after{content:"";width:7px;height:7px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(45deg);margin-top:-4px;flex-shrink:0;opacity:.85;transition:transform .18s ease,margin .18s ease}nav details.nav-acc[open]>summary::after{transform:rotate(225deg);margin-top:2px}nav details.nav-acc>summary:hover{background:var(--accent-soft)}nav .nav-acc-panel{padding:0 8px 8px 10px}nav .nav-acc-panel ul{list-style:none;margin:0;padding:2px 0 2px 10px;border-left:1px solid var(--border)}nav .nav-acc-panel li{margin:3px 0}nav .nav-acc-panel a{padding:8px 10px;font-size:14px;font-weight:400}.hero,.section{border:1px solid var(--border);background:var(--bg-card);border-radius:var(--radius);padding:18px;box-shadow:var(--shadow);margin-bottom:18px}.hero h1{font-family:var(--font-head);font-size:clamp(1.28rem,2.4vw,1.55rem);font-weight:600;line-height:1.22;margin:0 0 8px;letter-spacing:-0.02em;color:var(--brand-pink-deep)}main h1,main h2,main h3{color:var(--brand-pink-deep)}main h4,main h6{color:var(--text)}main ul li::marker,main ol li::marker{color:var(--brand-pink-deep)}.shot{margin:0 0 16px;border:1px solid var(--border);border-radius:12px;overflow:hidden;background:var(--bg-card);box-shadow:0 8px 28px oklch(20.8% 0.042 265.755 / 0.08)}.shot img{display:block;width:auto;height:auto;max-width:100%;margin:0 auto}.shot figcaption{padding:8px 14px;font-size:13px;color:var(--muted);background:color-mix(in srgb,var(--neutral-100) 60%,transparent);border-top:1px solid var(--border)}.shot.shot-stack img+img{border-top:1px solid var(--border)}.callout{margin:14px 0;padding:12px 14px;background:linear-gradient(135deg,color-mix(in srgb,var(--brand-pink-deep) 14%,#fff) 0%,color-mix(in srgb,var(--brand-pink-deep) 6%,#fff) 55%,#fff 100%);border:none;border-left:4px solid var(--brand-pink-deep);border-radius:14px}.steps{padding-left:18px}code{font-family:var(--mono);font-size:.92em;background:var(--neutral-100);padding:.12em .35em;border-radius:6px;border:1px solid var(--border)}
+  return `:root{--primary-50:oklch(98.2% 0.018 155.826);--primary-100:oklch(96.2% 0.044 156.743);--primary-200:oklch(92.5% 0.084 155.995);--primary-500:oklch(72.3% 0.219 149.579);--primary-600:oklch(62.7% 0.194 149.214);--primary-700:oklch(52.7% 0.154 150.069);--neutral-50:oklch(98.4% 0.003 247.858);--neutral-100:oklch(96.8% 0.007 247.896);--neutral-200:oklch(92.9% 0.013 255.508);--neutral-500:oklch(55.4% 0.046 257.417);--neutral-600:oklch(44.6% 0.043 257.281);--neutral-700:oklch(37.2% 0.044 257.287);--neutral-900:oklch(20.8% 0.042 265.755);--brand-blue:#00a3d5;--brand-pink:#ec008c;--brand-pink-deep:#c40075;--bg:var(--neutral-50);--bg-elev:#ffffff;--bg-card:#ffffff;--text:var(--neutral-900);--muted:var(--neutral-600);--accent:var(--brand-pink-deep);--accent-soft:color-mix(in srgb,var(--brand-pink) 16%,white);--border:var(--neutral-200);--radius:14px;--shadow:0 10px 30px oklch(20.8% 0.042 265.755 / 0.08);--font:"Inter",ui-sans-serif,system-ui,sans-serif;--font-head:"Lexend",ui-sans-serif,system-ui,sans-serif;--mono:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace}*{box-sizing:border-box}html{scroll-behavior:smooth}main [id]{scroll-margin-top:18px}body{margin:0;font-family:var(--font);color:var(--text);background:var(--bg);line-height:1.55}main p{font-size:16px}main ul,main ol{font-size:16px}a{color:var(--accent);text-decoration:none}a:hover{color:var(--brand-pink);text-decoration:underline}.wrap{max-width:1400px;margin:0 auto;padding:28px 20px;display:grid;grid-template-columns:300px 1fr;gap:24px}@media(max-width:920px){.wrap{grid-template-columns:1fr;padding:20px 16px 56px}aside{position:static!important}}aside{position:sticky;top:18px;align-self:start;max-height:calc(100vh - 36px);overflow:hidden;display:flex;flex-direction:column;border:1px solid color-mix(in srgb,var(--brand-pink) 14%,var(--border));background:var(--bg-elev);border-radius:var(--radius);padding:14px 10px;box-shadow:var(--shadow)}.aside-scroll{overflow-y:auto;overflow-x:hidden;padding-right:4px;flex:1 1 auto;scrollbar-width:thin}.brand{padding:10px 8px 14px;border-bottom:1px solid var(--border);margin-bottom:10px}.brand h1{font-family:var(--font-head);font-size:1.0625rem;font-weight:700;line-height:1.25;margin:8px 0 2px;letter-spacing:-0.02em;color:var(--brand-pink-deep)}.brand p{margin:0;color:var(--muted);font-size:13px}.brand-logo{display:flex;align-items:center;gap:10px}.nav-acc-root{list-style:none;margin:0;padding:4px 4px 2px}.nav-acc-root>li{margin:5px 0}nav a{display:block;padding:10px 10px;border-radius:10px;color:var(--text);border:1px solid transparent}nav a:hover{text-decoration:none;background:var(--accent-soft);border-color:color-mix(in srgb,var(--border) 70%,transparent)}nav details.nav-acc{border:none;border-radius:12px;background:var(--bg-card)}nav details.nav-acc>summary{list-style:none;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 10px;border-radius:12px;cursor:pointer;color:var(--brand-pink-deep);font-weight:600;font-size:14px;user-select:none}nav details.nav-acc>summary::-webkit-details-marker{display:none}nav details.nav-acc>summary::after{content:"";width:7px;height:7px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(45deg);margin-top:-4px;flex-shrink:0;opacity:.85;transition:transform .18s ease,margin .18s ease}nav details.nav-acc[open]>summary::after{transform:rotate(225deg);margin-top:2px}nav details.nav-acc>summary:hover{background:var(--accent-soft)}nav .nav-acc-panel{padding:0 8px 8px 10px}nav .nav-acc-panel ul{list-style:none;margin:0;padding:2px 0 2px 10px;border-left:1px solid var(--border)}nav .nav-acc-panel li{margin:3px 0}nav .nav-acc-panel a{padding:8px 10px;font-size:14px;font-weight:400}.hero,.section{border:1px solid var(--border);background:var(--bg-card);border-radius:var(--radius);padding:18px;box-shadow:var(--shadow);margin-bottom:18px}.hero h1{font-family:var(--font-head);font-size:clamp(1.28rem,2.4vw,1.55rem);font-weight:600;line-height:1.22;margin:0 0 8px;letter-spacing:-0.02em;color:var(--brand-pink-deep)}main h1,main h2,main h3{color:var(--brand-pink-deep)}main h4,main h5,main h6{color:var(--text)}main h3{font-size:15px}main h4{font-size:14px}main h5{font-size:13px}main ul li::marker,main ol li::marker{color:var(--brand-pink-deep)}.shot{margin:0 0 16px;border:1px solid var(--border);border-radius:12px;overflow:hidden;background:var(--bg-card);box-shadow:0 8px 28px oklch(20.8% 0.042 265.755 / 0.08)}.shot img{display:block;width:auto;height:auto;max-width:100%;margin:0 auto}.shot figcaption{padding:8px 14px;font-size:13px;color:var(--muted);background:color-mix(in srgb,var(--neutral-100) 60%,transparent);border-top:1px solid var(--border)}.shot.shot-stack img+img{border-top:1px solid var(--border)}.callout{margin:14px 0;padding:12px 14px;background:linear-gradient(135deg,color-mix(in srgb,var(--brand-pink-deep) 14%,#fff) 0%,color-mix(in srgb,var(--brand-pink-deep) 6%,#fff) 55%,#fff 100%);border:none;border-left:4px solid var(--brand-pink-deep);border-radius:14px}.steps{padding-left:18px}code{font-family:var(--mono);font-size:.92em;background:var(--neutral-100);padding:.12em .35em;border-radius:6px;border:1px solid var(--border)}
 .doc-searchbar{margin-top:12px;display:flex;flex-direction:column;gap:0;padding:0;border:1px solid #e2e4e9;background:#fff;border-radius:14px;box-shadow:0 2px 12px rgba(0,0,0,0.07);overflow:hidden}
 .doc-searchbar input[type=search]{width:100%;height:42px;padding:0 14px;border:none;border-bottom:1px solid #e2e4e9;background:#fff;color:#1a1a2e;outline:none;font-size:14px;box-sizing:border-box;-webkit-appearance:none}
 .doc-searchbar input[type=search]::placeholder{color:#aaa;font-size:14px}
@@ -1613,6 +1836,198 @@ function getDefaultCSS() {
 .doc-searchbar .meta{color:#999;font-size:13px;white-space:nowrap;margin-left:2px}
 mark.doc-hit{background:color-mix(in srgb,var(--brand-pink,#ec008c) 15%,white);color:inherit;padding:0 2px;border-radius:3px;border:1px solid color-mix(in srgb,var(--brand-pink,#ec008c) 28%,white)}
 mark.doc-hit.doc-hit-active{background:color-mix(in srgb,var(--brand-pink,#ec008c) 25%,white);box-shadow:0 0 0 2px color-mix(in srgb,var(--brand-pink,#ec008c) 20%,transparent)}`;
+}
+
+// ── Egyszerű megjelenés-szerkesztő (design form) ──────────────────────────────
+// A cél, hogy a nyers CSS kód helyett néhány magyar nyelvű mezővel (szín, sarok
+// lekerekítés, betűtípus) is be lehessen állítani a kézikönyv kinézetét. A
+// kiválasztott értékeket NEM a meglévő CSS-be írjuk bele (az bármi lehet, akár
+// kézzel írt egyedi kód is) — helyette egy jól elkülöníthető, jelölt :root blokkot
+// fűzünk a CSS végére, ami a CSS cascade szabályai szerint felülírja a korábbi
+// (azonos nevű) egyéni tulajdonságokat. Így a haladó CSS kód is megmarad érintetlenül.
+const FONT_PAIRS = {
+  modern:   { label: 'Modern (Inter + Lexend)',        font: `'Inter',ui-sans-serif,system-ui,sans-serif`,                head: `'Lexend',ui-sans-serif,system-ui,sans-serif`,                google: 'family=Inter:wght@400;500;600;700&family=Lexend:wght@500;600;700' },
+  friendly: { label: 'Barátságos (Nunito + Poppins)',  font: `'Nunito',ui-sans-serif,system-ui,sans-serif`,                head: `'Poppins',ui-sans-serif,system-ui,sans-serif`,               google: 'family=Nunito:wght@400;600;700&family=Poppins:wght@600;700' },
+  classic:  { label: 'Klasszikus (Georgia)',           font: `Georgia,'Times New Roman',serif`,                            head: `Georgia,'Times New Roman',serif`,                            google: null },
+  clean:    { label: 'Letisztult (rendszer betűtípus)', font: `ui-sans-serif,system-ui,-apple-system,sans-serif`,          head: `ui-sans-serif,system-ui,-apple-system,sans-serif`,           google: null },
+  mono:     { label: 'Gépelt (monospace)',             font: `'JetBrains Mono',ui-monospace,monospace`,                    head: `'JetBrains Mono',ui-monospace,monospace`,                    google: 'family=JetBrains+Mono:wght@400;500;600;700' }
+};
+
+const DESIGN_BLOCK_RE = /\/\*\s*@kezikonyv-design-start(?:\s+font-pair=(\w+))?\s*\*\/[\s\S]*?\/\*\s*@kezikonyv-design-end\s*\*\//;
+
+function stripDesignBlock(cssText) {
+  return (cssText || '').replace(DESIGN_BLOCK_RE, '').trim();
+}
+
+function parseDesignBlock(cssText) {
+  const m = (cssText || '').match(DESIGN_BLOCK_RE);
+  if (!m) return null;
+  const body = m[0];
+  const grab = (name) => {
+    const mm = body.match(new RegExp('--' + name + '\\s*:\\s*([^;]+);'));
+    return mm ? mm[1].trim() : null;
+  };
+  const vars = {
+    accent: grab('accent'),
+    bg: grab('bg'),
+    card: grab('bg-card'),
+    text: grab('text'),
+    muted: grab('muted'),
+    border: grab('border'),
+    radius: grab('radius'),
+    fsP: grab('fs-p'),
+    fsH1: grab('fs-h1'),
+    fsH2: grab('fs-h2'),
+    fsH3: grab('fs-h3'),
+    fsH4: grab('fs-h4'),
+    fsH5: grab('fs-h5')
+  };
+  Object.keys(vars).forEach(k => { if (vars[k] === null) delete vars[k]; });
+  return { vars, fontPair: m[1] || 'modern' };
+}
+
+// Számhoz px mértékegységet fűz, ha még nincs rajta (radius/betűméret mezőknél).
+function withPx(val, fallback) {
+  const v = val || fallback;
+  return /px|em|rem|%/.test(v) ? v : v + 'px';
+}
+
+function buildDesignBlock(vars, fontPairKey) {
+  const fp = FONT_PAIRS[fontPairKey] || FONT_PAIRS.modern;
+  const radius = withPx(vars.radius, '14');
+  const fsP = withPx(vars.fsP, '16');
+  const fsH1 = withPx(vars.fsH1, '24');
+  const fsH2 = withPx(vars.fsH2, '22');
+  const fsH3 = withPx(vars.fsH3, '15');
+  const fsH4 = withPx(vars.fsH4, '14');
+  const fsH5 = withPx(vars.fsH5, '13');
+  return `/* @kezikonyv-design-start font-pair=${fontPairKey} */
+:root{
+  --bg:${vars.bg};
+  --bg-elev:${vars.card};
+  --bg-card:${vars.card};
+  --text:${vars.text};
+  --muted:${vars.muted};
+  --accent:${vars.accent};
+  --brand-pink-deep:${vars.accent};
+  --brand-pink:color-mix(in srgb, ${vars.accent} 75%, white);
+  --accent-soft:color-mix(in srgb, ${vars.accent} 12%, white);
+  --border:${vars.border};
+  --radius:${radius};
+  --font:${fp.font};
+  --font-head:${fp.head};
+  --fs-p:${fsP};
+  --fs-h1:${fsH1};
+  --fs-h2:${fsH2};
+  --fs-h3:${fsH3};
+  --fs-h4:${fsH4};
+  --fs-h5:${fsH5};
+}
+main p{font-size:var(--fs-p)}
+.hero h1,main h1{font-size:var(--fs-h1)}
+main h2{font-size:var(--fs-h2)}
+main h3{font-size:var(--fs-h3)}
+main h4{font-size:var(--fs-h4)}
+main h5{font-size:var(--fs-h5)}
+/* @kezikonyv-design-end */`;
+}
+
+// Alapértelmezett kinézet megközelítő hex/px értékei (az eredeti CSS oklch-alapú
+// színskálájának hozzávetőleges megfelelői), csak addig, amíg a projekt még nem
+// kapott saját design-blokkot. A h3/h4/h5 alapértékek (15/14/13px) a getDefaultCSS()
+// tényleges alapértelmezett méreteivel egyeznek.
+const DESIGN_FALLBACK_VARS = {
+  accent: '#c40075', bg: '#fafafa', card: '#ffffff',
+  text: '#1e2433', muted: '#6b7280', border: '#e2e5ea', radius: '14',
+  fsP: '16', fsH1: '24', fsH2: '22', fsH3: '15', fsH4: '14', fsH5: '13'
+};
+
+function setCssMode(mode) {
+  document.getElementById('css-mode-simple-btn').classList.toggle('active', mode === 'simple');
+  document.getElementById('css-mode-code-btn').classList.toggle('active', mode === 'code');
+  document.getElementById('css-simple-panel').style.display = mode === 'simple' ? '' : 'none';
+  document.getElementById('css-code-panel').style.display = mode === 'code' ? '' : 'none';
+  if (!state.currentProject) return;
+  const proj = state.projects[state.currentProject];
+  if (mode === 'simple') {
+    loadDesignForm();
+  } else {
+    document.getElementById('proj-css-editor').value = proj.css || getDefaultCSS();
+  }
+}
+
+function loadDesignForm() {
+  if (!state.currentProject) return;
+  const proj = state.projects[state.currentProject];
+  const parsed = parseDesignBlock(proj.css || '');
+  const vars = Object.assign({}, DESIGN_FALLBACK_VARS, parsed ? parsed.vars : {});
+  const setColorField = (id, hex) => {
+    document.getElementById(id).value = hex;
+    document.getElementById(id + '-hex').value = hex;
+  };
+  setColorField('df-accent', vars.accent);
+  setColorField('df-bg', vars.bg);
+  setColorField('df-card', vars.card);
+  setColorField('df-text', vars.text);
+  setColorField('df-muted', vars.muted);
+  setColorField('df-border', vars.border);
+  const radiusNum = parseInt(vars.radius, 10) || 14;
+  document.getElementById('df-radius').value = radiusNum;
+  document.getElementById('df-radius-val').textContent = radiusNum + 'px';
+  document.getElementById('df-fontpair').value = (parsed && parsed.fontPair) || 'modern';
+  document.getElementById('df-fs-p').value = parseInt(vars.fsP, 10) || 16;
+  document.getElementById('df-fs-h1').value = parseInt(vars.fsH1, 10) || 24;
+  document.getElementById('df-fs-h2').value = parseInt(vars.fsH2, 10) || 22;
+  document.getElementById('df-fs-h3').value = parseInt(vars.fsH3, 10) || 15;
+  document.getElementById('df-fs-h4').value = parseInt(vars.fsH4, 10) || 14;
+  document.getElementById('df-fs-h5').value = parseInt(vars.fsH5, 10) || 13;
+}
+
+function onHexChange(field, val) {
+  if (/^#[0-9a-fA-F]{6}$/.test(val)) {
+    document.getElementById('df-' + field).value = val;
+    onDesignFieldChange();
+  }
+}
+
+function onDesignFieldChange() {
+  // A színválasztó (natív color picker) és a mellette lévő hex mező mindig szinkronban marad.
+  ['accent','bg','card','text','muted','border'].forEach(k => {
+    document.getElementById('df-' + k + '-hex').value = document.getElementById('df-' + k).value;
+  });
+  document.getElementById('df-radius-val').textContent = document.getElementById('df-radius').value + 'px';
+  clearTimeout(state._designTimer);
+  state._designTimer = setTimeout(() => applyDesignForm(false), 150);
+}
+
+function applyDesignForm(doSaveAndToast) {
+  if (!state.currentProject) return;
+  const proj = state.projects[state.currentProject];
+  const vars = {
+    accent: document.getElementById('df-accent').value,
+    bg: document.getElementById('df-bg').value,
+    card: document.getElementById('df-card').value,
+    text: document.getElementById('df-text').value,
+    muted: document.getElementById('df-muted').value,
+    border: document.getElementById('df-border').value,
+    radius: document.getElementById('df-radius').value,
+    fsP: document.getElementById('df-fs-p').value,
+    fsH1: document.getElementById('df-fs-h1').value,
+    fsH2: document.getElementById('df-fs-h2').value,
+    fsH3: document.getElementById('df-fs-h3').value,
+    fsH4: document.getElementById('df-fs-h4').value,
+    fsH5: document.getElementById('df-fs-h5').value
+  };
+  const fontPair = document.getElementById('df-fontpair').value;
+  const base = stripDesignBlock(proj.css || getDefaultCSS());
+  proj.css = base + '\n' + buildDesignBlock(vars, fontPair);
+  const codeEditor = document.getElementById('proj-css-editor');
+  if (codeEditor) codeEditor.value = proj.css;
+  renderPreview();
+  if (doSaveAndToast) {
+    persistState();
+    toast('✓ Megjelenés mentve');
+  }
 }
 
 // ── Drag & drop folder ────────────────────────────────────────────────────────
@@ -1730,6 +2145,7 @@ async function deleteProject(name) {
     await new Promise((res, rej) => { tx.oncomplete = res; tx.onerror = rej; });
     db.close();
   } catch(e) {}
+  await deleteAllFileRecordsForProject(name);
   delete state.projects[name];
   const sel = document.getElementById('project-select');
   const opt = [...sel.options].find(o => o.value === name);
@@ -2258,10 +2674,94 @@ function moveSubgroup(gi, si, dir) {
   renderNavGroupsEditor();
 }
 
+// ── config.json lemezre mentése ───────────────────────────────────────────────
+// Eddig az összerakott navigáció (nav_groups) csak a böngésző IndexedDB-jébe és a
+// legenerált (build-elt) HTML-be került bele — a projekt forrás config.json fájlja,
+// amit pl. GitHub-ra tölts fel, nem frissült. Ez a funkció a config.json-t is
+// lemezre írja / letölti, hogy a menü-összeállítás ne vesszen el egy új munkamenetben.
+function serializeConfig(proj) {
+  const c = proj.config || {};
+  const out = {
+    title: c.title, subtitle: c.subtitle, description: c.description,
+    lang: c.lang, output: c.output
+  };
+  if (c.logo_alt) out.logo_alt = c.logo_alt;
+  if (c.nav_groups) out.nav_groups = c.nav_groups;
+  // A fejezetek sorrendje: enélkül betöltéskor mindig ábécésorrendbe rendeződnének
+  // vissza a fájlnevek alapján, és a kézzel átrendezett sorrend elveszne.
+  if (proj.fileOrder && proj.fileOrder.length) out.fileOrder = proj.fileOrder;
+  return JSON.stringify(out, null, 2);
+}
+
+async function saveConfigToDisk(showToast = true) {
+  if (!state.currentProject) return;
+  const proj = state.projects[state.currentProject];
+  const json = serializeConfig(proj);
+
+  // 1. Már megjegyzett fájl handle (korábbi mentésből vagy mappa-hozzáférésből) — dialóg nélkül ír
+  if (proj.configHandle) {
+    try {
+      const writable = await proj.configHandle.createWritable();
+      await writable.write(json);
+      await writable.close();
+      if (showToast) toast('✓ config.json elmentve');
+      return;
+    } catch(e) {
+      console.warn('config.json handle write failed, újra kérjük:', e);
+      proj.configHandle = null;
+    }
+  }
+
+  // 2. Ha van mappa írási jog — létrehozzuk/frissítjük dialóg nélkül, és megjegyezzük a handle-t
+  if (proj.dirHandle) {
+    try {
+      const fh = await proj.dirHandle.getFileHandle('config.json', { create: true });
+      const writable = await fh.createWritable();
+      await writable.write(json);
+      await writable.close();
+      proj.configHandle = fh;
+      if (showToast) toast('✓ config.json elmentve a mappába');
+      return;
+    } catch(e) {
+      console.warn('config.json direct write failed:', e);
+    }
+  }
+
+  // 3. Mentés másként dialóg — csak első alkalommal, utána a handle-t megjegyezzük
+  if (window.showSaveFilePicker) {
+    try {
+      const fh = await window.showSaveFilePicker({
+        suggestedName: 'config.json',
+        types: [{ description: 'JSON fájl', accept: { 'application/json': ['.json'] } }],
+        startIn: 'documents'
+      });
+      const writable = await fh.createWritable();
+      await writable.write(json);
+      await writable.close();
+      proj.configHandle = fh;
+      if (showToast) toast('💾 config.json mentve: ' + fh.name);
+      return;
+    } catch(e) {
+      if (e.name === 'AbortError') return;
+      console.warn('config.json showSaveFilePicker failed:', e);
+    }
+  }
+
+  // 4. Fallback: sima letöltés
+  const blob = new Blob([json], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'config.json'; a.click();
+  URL.revokeObjectURL(url);
+  if (showToast) toast('💾 config.json letöltve');
+}
+
 async function saveNavGroups() {
   await persistState();
   renderPreview();
-  toast('✓ Navigáció mentve');
+  // A menü lemezre mentése: ha van mappa írási jog, csendben frissíti a config.json-t;
+  // különben mentés-dialógot nyit (majd megjegyzi a fájlt), vagy letölti a config.json-t.
+  await saveConfigToDisk();
 }
 
 
@@ -2277,6 +2777,8 @@ function loadCssEditor() {
   document.getElementById('css-proj-name').textContent = proj.config.title || state.currentProject;
   document.getElementById('proj-css-editor').value = proj.css || getDefaultCSS();
   document.getElementById('proj-css-editor').disabled = false;
+  // A tab megnyitásakor mindig az egyszerű, magyar nyelvű felületet mutatjuk alapból.
+  setCssMode('simple');
 }
 
 function saveCss() {
@@ -2288,9 +2790,10 @@ function saveCss() {
 }
 
 function resetToDefaultCss() {
-  if (!confirm('Visszaállítja az alapértelmezett CSS-t?')) return;
+  if (!confirm('Visszaállítja az alapértelmezett megjelenést?')) return;
   document.getElementById('proj-css-editor').value = getDefaultCSS();
   saveCss();
+  loadDesignForm();
 }
 
 document.getElementById('proj-css-editor').addEventListener('input', () => {
@@ -2336,7 +2839,10 @@ function setupDrag(div, fn) {
         proj.fileOrder.splice(b, 0, dragSrcFile);
         renderSidebar();
         await persistState();
-        toast('↕ Sorrend módosítva');
+        // Az új sorrendet a config.json-ba is kiírjuk, hogy betöltéskor (más gépen/böngészőben,
+        // vagy a GitHub-ra feltöltött fájlokból) is a beállított sorrend legyen érvényben,
+        // ne az ábécésorrend.
+        await saveConfigToDisk();
       }
     } else {
       // Másik projektből másolás
@@ -2359,45 +2865,134 @@ function setupDrag(div, fn) {
 }
 
 // ── IndexedDB perzisztencia ───────────────────────────────────────────────────
+// v2: a fejezetek tartalma (raw markdown, benne a base64 képekkel) külön
+// 'files' store-ba kerül, projektenkénti kulccsal. Így a gépelés közbeni
+// automentés (persistCurrentFile) csak az ÉPPEN szerkesztett fejezetet írja ki,
+// nem az egész projektet (minden fejezet, minden beágyazott kép) — ez volt
+// a fő oka annak, hogy sok kép után a szerkesztés egyre jobban be lassult.
 const DB_NAME = 'kezikonyv-editor';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 const STORE = 'projects';
+const FILES_STORE = 'files';
+
+function fileKey(projectName, fn) { return projectName + '::' + fn; }
 
 function openDB() {
   return new Promise((res, rej) => {
     const req = indexedDB.open(DB_NAME, DB_VERSION);
-    req.onupgradeneeded = e => e.target.result.createObjectStore(STORE, { keyPath: 'name' });
+    req.onupgradeneeded = e => {
+      const db = e.target.result;
+      if (!db.objectStoreNames.contains(STORE)) {
+        db.createObjectStore(STORE, { keyPath: 'name' });
+      }
+      if (!db.objectStoreNames.contains(FILES_STORE)) {
+        const fs = db.createObjectStore(FILES_STORE, { keyPath: 'key' });
+        fs.createIndex('project', 'project');
+      }
+    };
     req.onsuccess = e => res(e.target.result);
     req.onerror = e => rej(e.target.error);
   });
 }
 
+// Teljes mentés: projekt metaadatok + MINDEN fejezet. Csak ritkán hívott
+// műveleteknél használjuk (fejezet törlés/átnevezés, projekt létrehozás, explicit mentés),
+// ahol a teljes írás költsége elhanyagolható a gyakoriság mellett.
 async function persistState() {
   if (!state.currentProject) return;
   try {
     const proj = state.projects[state.currentProject];
     const db = await openDB();
-    // Csak a szöveg tartalmakat mentjük, nem a File objektumokat
-    const serializable = {
+    const meta = {
       name: proj.name,
       config: proj.config,
       css: proj.css,
       logo: proj.logo,
       fileOrder: proj.fileOrder,
-      currentFile: state.currentFile,
-      files: {}
+      currentFile: state.currentFile
     };
+    const tx = db.transaction([STORE, FILES_STORE], 'readwrite');
+    tx.objectStore(STORE).put(meta);
+    const filesStore = tx.objectStore(FILES_STORE);
     for (const fn of proj.fileOrder) {
       const f = proj.files[fn];
-      serializable.files[fn] = { meta: f.meta, content: f.content, raw: f.raw, dirty: false };
+      filesStore.put({ key: fileKey(proj.name, fn), project: proj.name, fn, meta: f.meta, content: f.content, raw: f.raw });
     }
-    const tx = db.transaction(STORE, 'readwrite');
-    tx.objectStore(STORE).put(serializable);
     await new Promise((res, rej) => { tx.oncomplete = res; tx.onerror = rej; });
     db.close();
   } catch(e) {
     console.warn('Persist failed:', e);
   }
+}
+
+// Könnyű automentés gépelés közben: csak az aktuális fejezetet írja ki,
+// a többi (esetleg képekkel teli) fejezethez nem nyúl.
+async function persistCurrentFile() {
+  if (!state.currentProject || !state.currentFile) return;
+  try {
+    const proj = state.projects[state.currentProject];
+    const f = proj.files[state.currentFile];
+    if (!f) return;
+    const db = await openDB();
+    const tx = db.transaction([STORE, FILES_STORE], 'readwrite');
+    // A meta rekordot is frissítjük (currentFile mutató), de fájltartalom nélkül — olcsó írás.
+    tx.objectStore(STORE).put({
+      name: proj.name, config: proj.config, css: proj.css, logo: proj.logo,
+      fileOrder: proj.fileOrder, currentFile: state.currentFile
+    });
+    tx.objectStore(FILES_STORE).put({
+      key: fileKey(proj.name, state.currentFile), project: proj.name, fn: state.currentFile,
+      meta: f.meta, content: f.content, raw: f.raw
+    });
+    await new Promise((res, rej) => { tx.oncomplete = res; tx.onerror = rej; });
+    db.close();
+  } catch(e) {
+    console.warn('Autosave failed:', e);
+  }
+}
+
+async function deleteFileRecord(projectName, fn) {
+  try {
+    const db = await openDB();
+    const tx = db.transaction(FILES_STORE, 'readwrite');
+    tx.objectStore(FILES_STORE).delete(fileKey(projectName, fn));
+    await new Promise((res, rej) => { tx.oncomplete = res; tx.onerror = rej; });
+    db.close();
+  } catch(e) {
+    console.warn('File record delete failed:', e);
+  }
+}
+
+async function deleteAllFileRecordsForProject(projectName) {
+  try {
+    const db = await openDB();
+    const tx = db.transaction(FILES_STORE, 'readwrite');
+    const idx = tx.objectStore(FILES_STORE).index('project');
+    const req = idx.openCursor(IDBKeyRange.only(projectName));
+    await new Promise((res, rej) => {
+      req.onsuccess = e => {
+        const cursor = e.target.result;
+        if (cursor) { cursor.delete(); cursor.continue(); } else { res(); }
+      };
+      req.onerror = rej;
+    });
+    await new Promise((res, rej) => { tx.oncomplete = res; tx.onerror = rej; });
+    db.close();
+  } catch(e) {
+    console.warn('Project file records delete failed:', e);
+  }
+}
+
+function getFileRecord(projectName, fn) {
+  return new Promise(async (resolve) => {
+    try {
+      const db = await openDB();
+      const tx = db.transaction(FILES_STORE, 'readonly');
+      const req = tx.objectStore(FILES_STORE).get(fileKey(projectName, fn));
+      req.onsuccess = () => { resolve(req.result || null); db.close(); };
+      req.onerror = () => { resolve(null); db.close(); };
+    } catch(e) { resolve(null); }
+  });
 }
 
 async function loadPersistedProjects() {
@@ -2423,7 +3018,9 @@ async function loadPersistedProjects() {
         fileObjects: {}
       };
       for (const fn of project.fileOrder) {
-        const sf = saved.files[fn] || {};
+        // v1 (régi) rekordoknál a fájltartalom még a projekt meta rekordba volt ágyazva;
+        // v2-től külön 'files' store-ban van, projektenként/fejezetenként lekérve.
+        const sf = (saved.files && saved.files[fn]) || (await getFileRecord(saved.name, fn)) || {};
         project.files[fn] = {
           meta: sf.meta || {},
           content: sf.content || '',
@@ -2469,11 +3066,12 @@ async function loadPersistedProjects() {
   }
 }
 
-// Automatikus mentés szerkesztés közben
+// Automatikus mentés szerkesztés közben — csak az aktuális fejezetet írja ki
+// (lásd persistCurrentFile), nem az egész projektet minden billentyűleütés után.
 const _origInput = document.getElementById('editor').oninput;
 document.getElementById('editor').addEventListener('input', () => {
   clearTimeout(state._persistTimer);
-  state._persistTimer = setTimeout(persistState, 2000);
+  state._persistTimer = setTimeout(persistCurrentFile, 2000);
 });
 
 // ── AI Panel ─────────────────────────────────────────────────────────────────
@@ -2749,8 +3347,14 @@ async function requestFolderAccess() {
       proj.outputHandle = await dirHandle.getFileHandle(outputName, { create: true });
     } catch(e) {}
 
+    // config.json handle — így a nav_groups (menü) mentése is dialóg nélkül, közvetlenül a mappába írhat
+    try {
+      proj.configHandle = await dirHandle.getFileHandle('config.json', { create: true });
+    } catch(e) {}
+
     // Gomb eltüntetése, státusz frissítése
-    document.getElementById('folder-access-btn').style.display = 'none';
+    const folderBtn = document.getElementById('folder-access-btn');
+    if (folderBtn) folderBtn.style.display = 'none';
     setStatus('Írási jog megadva ✓', 'saved');
     setTimeout(() => setStatus(''), 2500);
     toast('✓ Írási jog megadva — Ctrl+S közvetlenül ment');
@@ -2777,6 +3381,7 @@ async function deleteChapter(fn) {
 
   delete proj.files[fn];
   proj.fileOrder = proj.fileOrder.filter(f => f !== fn);
+  deleteFileRecord(state.currentProject, fn);
 
   if (state.currentFile === fn) {
     state.currentFile = null;
