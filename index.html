@@ -544,7 +544,7 @@ body { font-family: var(--sans); background: var(--bg); color: var(--text); disp
         Tölts be egy projektet
       </div>
     </div>
-    <div id="drop-zone" onclick="document.getElementById('folder-input').click()">
+    <div id="drop-zone" onclick="openProjectFolder()" title="Ha a böngésződ támogatja, innentől minden mentés automatikusan ebbe a mappába kerül">
       <div class="icon">📂</div>
       <div>Kattints a projekt<br>mappa betöltéséhez</div>
       <input id="folder-input" type="file" webkitdirectory mozdirectory multiple
@@ -562,7 +562,7 @@ body { font-family: var(--sans); background: var(--bg); color: var(--text); disp
       <div><span>2.</span> Válaszd ki a <code>projektek/minicopy</code> mappát</div>
       <div><span>3.</span> A fejezetek megjelennek a bal oldalsávban</div>
     </div>
-    <button class="btn primary" style="margin-top:8px" onclick="document.getElementById('folder-input').click()">📂 Projekt mappa megnyitása</button>
+    <button class="btn primary" style="margin-top:8px" onclick="openProjectFolder()">📂 Projekt mappa megnyitása</button>
   </div>
 
   <div id="editor-pane" style="display:none">
@@ -1158,6 +1158,121 @@ async function loadFromInput(input) {
   // Persistálás: fájl tartalmak mentése IndexedDB-be
   persistState();
   input.value = '';
+}
+
+// ── Projekt mappa betöltése ÍRÁSI joggal, egy lépésben ────────────────────────
+// A fenti loadFromInput csak OLVASÁSRA tud mappát betölteni (böngésző-korlát),
+// utána külön kellett volna írási jogot kérni — de ahhoz nem volt elérhető gomb
+// a felületen. Ez a függvény a showDirectoryPicker API-val egy lépésben tölti be
+// a projektet ÉS szerzi meg az írási jogot minden fejezethez, a config.json-hoz és
+// a kimeneti HTML-hez — ezután a mentés (kézi és automatikus is) egyenesen ebbe a
+// mappába ír, nem kell külön le/fel tölteni semmit.
+async function loadProjectFromDirectory() {
+  if (!window.showDirectoryPicker) {
+    toast('A böngésződ nem támogatja a közvetlen mappa-mentést — a 📂 gomb csak olvasásra tölti be a projektet.', 'err', 5000);
+    document.getElementById('folder-input').click();
+    return;
+  }
+
+  let dirHandle;
+  try {
+    dirHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
+  } catch(e) {
+    if (e.name !== 'AbortError') toast('Hiba: ' + e.message, 'err');
+    return;
+  }
+
+  const rootName = dirHandle.name;
+  const project = {
+    name: rootName,
+    config: {}, css: '', logo: '',
+    files: {}, fileOrder: [],
+    fileObjects: {},
+    dirHandle
+  };
+
+  // Gyökér szintű fájlok: config.json, style.css, logo.txt
+  for await (const [name, handle] of dirHandle.entries()) {
+    if (handle.kind !== 'file') continue;
+    try {
+      if (name === 'config.json') {
+        const file = await handle.getFile();
+        try { project.config = JSON.parse(await file.text()); } catch(e) {}
+      } else if (name === 'style.css') {
+        const file = await handle.getFile();
+        project.css = await file.text();
+      } else if (name === 'logo.txt') {
+        const file = await handle.getFile();
+        project.logo = (await file.text()).trim();
+      }
+    } catch(e) { console.warn('Gyökér fájl olvasási hiba (' + name + '):', e); }
+  }
+
+  // sections/ mappa: .md fejezetek — mindegyikhez megjegyezzük a fileHandle-t is
+  try {
+    const sectionsDir = await dirHandle.getDirectoryHandle('sections', { create: true });
+    project.sectionsDirHandle = sectionsDir;
+    for await (const [name, handle] of sectionsDir.entries()) {
+      if (handle.kind !== 'file' || !name.endsWith('.md') || name === 'README.md') continue;
+      const file = await handle.getFile();
+      const text = await file.text();
+      const { meta, content } = parseFrontmatter(text);
+      project.files[name] = { meta, content, raw: text, dirty: false, fileHandle: handle, fileObj: null };
+    }
+  } catch(e) { console.warn('sections/ mappa hiba:', e); }
+
+  // Fejezet sorrend: config.json mentett sorrendje, ha van (lásd drag&drop átrendezés)
+  const savedOrder = Array.isArray(project.config.fileOrder) ? project.config.fileOrder : null;
+  if (savedOrder) {
+    const known = new Set(Object.keys(project.files));
+    const ordered = savedOrder.filter(fn => known.has(fn));
+    const missing = Object.keys(project.files).filter(fn => !ordered.includes(fn)).sort();
+    project.fileOrder = ordered.concat(missing);
+  } else {
+    project.fileOrder = Object.keys(project.files).sort();
+  }
+  if (!project.css) project.css = getDefaultCSS();
+
+  // Kimeneti HTML és config.json handle — Build / menü mentés ide fog írni dialóg nélkül
+  const outputName = project.config.output || (rootName + '.html');
+  try { project.outputHandle = await dirHandle.getFileHandle(outputName, { create: true }); } catch(e) {}
+  try { project.configHandle = await dirHandle.getFileHandle('config.json', { create: true }); } catch(e) {}
+
+  state.projects[rootName] = project;
+  state.currentProject = rootName;
+
+  const sel = document.getElementById('project-select');
+  if (![...sel.options].find(o => o.value === rootName)) {
+    const opt = document.createElement('option');
+    opt.value = rootName;
+    opt.textContent = project.config.title || rootName;
+    sel.appendChild(opt);
+  }
+  sel.value = rootName;
+
+  renderSidebar();
+  showEditorPane();
+  if (project.fileOrder.length > 0) {
+    openFile(project.fileOrder[0]);
+  } else {
+    toast('Üres mappa — hozz létre egy fejezetet a + gombbal.', '', 4000);
+  }
+  setStatus('Betöltve (közvetlen mentéssel): ' + rootName, 'saved');
+  setTimeout(() => setStatus(''), 2500);
+  toast('✓ Betöltve, mentés innentől automatikusan ide kerül: ' + rootName);
+  checkFolderAccessBtn();
+
+  persistState();
+}
+
+// A 📂 gomb ezt hívja: ha a böngésző támogatja, közvetlen írási joggal tölt be,
+// ha nem, visszaesik a régi, csak-olvasható mappa-betöltésre.
+function openProjectFolder() {
+  if (window.showDirectoryPicker) {
+    loadProjectFromDirectory();
+  } else {
+    document.getElementById('folder-input').click();
+  }
 }
 
 // ── Parsers ───────────────────────────────────────────────────────────────────
@@ -3131,10 +3246,32 @@ async function loadPersistedProjects() {
 
 // Automatikus mentés szerkesztés közben — csak az aktuális fejezetet írja ki
 // (lásd persistCurrentFile), nem az egész projektet minden billentyűleütés után.
+// Ha a fejezethez van közvetlen fájl handle (lásd loadProjectFromDirectory), a
+// tartalom a böngésző IndexedDB-je MELLETT a mappába is automatikusan kiíródik —
+// így nem kell külön Ctrl+S / mentés a lemezre kerüléshez.
+async function autosaveCurrentFile() {
+  await persistCurrentFile();
+  if (!state.currentProject || !state.currentFile) return;
+  const proj = state.projects[state.currentProject];
+  const f = proj.files[state.currentFile];
+  if (!f || !f.fileHandle) return; // nincs mappa írási jog erre a fejezetre
+  try {
+    const writable = await f.fileHandle.createWritable();
+    await writable.write(f.raw);
+    await writable.close();
+    f.dirty = false;
+    renderSidebar();
+    setStatus('Automatikusan mentve a mappába ✓', 'saved');
+    setTimeout(() => setStatus(''), 1500);
+  } catch(e) {
+    console.warn('Automatikus lemezre mentés sikertelen:', e);
+  }
+}
+
 const _origInput = document.getElementById('editor').oninput;
 document.getElementById('editor').addEventListener('input', () => {
   clearTimeout(state._persistTimer);
-  state._persistTimer = setTimeout(persistCurrentFile, 2000);
+  state._persistTimer = setTimeout(autosaveCurrentFile, 2000);
 });
 
 // ── AI Panel ─────────────────────────────────────────────────────────────────
@@ -3584,6 +3721,20 @@ title: ${title}
 
   proj.files[fn] = { meta, content: mdContent, raw, dirty: true, fileHandle: null, fileObj: null };
 
+  // Ha a projekt mappa írási joggal van betöltve (loadProjectFromDirectory), az új
+  // fejezet fájlját rögtön létrehozzuk a sections/ mappában is — ettől kezdve ez a
+  // fejezet is automatikusan mentődik gépelés közben, nem csak a böngészőben.
+  if (proj.sectionsDirHandle) {
+    try {
+      const fh = await proj.sectionsDirHandle.getFileHandle(fn, { create: true });
+      const writable = await fh.createWritable();
+      await writable.write(raw);
+      await writable.close();
+      proj.files[fn].fileHandle = fh;
+      proj.files[fn].dirty = false;
+    } catch(e) { console.warn('Új fejezet lemezre írása sikertelen:', e); }
+  }
+
   // Pozicionálás
   if (position === 'end') {
     proj.fileOrder.push(fn);
@@ -3596,6 +3747,7 @@ title: ${title}
   }
 
   await persistState();
+  await saveConfigToDisk(false); // az új fejezettel megváltozott sorrendet is elmentjük a config.json-ba
   renderSidebar();
   openFile(fn);
   closeNewChapterModal();
