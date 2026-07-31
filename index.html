@@ -526,6 +526,8 @@ body { font-family: var(--sans); background: var(--bg); color: var(--text); disp
   <button class="btn" onclick="openAiPanel()" title="AI fejezet generálás screenshotból" style="background:linear-gradient(135deg,#6366f1,#8b5cf6);border-color:#6366f1;color:#fff">✨ AI</button>
   <button class="btn green" onclick="buildAndDownload(false)">⚡ Build</button>
   <button class="btn green" onclick="buildAndDownload(true)" title="Képek WebP-re konvertálva, max 1440px — ~80% kisebb fájl">⚡ Build + Optimalizál</button>
+  <div class="sep"></div>
+  <button class="btn" onclick="togglePreviewPopout()" id="btn-preview-popout" title="Az előnézetet külön böngészőlapon nyitja meg, élőben frissülve — így a szerkesztő nagyobb helyet kap">🡵 Előnézet külön lapon</button>
   <div class="spacer"></div>
   <span id="status" title="Nyisd meg Chrome-ban, file:// protokollon is működik">Nincs betöltve projekt</span>
 </div>
@@ -1640,6 +1642,54 @@ function renderPreview() {
   }
 
   frame.srcdoc = html;
+
+  // Ha van külön lapra kiugrasztott előnézet ablak (lásd togglePreviewPopout), azt is
+  // frissítjük — ugyanaz a friss HTML kerül bele, mint a beépített előnézet iframe-jébe.
+  if (state.previewWindow && !state.previewWindow.closed) {
+    try {
+      state.previewWindow.document.open();
+      state.previewWindow.document.write(html);
+      state.previewWindow.document.close();
+    } catch(e) { console.warn('Külön lapos előnézet frissítése sikertelen:', e); }
+  }
+}
+
+// ── Előnézet külön böngészőlapon ──────────────────────────────────────────────
+// Cél: a szerkesztő felület nagyobb lehessen — az előnézet egy külön (mindig
+// ugyanabba a névre nyíló, ezért újranyitáskor újrahasznosított) lapra kerül,
+// a beépített előnézet panel pedig eltűnik, a szerkesztő kitölti a helyét.
+function togglePreviewPopout() {
+  const btn = document.getElementById('btn-preview-popout');
+  const previewPane = document.getElementById('preview-pane');
+  const resizeHandle = document.getElementById('resize-handle');
+  const editorPane = document.getElementById('editor-pane');
+
+  if (state.previewPoppedOut) {
+    // Vissza a beépített nézetre — a külön lapot nyitva hagyjuk, ha a felhasználó még nézi.
+    state.previewPoppedOut = false;
+    previewPane.style.display = 'flex';
+    resizeHandle.style.display = '';
+    editorPane.style.flex = '';
+    editorPane.style.width = '';
+    editorPane.style.maxWidth = '';
+    btn.textContent = '🡵 Előnézet külön lapon';
+  } else {
+    const win = window.open('', 'kk_preview_window');
+    if (!win) {
+      toast('A böngésző blokkolta a felugró ablakot — engedélyezd a popupokat ehhez az oldalhoz.', 'err', 5000);
+      return;
+    }
+    state.previewWindow = win;
+    state.previewPoppedOut = true;
+    previewPane.style.display = 'none';
+    resizeHandle.style.display = 'none';
+    editorPane.style.flex = '1 1 auto';
+    editorPane.style.width = 'auto';
+    editorPane.style.maxWidth = 'none';
+    btn.textContent = '🡴 Vissza a beépített előnézetre';
+    renderPreview();
+    win.focus();
+  }
 }
 
 function buildPreviewHtml(proj, mainContent, full) {
