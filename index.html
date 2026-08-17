@@ -587,6 +587,8 @@ body { font-family: var(--sans); background: var(--bg); color: var(--text); disp
 .hp-doc-meta { font-size:11px; color:var(--text3); }
 .hp-doc-card .hp-open-btn { opacity:0; transition:opacity .15s; }
 .hp-doc-card:hover .hp-open-btn { opacity:1; }
+.hp-doc-actions { display:flex; gap:6px; opacity:0; transition:opacity .15s; flex-shrink:0; }
+.hp-doc-card:hover .hp-doc-actions { opacity:1; }
 
 .hp-empty { text-align:center; padding:50px 20px; color:var(--text3); font-size:13px; }
 
@@ -1654,10 +1656,11 @@ function renderProjectDocGrid() {
   if (!docs.length) {
     grid.innerHTML = '<div class="hp-empty" style="grid-column:1/-1">Ebben a projektben még nincs dokumentum — hozz létre egyet lent.</div>';
   } else {
+    const projectId = state.currentTopProject;
     docs.forEach(d => {
       const card = document.createElement('div');
       card.className = 'hp-card hp-doc-card';
-      card.onclick = () => cloudLoadProject(state.currentTopProject + '/' + d.id, state.currentTopProject, d.id);
+      card.onclick = () => cloudLoadProject(projectId + '/' + d.id, projectId, d.id);
       const metaBits = [d.chapterCount + ' fejezet'];
       if (d.updatedAt) metaBits.push('frissítve ' + formatRelativeDate(d.updatedAt));
       card.innerHTML = `
@@ -1666,8 +1669,22 @@ function renderProjectDocGrid() {
           <div class="hp-doc-title">${escapeHtml(d.title)}</div>
           <div class="hp-doc-meta">${escapeHtml(metaBits.join(' · '))}</div>
         </div>
+        <div class="hp-doc-actions"></div>
         <button class="btn primary hp-open-btn" style="pointer-events:none">Megnyitás</button>
       `;
+      const actions = card.querySelector('.hp-doc-actions');
+      const renameBtn = document.createElement('button');
+      renameBtn.className = 'btn-sm';
+      renameBtn.title = 'Dokumentum átnevezése';
+      renameBtn.textContent = '✏';
+      renameBtn.onclick = (e) => { e.stopPropagation(); renameDocInProject(projectId, d.id, d.title); };
+      const delBtn = document.createElement('button');
+      delBtn.className = 'btn-sm del';
+      delBtn.title = 'Dokumentum törlése';
+      delBtn.textContent = '🗑';
+      delBtn.onclick = (e) => { e.stopPropagation(); deleteDocInProject(projectId, d.id, d.title); };
+      actions.appendChild(renameBtn);
+      actions.appendChild(delBtn);
       grid.appendChild(card);
     });
   }
@@ -1763,6 +1780,88 @@ async function createDocInProject() {
 
   closeNewDocModal();
   await cloudLoadProject(projectId + '/' + id, projectId, id);
+}
+
+// ── Dokumentum átnevezése / törlése egy Projekten belül ──
+// Fontos: ezek a Projekt nézet dokumentum-kártyáiról hívódnak, ahol a dokumentum
+// esetleg MÉG NINCS betöltve a szerkesztőbe (state.projects-ben) — ezért közvetlenül
+// a Storage-ban lévő config.json-t olvassuk/írjuk, nem a memóriában lévő objektumot.
+async function renameDocInProject(projectId, docId, currentTitle) {
+  const newTitle = prompt('Új cím a dokumentumnak:', currentTitle || docId);
+  if (!newTitle || !newTitle.trim() || newTitle.trim() === currentTitle) return;
+  const trimmed = newTitle.trim();
+  const folder = projectId + '/' + docId;
+
+  const configText = await cloudDownloadText(folder + '/config.json');
+  let config = {};
+  if (configText) { try { config = JSON.parse(configText); } catch(e) {} }
+  config.title = trimmed;
+  const ok = await cloudUpload(folder + '/config.json', JSON.stringify(config, null, 2), 'application/json');
+  if (!ok) { toast('⚠ Átnevezés sikertelen', 'err'); return; }
+
+  // Ha ez a dokumentum épp meg van nyitva a szerkesztőben, ott is frissítjük.
+  const openProj = state.projects[folder];
+  if (openProj) {
+    openProj.config.title = trimmed;
+    const opt = [...document.getElementById('project-select').options].find(o => o.value === folder);
+    if (opt) opt.textContent = '☁️ ' + trimmed;
+    if (state.currentProject === folder) updateBreadcrumb();
+    persistState();
+  }
+
+  if (state.projectDocs) {
+    const d = state.projectDocs.find(x => x.id === docId);
+    if (d) d.title = trimmed;
+  }
+  renderProjectDocGrid();
+  toast('✓ Átnevezve');
+}
+
+async function cloudDeleteDocument(projectId, docId) {
+  const folder = projectId + '/' + docId;
+  const paths = [];
+  const { data: rootEntries } = await supabaseClient.storage.from(CLOUD_BUCKET).list(folder, { limit: 200 });
+  for (const e of (rootEntries || [])) {
+    if (e.id !== null) paths.push(folder + '/' + e.name); // gyökér szintű fájl (config.json, style.css, logo.txt, <docId>.html)
+  }
+  const { data: sectionEntries } = await supabaseClient.storage.from(CLOUD_BUCKET).list(folder + '/sections', { limit: 500 });
+  for (const e of (sectionEntries || [])) {
+    if (e.id !== null) paths.push(folder + '/sections/' + e.name);
+  }
+  if (!paths.length) return true;
+  const { error } = await supabaseClient.storage.from(CLOUD_BUCKET).remove(paths);
+  if (error) { console.warn('Cloud doc delete failed:', error); return false; }
+  return true;
+}
+
+async function deleteDocInProject(projectId, docId, title) {
+  if (!confirm('Törlöd a(z) "' + (title || docId) + '" dokumentumot?\nEz véglegesen törli az összes fejezetét, a CSS-ét és a beállításait a felhőből — ez nem vonható vissza.')) return;
+  toast('🗑 Törlés...', 'ok', 2500);
+  const ok = await cloudDeleteDocument(projectId, docId);
+  if (!ok) { toast('⚠ Törlés sikertelen', 'err'); return; }
+
+  const folder = projectId + '/' + docId;
+  // Ha épp ez a dokumentum van megnyitva a szerkesztőben, zárjuk be és lépjünk vissza.
+  if (state.currentProject === folder) {
+    delete state.projects[folder];
+    state.currentProject = null;
+    state.currentFile = null;
+  }
+  const opt = [...document.getElementById('project-select').options].find(o => o.value === folder);
+  if (opt) opt.remove();
+  try {
+    const db = await openDB();
+    const tx = db.transaction(STORE, 'readwrite');
+    tx.objectStore(STORE).delete(folder);
+    await new Promise((res, rej) => { tx.oncomplete = res; tx.onerror = rej; });
+    db.close();
+  } catch(e) {}
+  await deleteAllFileRecordsForProject(folder);
+
+  state.projectDocs = (state.projectDocs || []).filter(d => d.id !== docId);
+  state.homeProjects = null; // a projekt-kártya dokumentumszáma elavult, legközelebb frissül
+  renderProjectDocGrid();
+  toast('✓ Dokumentum törölve');
 }
 
 // ── Helyi projekt importálása egy Projektbe, dokumentumként ──
