@@ -12,6 +12,7 @@ Kétféle módban használható:
 ## Tartalom
 
 - [Közös, felhő alapú szerkesztés (bejelentkezéssel)](#közös-felhő-alapú-szerkesztés-bejelentkezéssel)
+- [Kezdőlap: Projektek és Dokumentumok](#kezdőlap-projektek-és-dokumentumok)
 - [Projekt betöltése és mentése (helyi mappa mód)](#projekt-betöltése-és-mentése-helyi-mappa-mód)
 - [Fejezetek szerkesztése](#fejezetek-szerkesztése)
 - [Markdown szintaxis](#markdown-szintaxis)
@@ -27,19 +28,31 @@ Kétféle módban használható:
 
 Az oldal megnyitásakor egy bejelentkező képernyő fogad — ez addig fedi le a felületet, amíg valaki nem jelentkezik be egy érvényes, a szervezet által létrehozott felhasználóval (email + jelszó). Új felhasználót önállóan nem lehet regisztrálni: a hozzáférést egy adminisztrátor adja meg a Supabase-projekt **Authentication → Users** felületén (`Invite user` / `Add user`).
 
-Bejelentkezés után a felső sávban megjelenik egy **☁️ Felhő** gomb:
+Bejelentkezés után a **Kezdőlap** fogad (lásd következő szakasz) — innen érhető el az összes közös, felhőben tárolt Projekt és az azokban lévő Dokumentum (kézikönyv).
 
-- **Meglévő felhő projekt megnyitása**: a gombra kattintva megjelenik a közösen tárolt projektek listája — bármelyikre kattintva ("Megnyitás") betöltődik, ugyanúgy szerkeszthető, mint egy helyi projekt.
-- **Új felhő projekt létrehozása**: azonosítót és megjelenített címet megadva egy új, üres projekt jön létre (egy induló "Bevezetés" fejezettel), rögtön a felhőben.
-- **Meglévő (helyi) projekt átvitele a felhőbe**: a "☁️ Felhő" ablakban a **"Meglévő (helyi) projekt átvitele a felhőbe"** résznél kiválasztható egy már betöltött, helyi projekt — a **"☁️ Feltöltés a felhőbe"** gomb egy kattintással átmásolja az összes fejezetét, a CSS-ét és a beállításait (config.json) egy új felhő projektbe, majd rögtön meg is nyitja azt. Az eredeti, helyi projekt (a böngésző tárolójában) változatlanul megmarad, csak egy másolat kerül a felhőbe.
-
-Amíg egy **felhő projekt** van megnyitva, minden mentés — fejezet gépelése közbeni automatikus mentés, kézi **💾 Mentés**, új fejezet létrehozása, fejezet átnevezése, sorrend átrendezése, menü- és CSS-mentés, valamint a **⚡ Build** kimenete is — közvetlenül a Supabase Storage-ba kerül, nem a böngésző helyi tárolójába vagy a gép mappájába. Így amit az egyik kolléga elment, azt egy másik — ugyanazt a felhő projektet megnyitva — azonnal látja.
+Amíg egy felhőben tárolt **Dokumentum** van megnyitva a szerkesztőben, minden mentés — fejezet gépelése közbeni automatikus mentés, kézi **💾 Mentés**, új fejezet létrehozása, fejezet átnevezése, sorrend átrendezése, menü- és CSS-mentés, valamint a **⚡ Build** kimenete is — közvetlenül a Supabase Storage-ba kerül, nem a böngésző helyi tárolójába vagy a gép mappájába. Így amit az egyik kolléga elment, azt egy másik — ugyanazt a Dokumentumot megnyitva — azonnal látja.
 
 A jobb felső **"🔑 Jelszó"** gombbal bármikor lecserélhető a saját jelszó (nem kell hozzá a régi jelszó megadása, csak be kell lenni jelentkezve). A bejelentkező képernyőn az **"Elfelejtett jelszó?"** linkkel jelszó-visszaállító email kérhető — ez, ahogy a felhasználó-meghívó email is, a Supabase alapértelmezett email-küldőjén megy, aminek szigorú (óránkénti néhány email) korlátja van; ha nem érkezik meg az email, ez a korlát az oka, és a bejelentkezés utáni "🔑 Jelszó" gombbal (vagy egy adminisztrátor által a Supabase felületén kézzel beállított új jelszóval) lehet megkerülni.
 
-A jobb felső **"Kilépés"** gomb kijelentkeztet; ezután a bejelentkező képernyő újra megjelenik.
+A jobb felső **"Kilépés"** gomb kijelentkeztet és visszavisz a Kezdőlapra; ezután a bejelentkező képernyő újra megjelenik.
 
 **Fontos korlát:** ha két ember *egyszerre*, ugyanabban a fejezetben dolgozik, a később mentett verzió felülírja a korábbit — nincs beépített ütközéskezelés vagy zárolás. Érdemes egy fejezetet egyszerre csak egy embernek szerkesztenie.
+
+---
+
+## Kezdőlap: Projektek és Dokumentumok
+
+Bejelentkezés után a **Kezdőlap** mutatja a közös, felhőben tárolt **Projekteket** — egy Projekt egy ügyfél, termék vagy belső téma köré szervezett gyűjtemény, amelyhez egy vagy több **Dokumentum** (egy-egy teljes kézikönyv, ugyanolyan felépítéssel, mint korábban egy "projekt") tartozhat.
+
+- **Projekt kártyák**: mindegyik mutatja a nevét, leírását, a hozzá tartozó dokumentumok számát, valamint a projekthez választott színt és ikont. Kattintásra megnyílik a Projekt nézete, ahol a benne lévő Dokumentumok listája látszik.
+- **🔍 Keresés**: a Kezdőlap tetején lévő keresőmezővel a Projektek nevére és leírására lehet szűrni.
+- **➕ Új projekt**: a rácsban lévő szaggatott keretű kártyára kattintva nyílik meg az űrlap — itt adható meg a Projekt neve, egy opcionális leírás, valamint egy szín és egy ikon (kattintással választható egy előre elkészített készletből). Ezek csak a Kezdőlapon és a Projekt nézetben, megkülönböztetésül szolgálnak.
+- **➕ Új dokumentum**: egy Projekt nézetében, a dokumentum-lista végén lévő kártyával hozható létre egy új, üres Dokumentum (egy induló "Bevezetés" fejezettel) — ehhez azonosítót (szóköz nélkül) és egy megjelenített címet kell megadni.
+- **📤 Helyi projekt importálása**: egy Projekt nézetében elérhető gomb — egy már betöltött, *helyi* (nem felhő) projekt egy kattintással feltölthető ebbe a Projektbe, új Dokumentumként. Az összes fejezet, a CSS és a beállítások (config.json) átmásolódnak; az eredeti, helyi másolat közben változatlanul megmarad a gépen / böngészőben.
+- **Morzsamenü (breadcrumb)** a felső sávban mindig mutatja, hol jársz (Kezdőlap / Projekt neve / Dokumentum címe), és bármelyik szintre vissza lehet kattintani belőle. A 🏠 gomb mindig egyenesen a Kezdőlapra visz.
+- A jogosultság-modell egyszerű: **minden bejelentkezett felhasználó minden Projektet és Dokumentumot lát és szerkeszthet** — nincs Projektenkénti vagy Dokumentumonkénti hozzáférés-korlátozás.
+
+Helyi mappa módban dolgozva (lásd lent) a Kezdőlap nem jelenik meg — a szerkesztő rögtön a mappa tartalmával nyílik meg, ahogy eddig is.
 
 ---
 
@@ -199,6 +212,7 @@ title: Telepítés
 
 - A mappába való közvetlen, automatikus mentés (`showDirectoryPicker` API) jelenleg Chrome és Edge asztali böngészőkben működik. Más böngészőknél a szerkesztő működik, de a fájlokat kézzel kell menteni / feltölteni.
 - A "Címsor 1" mező jelenleg csak a borító (első fejezet) fejlécére vonatkozó helyet foglal — a markdown `#` szintje ténylegesen `Címsor 2`-nek megfelelő HTML-elemet hoz létre (lásd a fenti táblázatot); ez a jövőben tisztázásra kerülhet.
-- Felhő módban minden bejelentkezett felhasználó minden felhő projekthez hozzáfér (nincs projektenkénti jogosultság-szűkítés) — jelenleg csoport/szerepkör szerinti hozzáférés-korlátozás nincs megvalósítva.
+- Felhő módban minden bejelentkezett felhasználó minden Projektet és Dokumentumot lát és szerkeszthet (nincs Projektenkénti / Dokumentumonkénti jogosultság-szűkítés) — jelenleg csoport/szerepkör szerinti hozzáférés-korlátozás nincs megvalósítva.
 - Felhő módban nincs ütközéskezelés: ha két ember egyszerre szerkeszti ugyanazt a fejezetet, a később mentett verzió felülírja a korábbit.
 - Fejezet törlése felhő módban is csak a szerkesztő nézetéből törli a fejezetet — a fájl a Supabase Storage-ban megmarad (ugyanaz a viselkedés, mint helyi mappa módban).
+- Egy Projekt vagy Dokumentum törlésére / átnevezésére jelenleg nincs felület a Kezdőlapon — ez a Supabase Storage felületén, kézzel végezhető el, ha szükséges.
