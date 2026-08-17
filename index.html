@@ -580,10 +580,11 @@ body { font-family: var(--sans); background: var(--bg); color: var(--text); disp
 .hp-new-card:hover { border-color:var(--accent); color:var(--accent2); background:var(--accent-soft); }
 .hp-new-card .plus { font-size:24px; line-height:1; }
 
-/* Dokumentum-kártyák a Projekt nézetben: 2 (szélesebb) oszlop, a szerkesztés/törlés/
-   megnyitás gombok mindig láthatók, egy fix sávban a kártya alján — nem csak hoverre. */
-#project-doc-grid { grid-template-columns:repeat(2, minmax(0, 1fr)); gap:16px; }
-@media (max-width: 720px) { #project-doc-grid { grid-template-columns:1fr; } }
+/* Kezdőlap (Projekt-kártyák) és Projekt nézet (Dokumentum-kártyák): mindkettő ugyanazt a
+   szélesebb, 2 oszlopos rácsot és kártyaszerkezetet használja — a szerkesztés/törlés/
+   megnyitás gombok mindig láthatók, egy fix sávban a kártya alján, nem csak hoverre. */
+#home-grid, #project-doc-grid { grid-template-columns:repeat(2, minmax(0, 1fr)); gap:16px; }
+@media (max-width: 720px) { #home-grid, #project-doc-grid { grid-template-columns:1fr; } }
 
 .hp-doc-card { display:flex; flex-direction:column; align-items:stretch; gap:14px; padding:16px 18px; cursor:pointer; }
 .hp-doc-top { display:flex; align-items:center; gap:14px; min-width:0; }
@@ -591,9 +592,9 @@ body { font-family: var(--sans); background: var(--bg); color: var(--text); disp
 .hp-doc-body { flex:1; min-width:0; }
 .hp-doc-title { font-size:14px; font-weight:600; margin-bottom:2px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .hp-doc-meta { font-size:11px; color:var(--text3); }
-.hp-doc-actions-row { display:flex; align-items:center; gap:8px; border-top:1px solid var(--border); padding-top:12px; }
-.hp-doc-actions-row .btn-sm { flex-shrink:0; white-space:nowrap; }
-.hp-doc-actions-row .btn.primary { margin-left:auto; padding:6px 18px; font-size:12px; }
+.hp-actions-row { display:flex; align-items:center; gap:8px; border-top:1px solid var(--border); padding-top:12px; margin-top:2px; }
+.hp-actions-row .btn-sm { flex-shrink:0; white-space:nowrap; }
+.hp-actions-row .btn.primary { margin-left:auto; padding:6px 18px; font-size:12px; flex-shrink:0; }
 
 .hp-empty { text-align:center; padding:50px 20px; color:var(--text3); font-size:13px; }
 
@@ -1109,10 +1110,10 @@ body { font-family: var(--sans); background: var(--bg); color: var(--text); disp
   </div>
 </div>
 
-<!-- Új projekt modal -->
+<!-- Új / szerkesztés Projekt modal (ugyanaz a modal szolgálja ki mindkettőt) -->
 <div class="hp-modal-backdrop" id="new-topproject-modal-backdrop" onclick="closeNewTopProjectModal()">
   <div class="hp-modal" onclick="event.stopPropagation()">
-    <h3>➕ Új projekt</h3>
+    <h3 id="ntp-modal-title">➕ Új projekt</h3>
     <label>Név</label>
     <input type="text" id="ntp-name" placeholder="pl. ÜgyfélX Bevezetés" />
     <label>Leírás (opcionális)</label>
@@ -1123,7 +1124,20 @@ body { font-family: var(--sans); background: var(--bg); color: var(--text); disp
     <div class="icon-row" id="ntp-icon-row"></div>
     <div style="display:flex;gap:8px;margin-top:20px">
       <button class="btn" onclick="closeNewTopProjectModal()" style="flex:1">Mégse</button>
-      <button class="btn primary" onclick="createTopProject()" style="flex:1">Létrehozás</button>
+      <button class="btn primary" id="ntp-submit-btn" onclick="saveTopProject()" style="flex:1">Létrehozás</button>
+    </div>
+  </div>
+</div>
+
+<!-- Dokumentum áthelyezése másik Projektbe -->
+<div class="hp-modal-backdrop" id="move-doc-modal-backdrop" onclick="closeMoveDocModal()">
+  <div class="hp-modal" onclick="event.stopPropagation()">
+    <h3>➡️ Dokumentum áthelyezése</h3>
+    <label>Célprojekt</label>
+    <select id="move-doc-target-select"></select>
+    <div style="display:flex;gap:8px;margin-top:20px">
+      <button class="btn" onclick="closeMoveDocModal()" style="flex:1">Mégse</button>
+      <button class="btn primary" onclick="runMoveDoc()" style="flex:1">➡️ Áthelyezés</button>
     </div>
   </div>
 </div>
@@ -1321,6 +1335,8 @@ const state = {
   currentTopProjectMeta: null, // { id, name, description, color, icon, docCount }
   homeProjects: null,          // kezdőlap kártyák cache-e
   projectDocs: null,           // az aktuális Projekt dokumentumainak cache-e
+  editingProjectId: null,      // ha nem null, az "Új/szerkesztés Projekt" modal szerkeszt, nem létrehoz
+  moveDocSource: null,         // { projectId, docId, title } — a "Dokumentum áthelyezése" modal forrása
 };
 
 // ── Toast ─────────────────────────────────────────────────────────────────────
@@ -1508,8 +1524,11 @@ async function cloudListTopProjects() {
   const projects = [];
   for (const id of ids) {
     const meta = (await cloudGetProjectMeta(id)) || { id, name: id, description: '', color: PROJECT_COLORS[0], icon: PROJECT_ICONS[0] };
-    const { data: docEntries } = await supabaseClient.storage.from(CLOUD_BUCKET).list(id, { limit: 200 });
-    meta.docCount = (docEntries || []).filter(e => e.id === null).length;
+    // FONTOS: a dokumentumszámot ugyanazzal a cloudListDocuments()-szel számoljuk, ami a
+    // Projekt nézetben is megjelenik — így csak a valódi (config.json-nal rendelkező)
+    // Dokumentum-mappák számítanak, nem minden alkönyvtár (pl. egy régi, lapos felhő
+    // projektből maradt "sections" mappa, ami korábban tévesen dokumentumnak tűnt).
+    meta.docCount = (await cloudListDocuments(id)).length;
     projects.push(meta);
   }
   return projects;
@@ -1611,16 +1630,25 @@ function renderHomeGrid() {
     grid.innerHTML = `<div class="hp-empty" style="grid-column:1/-1">${msg}</div>`;
   } else {
     list.forEach(p => {
+      const openProj = () => showProjectView(p.id);
       const card = document.createElement('div');
       card.className = 'hp-card';
-      card.onclick = () => showProjectView(p.id);
+      card.onclick = openProj;
       card.innerHTML = `
         <div class="accent-bar" style="background:${p.color}"></div>
         <div class="hp-card-icon" style="background:${p.color}22;color:${p.color}">${escapeHtml(p.icon)}</div>
-        <div class="hp-card-title">${escapeHtml(p.name)}</div>
+        <div class="hp-card-title" title="${escapeHtml(p.name)}">${escapeHtml(p.name)}</div>
         <div class="hp-card-desc">${escapeHtml(p.description || '')}</div>
         <div class="hp-card-meta"><span class="hp-badge">${p.docCount || 0} dokumentum</span></div>
+        <div class="hp-actions-row">
+          <button class="btn-sm hp-proj-edit-btn" title="Projekt szerkesztése">✏ Szerkesztés</button>
+          <button class="btn-sm del hp-proj-del-btn" title="Projekt törlése">🗑 Törlés</button>
+          <button class="btn primary hp-proj-open-btn">Megnyitás</button>
+        </div>
       `;
+      card.querySelector('.hp-proj-edit-btn').onclick = (e) => { e.stopPropagation(); openEditTopProjectModal(p); };
+      card.querySelector('.hp-proj-del-btn').onclick = (e) => { e.stopPropagation(); deleteTopProjectFromHome(p.id, p.name); };
+      card.querySelector('.hp-proj-open-btn').onclick = (e) => { e.stopPropagation(); openProj(); };
       grid.appendChild(card);
     });
   }
@@ -1680,13 +1708,15 @@ function renderProjectDocGrid() {
             <div class="hp-doc-meta">${escapeHtml(metaBits.join(' · '))}</div>
           </div>
         </div>
-        <div class="hp-doc-actions-row">
+        <div class="hp-actions-row">
           <button class="btn-sm hp-doc-edit-btn" title="Dokumentum átnevezése">✏ Szerkesztés</button>
+          <button class="btn-sm hp-doc-move-btn" title="Áthelyezés másik projektbe">➡️ Áthelyezés</button>
           <button class="btn-sm del hp-doc-del-btn" title="Dokumentum törlése">🗑 Törlés</button>
           <button class="btn primary hp-doc-open-btn">Megnyitás</button>
         </div>
       `;
       card.querySelector('.hp-doc-edit-btn').onclick = (e) => { e.stopPropagation(); renameDocInProject(projectId, d.id, d.title); };
+      card.querySelector('.hp-doc-move-btn').onclick = (e) => { e.stopPropagation(); openMoveDocModal(projectId, d.id, d.title); };
       card.querySelector('.hp-doc-del-btn').onclick = (e) => { e.stopPropagation(); deleteDocInProject(projectId, d.id, d.title); };
       card.querySelector('.hp-doc-open-btn').onclick = (e) => { e.stopPropagation(); openDoc(); };
       grid.appendChild(card);
@@ -1727,6 +1757,9 @@ function renderIconOptions() {
   });
 }
 function openNewTopProjectModal() {
+  state.editingProjectId = null;
+  document.getElementById('ntp-modal-title').textContent = '➕ Új projekt';
+  document.getElementById('ntp-submit-btn').textContent = 'Létrehozás';
   document.getElementById('ntp-name').value = '';
   document.getElementById('ntp-desc').value = '';
   state.ntpColor = PROJECT_COLORS[0];
@@ -1735,14 +1768,51 @@ function openNewTopProjectModal() {
   renderIconOptions();
   document.getElementById('new-topproject-modal-backdrop').classList.add('open');
 }
+function openEditTopProjectModal(p) {
+  state.editingProjectId = p.id;
+  document.getElementById('ntp-modal-title').textContent = '✏ Projekt szerkesztése';
+  document.getElementById('ntp-submit-btn').textContent = 'Mentés';
+  document.getElementById('ntp-name').value = p.name || '';
+  document.getElementById('ntp-desc').value = p.description || '';
+  state.ntpColor = p.color || PROJECT_COLORS[0];
+  state.ntpIcon = p.icon || PROJECT_ICONS[0];
+  renderSwatches();
+  renderIconOptions();
+  document.getElementById('new-topproject-modal-backdrop').classList.add('open');
+}
 function closeNewTopProjectModal() {
   document.getElementById('new-topproject-modal-backdrop').classList.remove('open');
+  state.editingProjectId = null;
 }
-async function createTopProject() {
+async function saveTopProject() {
   const name = document.getElementById('ntp-name').value.trim();
   if (!name) { toast('Add meg a projekt nevét!', 'err'); return; }
   const desc = document.getElementById('ntp-desc').value.trim();
 
+  if (state.editingProjectId) {
+    const id = state.editingProjectId;
+    const meta = { name, description: desc, color: state.ntpColor, icon: state.ntpIcon };
+    toast('☁️ Mentés...', 'ok', 2000);
+    const ok = await cloudUpload(id + '/_project.json', JSON.stringify(meta, null, 2), 'application/json');
+    if (!ok) { toast('⚠ Mentés sikertelen', 'err'); return; }
+    closeNewTopProjectModal();
+
+    const entry = (state.homeProjects || []).find(p => p.id === id);
+    if (entry) { entry.name = name; entry.description = desc; entry.color = state.ntpColor; entry.icon = state.ntpIcon; }
+    if (state.currentTopProject === id) {
+      state.currentTopProjectMeta = { ...(state.currentTopProjectMeta || {}), id, name, description: desc, color: state.ntpColor, icon: state.ntpIcon };
+      if (state.uiView === 'project') {
+        document.getElementById('project-page-title').textContent = name;
+        document.getElementById('project-page-desc').textContent = desc;
+      }
+      updateBreadcrumb();
+    }
+    if (state.uiView === 'home') renderHomeGrid();
+    toast('✓ Projekt frissítve');
+    return;
+  }
+
+  // Új Projekt létrehozása
   const existing = state.homeProjects || (await cloudListTopProjects());
   let id = slugify(name) || ('projekt-' + Math.floor(Math.random() * 100000));
   if (existing.find(p => p.id === id)) id = id + '-' + Math.floor(Math.random() * 1000);
@@ -1755,6 +1825,55 @@ async function createTopProject() {
   toast('✓ Projekt létrehozva');
   state.homeProjects = null;
   await showProjectView(id);
+}
+
+// ── Projekt törlése (mindenestül, a Kezdőlap kártyájáról) ──
+// Rekurzívan kitakarít MINDENT az adott útvonal alatt a Storage-ban — a Dokumentum-mappákat,
+// azok sections/ almappáit, a _project.json-t, és bármilyen régebbi, nem-hierarchikus
+// maradékot (pl. egy régi "sections" mappát) is, mert az Object Storage-ban nincs valódi
+// mappa, csak addig "létezik" egy elérési út, amíg van alatta fájl.
+async function cloudDeleteAllUnder(path) {
+  const { data } = await supabaseClient.storage.from(CLOUD_BUCKET).list(path, { limit: 1000 });
+  const filePaths = [];
+  const subfolders = [];
+  for (const e of (data || [])) {
+    if (e.id !== null) filePaths.push(path + '/' + e.name);
+    else subfolders.push(path + '/' + e.name);
+  }
+  if (filePaths.length) {
+    const { error } = await supabaseClient.storage.from(CLOUD_BUCKET).remove(filePaths);
+    if (error) console.warn('Cloud delete failed:', path, error);
+  }
+  for (const sub of subfolders) await cloudDeleteAllUnder(sub);
+}
+
+async function deleteTopProjectFromHome(projectId, name) {
+  if (!confirm('Törlöd a(z) "' + (name || projectId) + '" projektet?\nEz véglegesen törli az ÖSSZES benne lévő dokumentumot, fejezetet, CSS-t és beállítást a felhőből — ez nem vonható vissza.')) return;
+  toast('🗑 Projekt törlése...', 'ok', 3000);
+  await cloudDeleteAllUnder(projectId);
+
+  // Minden, ebből a Projektből esetleg már betöltött Dokumentum eltávolítása a memóriából/IndexedDB-ből.
+  const sel = document.getElementById('project-select');
+  for (const folderId of Object.keys(state.projects)) {
+    const p = state.projects[folderId];
+    if (p.topProjectId !== projectId) continue;
+    delete state.projects[folderId];
+    const opt = [...sel.options].find(o => o.value === folderId);
+    if (opt) opt.remove();
+    if (state.currentProject === folderId) { state.currentProject = null; state.currentFile = null; }
+    await deleteAllFileRecordsForProject(folderId);
+    try {
+      const db = await openDB();
+      const tx = db.transaction(STORE, 'readwrite');
+      tx.objectStore(STORE).delete(folderId);
+      await new Promise((res, rej) => { tx.oncomplete = res; tx.onerror = rej; });
+      db.close();
+    } catch(e) {}
+  }
+
+  state.homeProjects = (state.homeProjects || []).filter(p => p.id !== projectId);
+  renderHomeGrid();
+  toast('✓ Projekt törölve');
 }
 
 // ── Új Dokumentum modal (egy Projekten belül) ──
@@ -1822,20 +1941,114 @@ async function renameDocInProject(projectId, docId, currentTitle) {
 }
 
 async function cloudDeleteDocument(projectId, docId) {
-  const folder = projectId + '/' + docId;
-  const paths = [];
-  const { data: rootEntries } = await supabaseClient.storage.from(CLOUD_BUCKET).list(folder, { limit: 200 });
-  for (const e of (rootEntries || [])) {
-    if (e.id !== null) paths.push(folder + '/' + e.name); // gyökér szintű fájl (config.json, style.css, logo.txt, <docId>.html)
-  }
-  const { data: sectionEntries } = await supabaseClient.storage.from(CLOUD_BUCKET).list(folder + '/sections', { limit: 500 });
-  for (const e of (sectionEntries || [])) {
-    if (e.id !== null) paths.push(folder + '/sections/' + e.name);
-  }
-  if (!paths.length) return true;
-  const { error } = await supabaseClient.storage.from(CLOUD_BUCKET).remove(paths);
-  if (error) { console.warn('Cloud doc delete failed:', error); return false; }
+  await cloudDeleteAllUnder(projectId + '/' + docId);
   return true;
+}
+
+// ── Dokumentum áthelyezése egy másik Projektbe ──
+function guessContentType(filename) {
+  if (filename.endsWith('.json')) return 'application/json';
+  if (filename.endsWith('.css')) return 'text/css';
+  if (filename.endsWith('.html')) return 'text/html';
+  if (filename.endsWith('.md')) return 'text/markdown';
+  return 'text/plain';
+}
+async function cloudMoveDocument(fromProjectId, docId, toProjectId) {
+  const fromFolder = fromProjectId + '/' + docId;
+  const toFolder = toProjectId + '/' + docId;
+
+  const destConfig = await cloudDownloadText(toFolder + '/config.json');
+  if (destConfig) return { ok: false, reason: 'exists' };
+
+  const { data: rootEntries } = await supabaseClient.storage.from(CLOUD_BUCKET).list(fromFolder, { limit: 200 });
+  const rootFiles = (rootEntries || []).filter(e => e.id !== null).map(e => e.name);
+  const { data: sectionEntries } = await supabaseClient.storage.from(CLOUD_BUCKET).list(fromFolder + '/sections', { limit: 500 });
+  const sectionFiles = (sectionEntries || []).filter(e => e.id !== null).map(e => e.name);
+
+  // Minden fájl (config.json, style.css, logo.txt, kimeneti HTML, fejezetek) szöveges —
+  // ugyanúgy szöveg-alapú letöltés + feltöltés, mint a Helyi projekt importálásánál.
+  for (const name of rootFiles) {
+    const text = await cloudDownloadText(fromFolder + '/' + name);
+    if (text === null) continue;
+    await cloudUpload(toFolder + '/' + name, text, guessContentType(name));
+  }
+  for (const name of sectionFiles) {
+    const text = await cloudDownloadText(fromFolder + '/sections/' + name);
+    if (text === null) continue;
+    await cloudUpload(toFolder + '/sections/' + name, text, 'text/markdown');
+  }
+
+  await cloudDeleteAllUnder(fromFolder);
+  return { ok: true };
+}
+
+async function openMoveDocModal(projectId, docId, title) {
+  state.moveDocSource = { projectId, docId, title };
+  const sel = document.getElementById('move-doc-target-select');
+  sel.innerHTML = '<option value="">Betöltés...</option>';
+  document.getElementById('move-doc-modal-backdrop').classList.add('open');
+
+  // Friss (nem cache-elt) Projekt-lista, docCount nélkül — itt csak a névre van szükség,
+  // nem érdemes minden Projekt összes Dokumentumát is végignézni csak egy legördülőhöz.
+  const { data } = await supabaseClient.storage.from(CLOUD_BUCKET)
+    .list('', { limit: 200, sortBy: { column: 'name', order: 'asc' } });
+  const ids = (data || []).filter(e => e.id === null && e.name !== projectId).map(e => e.name);
+  const others = [];
+  for (const id of ids) {
+    const m = await cloudGetProjectMeta(id);
+    others.push(m || { id, name: id });
+  }
+  if (!others.length) {
+    sel.innerHTML = '<option value="">— nincs másik projekt —</option>';
+  } else {
+    sel.innerHTML = '';
+    others.forEach(p => {
+      const opt = document.createElement('option');
+      opt.value = p.id;
+      opt.textContent = p.name;
+      sel.appendChild(opt);
+    });
+  }
+}
+function closeMoveDocModal() {
+  document.getElementById('move-doc-modal-backdrop').classList.remove('open');
+  state.moveDocSource = null;
+}
+async function runMoveDoc() {
+  const src = state.moveDocSource;
+  if (!src) return;
+  const toProjectId = document.getElementById('move-doc-target-select').value;
+  if (!toProjectId) { toast('Válassz célprojektet!', 'err'); return; }
+
+  toast('➡️ Áthelyezés folyamatban...', 'ok', 4000);
+  const result = await cloudMoveDocument(src.projectId, src.docId, toProjectId);
+  if (!result.ok) {
+    toast(result.reason === 'exists' ? 'A célprojektben már van ilyen azonosítójú dokumentum!' : '⚠ Áthelyezés sikertelen', 'err', 4000);
+    return;
+  }
+  closeMoveDocModal();
+
+  // Ha épp meg volt nyitva a szerkesztőben a forrás helyről, zárjuk be onnan.
+  const oldFolder = src.projectId + '/' + src.docId;
+  if (state.currentProject === oldFolder) {
+    delete state.projects[oldFolder];
+    state.currentProject = null;
+    state.currentFile = null;
+    const opt = [...document.getElementById('project-select').options].find(o => o.value === oldFolder);
+    if (opt) opt.remove();
+  }
+  await deleteAllFileRecordsForProject(oldFolder);
+  try {
+    const db = await openDB();
+    const tx = db.transaction(STORE, 'readwrite');
+    tx.objectStore(STORE).delete(oldFolder);
+    await new Promise((res, rej) => { tx.oncomplete = res; tx.onerror = rej; });
+    db.close();
+  } catch(e) {}
+
+  state.homeProjects = null; // mindkét projekt dokumentumszáma változott
+  toast('✓ Dokumentum áthelyezve');
+  await showProjectView(src.projectId); // a forrás Projekt nézete frissül, a dokumentum eltűnik belőle
 }
 
 async function deleteDocInProject(projectId, docId, title) {
