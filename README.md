@@ -49,6 +49,8 @@ Bejelentkezés után a **Kezdőlap** mutatja a közös, felhőben tárolt **Proj
 - **➕ Új projekt**: a rácsban lévő szaggatott keretű kártyára kattintva nyílik meg az űrlap — itt adható meg a Projekt neve, egy opcionális leírás, valamint egy szín és egy ikon (kattintással választható egy előre elkészített készletből). Ezek csak a Kezdőlapon és a Projekt nézetben, megkülönböztetésül szolgálnak.
 - **➕ Új dokumentum**: egy Projekt nézetében, a dokumentum-lista végén lévő kártyával hozható létre egy új, üres Dokumentum (egy induló "Bevezetés" fejezettel) — ehhez azonosítót (szóköz nélkül) és egy megjelenített címet kell megadni.
 - **📤 Helyi projekt importálása**: egy Projekt nézetében elérhető gomb — egy már betöltött, *helyi* (nem felhő) projekt egy kattintással feltölthető ebbe a Projektbe, új Dokumentumként. Az összes fejezet, a CSS és a beállítások (config.json) átmásolódnak; az eredeti, helyi másolat közben változatlanul megmarad a gépen / böngészőben.
+- **✏ Dokumentum átnevezése**: egy Projekt nézetében, egy Dokumentum-kártya fölé húzva megjelenik egy ✏ gomb — erre kattintva megadható a Dokumentum új, megjelenített címe. (Ez csak a címet változtatja, a Dokumentum azonosítóját — vagyis a felhőben lévő mappa nevét — nem.)
+- **🗑 Dokumentum törlése**: ugyanígy, a Dokumentum-kártya fölé húzva megjelenő 🗑 gombbal törölhető egy teljes Dokumentum — ez véglegesen eltávolítja az összes fejezetét, a CSS-ét és a beállításait a felhőből (megerősítést kér, mert nem vonható vissza).
 - **Morzsamenü (breadcrumb)** a felső sávban mindig mutatja, hol jársz (Kezdőlap / Projekt neve / Dokumentum címe), és bármelyik szintre vissza lehet kattintani belőle. A 🏠 gomb mindig egyenesen a Kezdőlapra visz.
 - A jogosultság-modell egyszerű: **minden bejelentkezett felhasználó minden Projektet és Dokumentumot lát és szerkeszthet** — nincs Projektenkénti vagy Dokumentumonkénti hozzáférés-korlátozás.
 
@@ -215,4 +217,4 @@ title: Telepítés
 - Felhő módban minden bejelentkezett felhasználó minden Projektet és Dokumentumot lát és szerkeszthet (nincs Projektenkénti / Dokumentumonkénti jogosultság-szűkítés) — jelenleg csoport/szerepkör szerinti hozzáférés-korlátozás nincs megvalósítva.
 - Felhő módban nincs ütközéskezelés: ha két ember egyszerre szerkeszti ugyanazt a fejezetet, a később mentett verzió felülírja a korábbit.
 - Fejezet törlése felhő módban is csak a szerkesztő nézetéből törli a fejezetet — a fájl a Supabase Storage-ban megmarad (ugyanaz a viselkedés, mint helyi mappa módban).
-- Egy Projekt vagy Dokumentum törlésére / átnevezésére jelenleg nincs felület a Kezdőlapon — ez a Supabase Storage felületén, kézzel végezhető el, ha szükséges.
+- Egy Dokumentum átnevezése / törlése a Projekt nézetében megoldott (✏ / 🗑 a kártyán), de magának a **Projektnek** (a felső szintnek) az átnevezésére vagy törlésére jelenleg nincs felület — ez a Supabase Storage felületén, kézzel végezhető el, ha szükséges.
