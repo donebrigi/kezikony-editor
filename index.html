@@ -559,6 +559,26 @@ body { font-family: var(--sans); background: var(--bg); color: var(--text); disp
   background:var(--bg3); color:var(--text2); cursor:pointer; font-size:13px;
 }
 #cloud-modal-close:hover { color:var(--text); }
+
+/* ── Jelszó módosítása modal ── */
+#pw-modal-backdrop {
+  display:none; position:fixed; inset:0;
+  background:rgba(0,0,0,0.65); z-index:200;
+  align-items:center; justify-content:center;
+}
+#pw-modal-backdrop.open { display:flex; }
+#pw-modal {
+  background:var(--bg2); border:1px solid var(--border2);
+  border-radius:12px; padding:22px; width:320px; max-width:95vw;
+  box-shadow:0 24px 64px rgba(0,0,0,0.55);
+}
+#pw-modal h3 { font-size:14px; color:var(--text2); margin-bottom:14px; font-weight:600; }
+#pw-modal input {
+  width:100%; padding:8px 10px; margin-bottom:10px;
+  background:var(--bg3); border:1px solid var(--border2); border-radius:var(--radius);
+  color:var(--text); font-size:13px; box-sizing:border-box;
+}
+#pw-error { color:var(--red); font-size:12px; min-height:14px; }
 </style>
 </head>
 <body>
@@ -584,6 +604,7 @@ body { font-family: var(--sans); background: var(--bg); color: var(--text); disp
   <div class="sep"></div>
   <div id="user-bar">
     <span id="user-email"></span>
+    <button class="btn" onclick="openPasswordModal()" style="padding:4px 10px;font-size:12px">🔑 Jelszó</button>
     <button class="btn" onclick="cloudLogout()" style="padding:4px 10px;font-size:12px">Kilépés</button>
   </div>
 </div>
@@ -1023,6 +1044,23 @@ body { font-family: var(--sans); background: var(--bg); color: var(--text); disp
     <input id="auth-password" type="password" placeholder="jelszó" autocomplete="current-password"/>
     <button class="btn primary" onclick="cloudLogin()">Belépés</button>
     <div id="auth-error"></div>
+    <div style="margin-top:12px">
+      <a href="#" onclick="cloudForgotPassword();return false" style="font-size:12px;color:var(--text3)">Elfelejtett jelszó?</a>
+    </div>
+  </div>
+</div>
+
+<!-- Jelszó módosítása (bejelentkezve) -->
+<div id="pw-modal-backdrop">
+  <div id="pw-modal" onclick="event.stopPropagation()">
+    <h3>🔑 Jelszó módosítása</h3>
+    <input id="pw-new" type="password" placeholder="új jelszó (min. 6 karakter)" autocomplete="new-password"/>
+    <input id="pw-confirm" type="password" placeholder="új jelszó mégegyszer" autocomplete="new-password"/>
+    <div id="pw-error"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px">
+      <button class="btn" onclick="closePasswordModal()">Mégse</button>
+      <button class="btn primary" onclick="changePassword()">Mentés</button>
+    </div>
   </div>
 </div>
 
@@ -1210,6 +1248,42 @@ async function cloudLogin() {
 }
 async function cloudLogout() {
   await supabaseClient.auth.signOut();
+}
+
+// Elfelejtett jelszó — a bejelentkező képernyőn, még bejelentkezés előtt.
+// Figyelem: ez is a Supabase alapértelmezett email-küldőjén megy, ami szigorúan
+// korlátozott (lásd README) — ha nem érkezik meg az email, ez lehet az oka.
+async function cloudForgotPassword() {
+  const email = document.getElementById('auth-email').value.trim();
+  const errEl = document.getElementById('auth-error');
+  if (!email) { errEl.textContent = 'Előbb írd be az email címedet a mezőbe.'; return; }
+  const { error } = await supabaseClient.auth.resetPasswordForEmail(email);
+  if (error) { errEl.textContent = 'Hiba történt: ' + error.message; return; }
+  errEl.style.color = 'var(--green)';
+  errEl.textContent = 'Ha ez a cím regisztrálva van, hamarosan kapsz egy emailt a jelszó visszaállításához.';
+}
+
+// Jelszó módosítása — már bejelentkezett felhasználónak.
+function openPasswordModal() {
+  document.getElementById('pw-new').value = '';
+  document.getElementById('pw-confirm').value = '';
+  document.getElementById('pw-error').textContent = '';
+  document.getElementById('pw-modal-backdrop').classList.add('open');
+}
+function closePasswordModal() {
+  document.getElementById('pw-modal-backdrop').classList.remove('open');
+}
+async function changePassword() {
+  const pw1 = document.getElementById('pw-new').value;
+  const pw2 = document.getElementById('pw-confirm').value;
+  const errEl = document.getElementById('pw-error');
+  errEl.textContent = '';
+  if (!pw1 || pw1.length < 6) { errEl.textContent = 'A jelszó legalább 6 karakter legyen.'; return; }
+  if (pw1 !== pw2) { errEl.textContent = 'A két jelszó nem egyezik.'; return; }
+  const { error } = await supabaseClient.auth.updateUser({ password: pw1 });
+  if (error) { errEl.textContent = 'Hiba: ' + error.message; return; }
+  closePasswordModal();
+  toast('✓ Jelszó módosítva');
 }
 document.getElementById('auth-password').addEventListener('keydown', e => {
   if (e.key === 'Enter') cloudLogin();
