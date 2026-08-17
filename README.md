@@ -35,6 +35,8 @@ Bejelentkezés után a felső sávban megjelenik egy **☁️ Felhő** gomb:
 
 Amíg egy **felhő projekt** van megnyitva, minden mentés — fejezet gépelése közbeni automatikus mentés, kézi **💾 Mentés**, új fejezet létrehozása, fejezet átnevezése, sorrend átrendezése, menü- és CSS-mentés, valamint a **⚡ Build** kimenete is — közvetlenül a Supabase Storage-ba kerül, nem a böngésző helyi tárolójába vagy a gép mappájába. Így amit az egyik kolléga elment, azt egy másik — ugyanazt a felhő projektet megnyitva — azonnal látja.
 
+A jobb felső **"🔑 Jelszó"** gombbal bármikor lecserélhető a saját jelszó (nem kell hozzá a régi jelszó megadása, csak be kell lenni jelentkezve). A bejelentkező képernyőn az **"Elfelejtett jelszó?"** linkkel jelszó-visszaállító email kérhető — ez, ahogy a felhasználó-meghívó email is, a Supabase alapértelmezett email-küldőjén megy, aminek szigorú (óránkénti néhány email) korlátja van; ha nem érkezik meg az email, ez a korlát az oka, és a bejelentkezés utáni "🔑 Jelszó" gombbal (vagy egy adminisztrátor által a Supabase felületén kézzel beállított új jelszóval) lehet megkerülni.
+
 A jobb felső **"Kilépés"** gomb kijelentkeztet; ezután a bejelentkező képernyő újra megjelenik.
 
 **Fontos korlát:** ha két ember *egyszerre*, ugyanabban a fejezetben dolgozik, a később mentett verzió felülírja a korábbit — nincs beépített ütközéskezelés vagy zárolás. Érdemes egy fejezetet egyszerre csak egy embernek szerkesztenie.
