@@ -509,6 +509,56 @@ body { font-family: var(--sans); background: var(--bg); color: var(--text); disp
 .code { color: #89ddff; }
 .link { color: var(--green); }
 .callout { color: #f78c6c; }
+
+/* ── Cloud auth gate ── */
+#auth-gate {
+  position: fixed; inset: 0; z-index: 9999;
+  background: var(--bg);
+  display: flex; align-items: center; justify-content: center;
+}
+#auth-gate.hidden { display: none; }
+#auth-box {
+  width: 320px; background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 12px; padding: 28px 24px; text-align: center;
+  box-shadow: 0 24px 64px rgba(0,0,0,0.55);
+}
+#auth-box p { font-size: 12px; color: var(--text3); margin-bottom: 18px; }
+#auth-box input {
+  width: 100%; padding: 8px 10px; margin-bottom: 10px;
+  background: var(--bg3); border: 1px solid var(--border2); border-radius: var(--radius);
+  color: var(--text); font-size: 13px; box-sizing: border-box;
+}
+#auth-box .btn { width: 100%; margin-top: 4px; }
+#auth-error { color: var(--red); font-size: 12px; margin-top: 10px; min-height: 14px; }
+#user-bar { display: flex; align-items: center; gap: 8px; }
+#user-email { font-size: 11px; color: var(--text3); }
+
+/* ── Felhő projekt modal ── */
+#cloud-modal-backdrop {
+  display:none; position:fixed; inset:0;
+  background:rgba(0,0,0,0.65); z-index:150;
+  align-items:center; justify-content:center;
+}
+#cloud-modal-backdrop.open { display:flex; }
+#cloud-modal {
+  background:var(--bg2); border:1px solid var(--border2);
+  border-radius:12px; padding:22px; width:480px; max-width:95vw;
+  max-height:88vh; overflow-y:auto;
+  box-shadow:0 24px 64px rgba(0,0,0,0.55);
+}
+#cloud-modal h3 { font-size:14px; color:var(--text2); margin-bottom:14px; font-weight:600; }
+#cloud-modal-list { margin-bottom: 16px; }
+#cloud-new-form { border-top:1px solid var(--border); padding-top:14px; }
+#cloud-new-form label { display:block; font-size:12px; color:var(--text3); margin-bottom:4px; margin-top:10px; }
+#cloud-new-form input[type=text] {
+  width:100%; padding:7px 10px; background:var(--bg); border:1px solid var(--border2);
+  color:var(--text); border-radius:var(--radius); font-size:13px; box-sizing:border-box;
+}
+#cloud-modal-close {
+  margin-top:16px; padding:6px 16px; border-radius:var(--radius); border:1px solid var(--border2);
+  background:var(--bg3); color:var(--text2); cursor:pointer; font-size:13px;
+}
+#cloud-modal-close:hover { color:var(--text); }
 </style>
 </head>
 <body>
@@ -521,6 +571,7 @@ body { font-family: var(--sans); background: var(--bg); color: var(--text); disp
     <option value="">— válassz projektet —</option>
   </select>
   <button class="btn" onclick="openProjModal()" title="Projektek kezelése" style="padding:5px 9px;font-size:13px">⚙</button>
+  <button class="btn" onclick="openCloudModal()" title="Közös, felhőben tárolt projektek — ide látnak rá a kollégáid is" style="padding:5px 9px;font-size:13px">☁️ Felhő</button>
   <div class="sep"></div>
   <button class="btn" onclick="saveCurrentFile()" title="Ctrl+S">💾 Mentés</button>
   <button class="btn" onclick="openAiPanel()" title="AI fejezet generálás screenshotból" style="background:linear-gradient(135deg,#6366f1,#8b5cf6);border-color:#6366f1;color:#fff">✨ AI</button>
@@ -530,6 +581,11 @@ body { font-family: var(--sans); background: var(--bg); color: var(--text); disp
   <button class="btn" onclick="togglePreviewPopout()" id="btn-preview-popout" title="Az előnézetet külön böngészőlapon nyitja meg, élőben frissülve — így a szerkesztő nagyobb helyet kap">🡵 Előnézet külön lapon</button>
   <div class="spacer"></div>
   <span id="status" title="Nyisd meg Chrome-ban, file:// protokollon is működik">Nincs betöltve projekt</span>
+  <div class="sep"></div>
+  <div id="user-bar">
+    <span id="user-email"></span>
+    <button class="btn" onclick="cloudLogout()" style="padding:4px 10px;font-size:12px">Kilépés</button>
+  </div>
 </div>
 
 <!-- Main -->
@@ -937,6 +993,40 @@ body { font-family: var(--sans); background: var(--bg); color: var(--text); disp
   </div>
 </div>
 
+<!-- Felhő projekt modal (Supabase Storage — közös, kollégákkal megosztott projektek) -->
+<div id="cloud-modal-backdrop">
+  <div id="cloud-modal" onclick="event.stopPropagation()">
+    <h3>☁️ Felhő projektek (közös, kollégákkal megosztott)</h3>
+    <div id="cloud-modal-list"></div>
+    <div id="cloud-migrate-form" style="border-top:1px solid var(--border);padding-top:14px">
+      <label style="display:block;font-size:12px;color:var(--text3);margin-bottom:4px">📤 Meglévő (helyi) projekt átvitele a felhőbe</label>
+      <select id="cloud-migrate-source" style="width:100%;padding:7px 10px;background:var(--bg);border:1px solid var(--border2);color:var(--text);border-radius:var(--radius);font-size:13px;box-sizing:border-box;margin-bottom:8px"></select>
+      <button class="btn primary" onclick="migrateProjectToCloud()" style="width:100%">☁️ Feltöltés a felhőbe</button>
+    </div>
+    <div id="cloud-new-form">
+      <label>➕ Új felhő projekt — azonosító (szóköz nélkül)</label>
+      <input type="text" id="cloud-new-id" placeholder="pl. ugyfel-neve" />
+      <label>Megjelenített cím</label>
+      <input type="text" id="cloud-new-title" placeholder="pl. ÜgyfélNév — kézikönyv" />
+      <button class="btn primary" onclick="cloudCreateProject()" style="margin-top:10px;width:100%">➕ Létrehozás a felhőben</button>
+    </div>
+    <button id="cloud-modal-close" onclick="closeCloudModal()">Bezárás</button>
+  </div>
+</div>
+
+<!-- Bejelentkezés (Supabase Auth) — amíg nincs bejelentkezve, ez fedi le a teljes felületet -->
+<div id="auth-gate">
+  <div id="auth-box">
+    <div style="font-size:16px;font-weight:600;margin-bottom:2px;color:var(--accent2)">📖 Kézikönyv Szerkesztő</div>
+    <p>Jelentkezz be a folytatáshoz</p>
+    <input id="auth-email" type="email" placeholder="email cím" autocomplete="username"/>
+    <input id="auth-password" type="password" placeholder="jelszó" autocomplete="current-password"/>
+    <button class="btn primary" onclick="cloudLogin()">Belépés</button>
+    <div id="auth-error"></div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 // ── Search JS (injected into built HTML) ─────────────────────────────────────
 const SEARCH_JS = `(function () {
@@ -1078,6 +1168,259 @@ function toast(msg, type='ok', dur=2500) {
 function setStatus(msg, cls='') {
   const s = document.getElementById('status');
   s.textContent = msg; s.className = cls;
+}
+
+// ── Supabase Cloud (közös tárhely + bejelentkezés) ─────────────────────────────
+// Ezek a projekten belül "felhő projektnek" (proj.cloudFolder) nevezett projektek
+// forrása és célja: nem a helyi mappába/IndexedDB-be, hanem a Supabase Storage
+// "kezikonyv" bucket-jébe olvasnak/írnak, így minden bejelentkezett kolléga
+// ugyanazt a tartalmat látja és szerkesztheti.
+const SUPABASE_URL = 'https://xnycxkbegnbaxkhtpcev.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_caGEy-9KlDt1vKsICEHv7w_LbUQZADL';
+const CLOUD_BUCKET = 'kezikonyv';
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// ── Bejelentkezés ──
+async function cloudCheckSession() {
+  const { data: { session } } = await supabaseClient.auth.getSession();
+  updateAuthUI(session);
+}
+function updateAuthUI(session) {
+  const gate = document.getElementById('auth-gate');
+  const emailSpan = document.getElementById('user-email');
+  if (session && session.user) {
+    gate.classList.add('hidden');
+    if (emailSpan) emailSpan.textContent = session.user.email || '';
+  } else {
+    gate.classList.remove('hidden');
+    if (emailSpan) emailSpan.textContent = '';
+  }
+}
+supabaseClient.auth.onAuthStateChange((_event, session) => updateAuthUI(session));
+
+async function cloudLogin() {
+  const email = document.getElementById('auth-email').value.trim();
+  const password = document.getElementById('auth-password').value;
+  const errEl = document.getElementById('auth-error');
+  errEl.textContent = '';
+  if (!email || !password) { errEl.textContent = 'Add meg az email címet és a jelszót.'; return; }
+  const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
+  if (error) { errEl.textContent = 'Hibás email vagy jelszó.'; return; }
+  document.getElementById('auth-password').value = '';
+}
+async function cloudLogout() {
+  await supabaseClient.auth.signOut();
+}
+document.getElementById('auth-password').addEventListener('keydown', e => {
+  if (e.key === 'Enter') cloudLogin();
+});
+cloudCheckSession();
+
+// ── Storage segédfüggvények ──
+async function cloudDownloadText(path) {
+  const { data, error } = await supabaseClient.storage.from(CLOUD_BUCKET).download(path);
+  if (error || !data) return null;
+  return await data.text();
+}
+async function cloudUpload(path, content, contentType) {
+  const blob = new Blob([content], { type: contentType });
+  const { error } = await supabaseClient.storage.from(CLOUD_BUCKET).upload(path, blob, { upsert: true, contentType });
+  if (error) {
+    console.warn('Cloud upload failed:', path, error);
+    toast('⚠ Felhő mentés sikertelen: ' + path, 'err', 4000);
+    return false;
+  }
+  return true;
+}
+async function cloudSaveSectionFile(proj, fn) {
+  if (!proj.cloudFolder) return;
+  const f = proj.files[fn];
+  if (!f) return;
+  await cloudUpload(proj.cloudFolder + '/sections/' + fn, f.raw, 'text/markdown');
+}
+async function cloudSaveConfig(proj) {
+  if (!proj.cloudFolder) return;
+  await cloudUpload(proj.cloudFolder + '/config.json', serializeConfig(proj), 'application/json');
+}
+async function cloudSaveCss(proj) {
+  if (!proj.cloudFolder) return;
+  await cloudUpload(proj.cloudFolder + '/style.css', proj.css || getDefaultCSS(), 'text/css');
+}
+async function cloudSaveOutput(proj, outputName, html) {
+  if (!proj.cloudFolder) return;
+  await cloudUpload(proj.cloudFolder + '/' + outputName, html, 'text/html');
+}
+
+// ── Felhő projektek listázása / megnyitása / létrehozása ──
+async function cloudListProjects() {
+  const { data, error } = await supabaseClient.storage.from(CLOUD_BUCKET)
+    .list('', { limit: 200, sortBy: { column: 'name', order: 'asc' } });
+  if (error) { console.warn('Cloud list failed:', error); return []; }
+  // A gyökérben lévő "mappák" (id === null) a projektek — önálló fájlt itt nem várunk.
+  return (data || []).filter(e => e.id === null).map(e => e.name);
+}
+
+function openCloudModal() {
+  document.getElementById('cloud-modal-backdrop').classList.add('open');
+  refreshCloudModalList();
+  populateMigrateSourceSelect();
+}
+
+function populateMigrateSourceSelect() {
+  const sel = document.getElementById('cloud-migrate-source');
+  if (!sel) return;
+  const localNames = Object.keys(state.projects).filter(n => !state.projects[n].cloudFolder);
+  if (!localNames.length) {
+    sel.innerHTML = '<option value="">— nincs helyi projekt betöltve —</option>';
+    return;
+  }
+  sel.innerHTML = '';
+  localNames.forEach(name => {
+    const opt = document.createElement('option');
+    opt.value = name;
+    opt.textContent = state.projects[name].config?.title || name;
+    sel.appendChild(opt);
+  });
+}
+
+async function migrateProjectToCloud() {
+  const sourceName = document.getElementById('cloud-migrate-source').value;
+  if (!sourceName || !state.projects[sourceName]) { toast('Nincs kiválasztható helyi projekt!', 'err'); return; }
+  const source = state.projects[sourceName];
+  if (source.cloudFolder) { toast('Ez már felhő projekt.', 'err'); return; }
+
+  let targetId = prompt('Add meg az új felhő projekt azonosítóját (szóköz nélkül):', sourceName.replace(/\s+/g, '-'));
+  if (!targetId) return;
+  targetId = targetId.trim().replace(/\s+/g, '-');
+  if (!targetId) return;
+
+  const existing = await cloudListProjects();
+  if (existing.includes(targetId)) { toast('Már létezik ilyen azonosítójú felhő projekt!', 'err'); return; }
+
+  toast('☁️ Migrálás folyamatban, ez eltarthat pár másodpercig...', 'ok', 6000);
+
+  await cloudUpload(targetId + '/config.json', serializeConfig({ config: source.config, fileOrder: source.fileOrder }), 'application/json');
+  await cloudUpload(targetId + '/style.css', source.css || getDefaultCSS(), 'text/css');
+  if (source.logo) await cloudUpload(targetId + '/logo.txt', source.logo, 'text/plain');
+
+  for (const fn of source.fileOrder) {
+    const f = source.files[fn];
+    if (!f) continue;
+    await cloudUpload(targetId + '/sections/' + fn, f.raw, 'text/markdown');
+  }
+
+  toast('✓ Migrálva — megnyitás a felhőből...', 'ok', 3000);
+  await cloudLoadProject(targetId);
+}
+function closeCloudModal() {
+  document.getElementById('cloud-modal-backdrop').classList.remove('open');
+}
+async function refreshCloudModalList() {
+  const list = document.getElementById('cloud-modal-list');
+  list.innerHTML = '<div style="font-size:12px;color:var(--text3)">Betöltés...</div>';
+  const names = await cloudListProjects();
+  if (!names.length) {
+    list.innerHTML = '<div style="font-size:12px;color:var(--text3)">Még nincs felhő projekt — hozz létre egyet lent.</div>';
+    return;
+  }
+  list.innerHTML = '';
+  names.forEach(name => {
+    const row = document.createElement('div');
+    row.className = 'proj-row';
+    row.innerHTML = `<span class="proj-name">☁️ ${name}</span><button class="btn-sm" onclick="cloudLoadProject('${name}')">Megnyitás</button>`;
+    list.appendChild(row);
+  });
+}
+
+async function cloudLoadProject(folderId) {
+  closeCloudModal();
+  toast('☁️ Felhő projekt betöltése...', 'ok', 2000);
+
+  const project = {
+    name: folderId,
+    config: {}, css: '', logo: '',
+    files: {}, fileOrder: [],
+    fileObjects: {},
+    cloudFolder: folderId
+  };
+
+  const configText = await cloudDownloadText(folderId + '/config.json');
+  if (configText) { try { project.config = JSON.parse(configText); } catch(e) {} }
+  const cssText = await cloudDownloadText(folderId + '/style.css');
+  if (cssText) project.css = cssText;
+  const logoText = await cloudDownloadText(folderId + '/logo.txt');
+  if (logoText) project.logo = logoText.trim();
+
+  const { data: sectionFiles, error: listErr } = await supabaseClient.storage.from(CLOUD_BUCKET)
+    .list(folderId + '/sections', { limit: 500 });
+  if (!listErr && sectionFiles) {
+    for (const entry of sectionFiles) {
+      if (entry.id === null) continue; // almappa, nem várunk ilyet
+      if (!entry.name.endsWith('.md') || entry.name === 'README.md') continue;
+      const text = await cloudDownloadText(folderId + '/sections/' + entry.name);
+      if (text === null) continue;
+      const { meta, content } = parseFrontmatter(text);
+      project.files[entry.name] = { meta, content, raw: text, dirty: false, fileHandle: null, fileObj: null };
+    }
+  }
+
+  const savedOrder = Array.isArray(project.config.fileOrder) ? project.config.fileOrder : null;
+  if (savedOrder) {
+    const known = new Set(Object.keys(project.files));
+    const ordered = savedOrder.filter(fn => known.has(fn));
+    const missing = Object.keys(project.files).filter(fn => !ordered.includes(fn)).sort();
+    project.fileOrder = ordered.concat(missing);
+  } else {
+    project.fileOrder = Object.keys(project.files).sort();
+  }
+  if (!project.css) project.css = getDefaultCSS();
+
+  state.projects[folderId] = project;
+  state.currentProject = folderId;
+
+  const sel = document.getElementById('project-select');
+  if (![...sel.options].find(o => o.value === folderId)) {
+    const opt = document.createElement('option');
+    opt.value = folderId;
+    opt.textContent = '☁️ ' + (project.config.title || folderId);
+    sel.appendChild(opt);
+  }
+  sel.value = folderId;
+
+  renderSidebar();
+  showEditorPane();
+  if (project.fileOrder.length > 0) {
+    openFile(project.fileOrder[0]);
+  } else {
+    toast('Üres felhő projekt — hozz létre egy fejezetet a + gombbal.', '', 4000);
+  }
+  setStatus('Felhő projekt betöltve: ' + folderId, 'saved');
+  setTimeout(() => setStatus(''), 2500);
+  toast('✓ Felhő projekt betöltve — a mentés innentől mindenki számára közösen kerül el');
+  checkFolderAccessBtn();
+  persistState();
+}
+
+async function cloudCreateProject() {
+  const id = document.getElementById('cloud-new-id').value.trim().replace(/\s+/g,'-');
+  const title = document.getElementById('cloud-new-title').value.trim();
+  if (!id) { toast('Add meg a projekt azonosítóját!', 'err'); return; }
+
+  const existing = await cloudListProjects();
+  if (existing.includes(id)) { toast('Már létezik ilyen azonosítójú felhő projekt!', 'err'); return; }
+
+  const config = { title: title || id, subtitle: title || id, description: '', lang: 'hu', output: id + '.html' };
+  const starterRaw = '---\nid: bevezetes\ntitle: Bevezetés\n---\n\n# Bevezetés\n\n';
+
+  toast('☁️ Létrehozás...', 'ok', 2000);
+  await cloudUpload(id + '/config.json', JSON.stringify(config, null, 2), 'application/json');
+  await cloudUpload(id + '/style.css', getDefaultCSS(), 'text/css');
+  await cloudUpload(id + '/sections/01_bevezetes.md', starterRaw, 'text/markdown');
+
+  document.getElementById('cloud-new-id').value = '';
+  document.getElementById('cloud-new-title').value = '';
+
+  await cloudLoadProject(id);
 }
 
 // ── Folder loading ────────────────────────────────────────────────────────────
@@ -1534,6 +1877,18 @@ async function saveCurrentFile() {
   const proj = state.projects[state.currentProject];
   const f = proj.files[state.currentFile];
 
+  // Felhő projekt: közvetlenül a Supabase Storage-ba mentünk, nincs dialóg/handle
+  if (proj.cloudFolder) {
+    await cloudSaveSectionFile(proj, state.currentFile);
+    f.dirty = false;
+    renderSidebar();
+    setStatus('Mentve a felhőbe ✓', 'saved');
+    setTimeout(() => setStatus(''), 2000);
+    toast('☁️ Mentve: ' + state.currentFile);
+    persistState();
+    return;
+  }
+
   // Ha már van mentett handle erre a fájlra — közvetlenül ír, nincs dialóg
   if (f.fileHandle) {
     try {
@@ -1944,6 +2299,13 @@ async function buildAndDownload(optimize = false) {
     html = await optimizeHtmlImages(html);
     const origKB = Math.round(html.length / 1024);
     toast(`✓ Optimalizálva — ${origKB} KB`, 'ok', 3000);
+  }
+
+  // 0. Felhő projekt: a legenerált HTML a Storage-ba kerül fel
+  if (proj.cloudFolder) {
+    await cloudSaveOutput(proj, outputName, html);
+    toast('✓ HTML elmentve a felhőbe: ' + outputName);
+    return;
   }
 
   // 1. Közvetlen írás a projekt mappájába
@@ -2931,6 +3293,13 @@ async function saveConfigToDisk(showToast = true) {
   const proj = state.projects[state.currentProject];
   const json = serializeConfig(proj);
 
+  // 0. Felhő projekt: a config.json (menü, fejezetsorrend) a Storage-ba kerül
+  if (proj.cloudFolder) {
+    await cloudSaveConfig(proj);
+    if (showToast) toast('✓ config.json elmentve a felhőbe');
+    return;
+  }
+
   // 1. Már megjegyzett fájl handle (korábbi mentésből vagy mappa-hozzáférésből) — dialóg nélkül ír
   if (proj.configHandle) {
     try {
@@ -3016,9 +3385,11 @@ function loadCssEditor() {
 
 function saveCss() {
   if (!state.currentProject) return;
-  state.projects[state.currentProject].css = document.getElementById('proj-css-editor').value;
+  const proj = state.projects[state.currentProject];
+  proj.css = document.getElementById('proj-css-editor').value;
   persistState();
   renderPreview();
+  if (proj.cloudFolder) cloudSaveCss(proj);
   toast('✓ CSS alkalmazva');
 }
 
@@ -3309,7 +3680,16 @@ async function autosaveCurrentFile() {
   if (!state.currentProject || !state.currentFile) return;
   const proj = state.projects[state.currentProject];
   const f = proj.files[state.currentFile];
-  if (!f || !f.fileHandle) return; // nincs mappa írási jog erre a fejezetre
+  if (!f) return;
+  if (proj.cloudFolder) {
+    await cloudSaveSectionFile(proj, state.currentFile);
+    f.dirty = false;
+    renderSidebar();
+    setStatus('Automatikusan mentve a felhőbe ✓', 'saved');
+    setTimeout(() => setStatus(''), 1500);
+    return;
+  }
+  if (!f.fileHandle) return; // nincs mappa írási jog erre a fejezetre
   try {
     const writable = await f.fileHandle.createWritable();
     await writable.write(f.raw);
@@ -3700,6 +4080,11 @@ async function confirmChapterRename(fn) {
   f.raw = rawLines.join('\n');
   f.dirty = true;
 
+  if (proj.cloudFolder) {
+    await cloudSaveSectionFile(proj, fn);
+    f.dirty = false;
+  }
+
   renderSidebar();
   if (fn === state.currentFile) {
     document.getElementById('editor').value = f.raw;
@@ -3788,6 +4173,12 @@ title: ${title}
       proj.files[fn].fileHandle = fh;
       proj.files[fn].dirty = false;
     } catch(e) { console.warn('Új fejezet lemezre írása sikertelen:', e); }
+  }
+
+  // Felhő projekt: az új fejezet fájlja a Storage-ba kerül
+  if (proj.cloudFolder) {
+    await cloudSaveSectionFile(proj, fn);
+    proj.files[fn].dirty = false;
   }
 
   // Pozicionálás
