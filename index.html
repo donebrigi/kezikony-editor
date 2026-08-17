@@ -1408,9 +1408,17 @@ async function cloudCheckSession() {
 function updateAuthUI(session) {
   const gate = document.getElementById('auth-gate');
   const emailSpan = document.getElementById('user-email');
+  // Az induláskor (még a bejelentkezés eldőlte előtt) lefutó showHomeView() a Projekt-listát
+  // hitelesítés nélkül próbálja lekérni — ez üresen/hibásan tér vissza, mert a Supabase még
+  // nem tudja, ki vagyunk. Ha ilyenkor épp most (ebben a hívásban) válik érvényessé a
+  // munkamenet — vagyis a belépő ablak eddig látszott, most tűnik el —, a Kezdőlapon lévő
+  // Projekt-listát újra le kell kérni és ki kell rajzolni, különben üresen maradna addig,
+  // amíg valaki rá nem kattint a 🏠 gombra.
+  const wasGateVisible = gate && !gate.classList.contains('hidden');
   if (session && session.user) {
     gate.classList.add('hidden');
     if (emailSpan) emailSpan.textContent = session.user.email || '';
+    if (wasGateVisible && state.uiView === 'home') showHomeView();
   } else {
     gate.classList.remove('hidden');
     if (emailSpan) emailSpan.textContent = '';
