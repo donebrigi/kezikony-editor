@@ -44,11 +44,17 @@ A jobb felső **"Kilépés"** gomb kijelentkeztet és visszavisz a Kezdőlapra; 
 
 Bejelentkezés után a **Kezdőlap** mutatja a közös, felhőben tárolt **Projekteket** — egy Projekt egy ügyfél, termék vagy belső téma köré szervezett gyűjtemény, amelyhez egy vagy több **Dokumentum** (egy-egy teljes kézikönyv, ugyanolyan felépítéssel, mint korábban egy "projekt") tartozhat.
 
-- **Projekt kártyák**: mindegyik mutatja a nevét, leírását, a hozzá tartozó dokumentumok számát, valamint a projekthez választott színt és ikont. Kattintásra megnyílik a Projekt nézete, ahol a benne lévő Dokumentumok listája látszik.
+Mind a Kezdőlapon (Projekt kártyák), mind egy Projekt nézetében (Dokumentum kártyák) ugyanaz a kártyaszerkezet jelenik meg: 2, széles kártya egy sorban, a gombok pedig egy fix sávban, mindig láthatóan a kártya alján — nem csak kártya fölé húzáskor bukkannak elő.
+
+- **Projekt kártyák a Kezdőlapon**: mindegyik mutatja a nevét, leírását, a hozzá tartozó dokumentumok számát, valamint a projekthez választott színt és ikont. A kártya alján lévő gombsor:
+  - **✏ Szerkesztés**: a Projekt nevét, leírását, színét és ikonját lehet módosítani — ugyanaz az űrlap, mint új Projekt létrehozásakor, csak a meglévő adatokkal előtöltve.
+  - **🗑 Törlés**: törli a teljes Projektet — ez véglegesen eltávolítja az ÖSSZES benne lévő Dokumentumot, azok fejezeteit, CSS-ét és beállításait a felhőből (megerősítést kér, mert nem vonható vissza).
+  - **Megnyitás**: megnyitja a Projekt nézetét (ugyanezt teszi, ha magára a kártyára kattintasz).
 - **🔍 Keresés**: a Kezdőlap tetején lévő keresőmezővel a Projektek nevére és leírására lehet szűrni.
-- **➕ Új projekt**: a rácsban lévő szaggatott keretű kártyára kattintva nyílik meg az űrlap — itt adható meg a Projekt neve, egy opcionális leírás, valamint egy szín és egy ikon (kattintással választható egy előre elkészített készletből). Ezek csak a Kezdőlapon és a Projekt nézetben, megkülönböztetésül szolgálnak.
-- **Dokumentum-kártyák egy Projekt nézetében**: két, széles kártya kerül egy sorba, mindegyiken a cím, a fejezetszám és az utolsó frissítés alatt egy fix gombsor látszik — ez mindig látható, nem csak kártya fölé húzáskor:
+- **➕ Új projekt**: a rácsban lévő szaggatott keretű kártyára kattintva nyílik meg az űrlap — itt adható meg a Projekt neve, egy opcionális leírás, valamint egy szín és egy ikon (kattintással választható egy előre elkészített készletből).
+- **Dokumentum kártyák egy Projekt nézetében**: a cím, a fejezetszám és az utolsó frissítés alatt egy gombsor:
   - **✏ Szerkesztés**: bekéri a Dokumentum új, megjelenített címét. (Ez csak a címet változtatja, a Dokumentum azonosítóját — vagyis a felhőben lévő mappa nevét — nem.)
+  - **➡️ Áthelyezés**: a Dokumentum átvihető egy másik, meglévő Projektbe — a legördülőben kiválasztott célprojektbe átmásolódik az összes fejezete, a CSS-e és a beállításai, majd törlődik a régi helyéről. (Ha a célprojektben már van ugyanilyen azonosítójú Dokumentum, az áthelyezés meghiúsul — ilyenkor előbb nevezd át valamelyiket.)
   - **🗑 Törlés**: törli a teljes Dokumentumot — ez véglegesen eltávolítja az összes fejezetét, a CSS-ét és a beállításait a felhőből (megerősítést kér, mert nem vonható vissza).
   - **Megnyitás**: megnyitja a Dokumentumot a szerkesztőben (ugyanezt teszi, ha magára a kártyára kattintasz).
 - **➕ Új dokumentum**: egy Projekt nézetében, a dokumentum-lista végén lévő kártyával hozható létre egy új, üres Dokumentum (egy induló "Bevezetés" fejezettel) — ehhez azonosítót (szóköz nélkül) és egy megjelenített címet kell megadni.
@@ -219,4 +225,5 @@ title: Telepítés
 - Felhő módban minden bejelentkezett felhasználó minden Projektet és Dokumentumot lát és szerkeszthet (nincs Projektenkénti / Dokumentumonkénti jogosultság-szűkítés) — jelenleg csoport/szerepkör szerinti hozzáférés-korlátozás nincs megvalósítva.
 - Felhő módban nincs ütközéskezelés: ha két ember egyszerre szerkeszti ugyanazt a fejezetet, a később mentett verzió felülírja a korábbit.
 - Fejezet törlése felhő módban is csak a szerkesztő nézetéből törli a fejezetet — a fájl a Supabase Storage-ban megmarad (ugyanaz a viselkedés, mint helyi mappa módban).
-- Egy Dokumentum átnevezése / törlése a Projekt nézetében megoldott (✏ / 🗑 a kártyán), de magának a **Projektnek** (a felső szintnek) az átnevezésére vagy törlésére jelenleg nincs felület — ez a Supabase Storage felületén, kézzel végezhető el, ha szükséges.
+- Egy Dokumentum vagy egy Projekt átnevezése, törlése, illetve egy Dokumentum másik Projektbe áthelyezése mind elérhető a kártyák gombjaival — de a Projekt *azonosítója* (a felhőben lévő mappa neve) sehol nem módosítható a felületről, csak a megjelenített neve.
+- Egy Projekt vagy Dokumentum áthelyezése/törlése közben megszakadó internetkapcsolat vagy bezárt böngészőlap félbehagyott állapotot eredményezhet (pl. a fájlok már átmásolódtak az új helyre, de a régiek még nem törlődtek) — ilyenkor érdemes a Supabase Storage felületén ellenőrizni és kézzel rendezni.
