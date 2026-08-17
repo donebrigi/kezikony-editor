@@ -4,9 +4,15 @@ Böngészőben futó, egyetlen `index.html` fájlból álló szerkesztő kézik�
 
 Nincs build lépés, nincs szerver — csak nyisd meg az `index.html`-t egy böngészőben (Chrome/Edge ajánlott a teljes funkcionalitáshoz).
 
+Kétféle módban használható:
+
+- **Helyi mappa mód** — egy projekt a saját géped egy mappájában él, csak te férsz hozzá.
+- **Felhő mód** — bejelentkezés után a projekt a Supabase-ben (közös, megosztott tárhelyen) él, így kollégáid is hozzáférnek és szerkeszthetik ugyanazt.
+
 ## Tartalom
 
-- [Projekt betöltése és mentése](#projekt-betöltése-és-mentése)
+- [Közös, felhő alapú szerkesztés (bejelentkezéssel)](#közös-felhő-alapú-szerkesztés-bejelentkezéssel)
+- [Projekt betöltése és mentése (helyi mappa mód)](#projekt-betöltése-és-mentése-helyi-mappa-mód)
 - [Fejezetek szerkesztése](#fejezetek-szerkesztése)
 - [Markdown szintaxis](#markdown-szintaxis)
 - [Megjelenés testreszabása](#megjelenés-testreszabása)
@@ -16,6 +22,26 @@ Nincs build lépés, nincs szerver — csak nyisd meg az `index.html`-t egy bön
 - [Ismert korlátok](#ismert-korlátok)
 
 ---
+
+## Közös, felhő alapú szerkesztés (bejelentkezéssel)
+
+Az oldal megnyitásakor egy bejelentkező képernyő fogad — ez addig fedi le a felületet, amíg valaki nem jelentkezik be egy érvényes, a szervezet által létrehozott felhasználóval (email + jelszó). Új felhasználót önállóan nem lehet regisztrálni: a hozzáférést egy adminisztrátor adja meg a Supabase-projekt **Authentication → Users** felületén (`Invite user` / `Add user`).
+
+Bejelentkezés után a felső sávban megjelenik egy **☁️ Felhő** gomb:
+
+- **Meglévő felhő projekt megnyitása**: a gombra kattintva megjelenik a közösen tárolt projektek listája — bármelyikre kattintva ("Megnyitás") betöltődik, ugyanúgy szerkeszthető, mint egy helyi projekt.
+- **Új felhő projekt létrehozása**: azonosítót és megjelenített címet megadva egy új, üres projekt jön létre (egy induló "Bevezetés" fejezettel), rögtön a felhőben.
+- **Meglévő (helyi) projekt átvitele a felhőbe**: a "☁️ Felhő" ablakban a **"Meglévő (helyi) projekt átvitele a felhőbe"** résznél kiválasztható egy már betöltött, helyi projekt — a **"☁️ Feltöltés a felhőbe"** gomb egy kattintással átmásolja az összes fejezetét, a CSS-ét és a beállításait (config.json) egy új felhő projektbe, majd rögtön meg is nyitja azt. Az eredeti, helyi projekt (a böngésző tárolójában) változatlanul megmarad, csak egy másolat kerül a felhőbe.
+
+Amíg egy **felhő projekt** van megnyitva, minden mentés — fejezet gépelése közbeni automatikus mentés, kézi **💾 Mentés**, új fejezet létrehozása, fejezet átnevezése, sorrend átrendezése, menü- és CSS-mentés, valamint a **⚡ Build** kimenete is — közvetlenül a Supabase Storage-ba kerül, nem a böngésző helyi tárolójába vagy a gép mappájába. Így amit az egyik kolléga elment, azt egy másik — ugyanazt a felhő projektet megnyitva — azonnal látja.
+
+A jobb felső **"Kilépés"** gomb kijelentkeztet; ezután a bejelentkező képernyő újra megjelenik.
+
+**Fontos korlát:** ha két ember *egyszerre*, ugyanabban a fejezetben dolgozik, a később mentett verzió felülírja a korábbit — nincs beépített ütközéskezelés vagy zárolás. Érdemes egy fejezetet egyszerre csak egy embernek szerkesztenie.
+
+---
+
+## Projekt betöltése és mentése (helyi mappa mód)
 
 ## Projekt betöltése és mentése
 
@@ -171,3 +197,6 @@ title: Telepítés
 
 - A mappába való közvetlen, automatikus mentés (`showDirectoryPicker` API) jelenleg Chrome és Edge asztali böngészőkben működik. Más böngészőknél a szerkesztő működik, de a fájlokat kézzel kell menteni / feltölteni.
 - A "Címsor 1" mező jelenleg csak a borító (első fejezet) fejlécére vonatkozó helyet foglal — a markdown `#` szintje ténylegesen `Címsor 2`-nek megfelelő HTML-elemet hoz létre (lásd a fenti táblázatot); ez a jövőben tisztázásra kerülhet.
+- Felhő módban minden bejelentkezett felhasználó minden felhő projekthez hozzáfér (nincs projektenkénti jogosultság-szűkítés) — jelenleg csoport/szerepkör szerinti hozzáférés-korlátozás nincs megvalósítva.
+- Felhő módban nincs ütközéskezelés: ha két ember egyszerre szerkeszti ugyanazt a fejezetet, a később mentett verzió felülírja a korábbit.
+- Fejezet törlése felhő módban is csak a szerkesztő nézetéből törli a fejezetet — a fájl a Supabase Storage-ban megmarad (ugyanaz a viselkedés, mint helyi mappa módban).
