@@ -533,32 +533,88 @@ body { font-family: var(--sans); background: var(--bg); color: var(--text); disp
 #user-bar { display: flex; align-items: center; gap: 8px; }
 #user-email { font-size: 11px; color: var(--text3); }
 
-/* ── Felhő projekt modal ── */
-#cloud-modal-backdrop {
-  display:none; position:fixed; inset:0;
-  background:rgba(0,0,0,0.65); z-index:150;
+/* ── Kezdőlap / Projekt nézet (Projekt → Dokumentum) ── */
+#breadcrumb-bar { display:flex; align-items:center; gap:6px; font-size:13px; color:var(--text2); }
+#breadcrumb-bar .crumb { cursor:pointer; }
+#breadcrumb-bar .crumb:hover { color:var(--accent2); text-decoration:underline; }
+#breadcrumb-bar .crumb-current { color:var(--text); font-weight:500; }
+#breadcrumb-bar .crumb-sep { color:var(--text3); }
+
+#view-home, #view-project { display:none; overflow-y:auto; }
+#view-home.active, #view-project.active { display:block; flex:1; }
+#home-page, #project-page { max-width:1100px; margin:0 auto; padding:32px 24px 80px; }
+.hp-header-row { display:flex; align-items:flex-end; justify-content:space-between; margin-bottom:22px; gap:16px; flex-wrap:wrap; }
+.hp-header-row h1 { font-size:20px; font-weight:700; margin-bottom:4px; }
+.hp-header-row .sub { font-size:13px; color:var(--text3); }
+#home-search {
+  background:var(--bg3); border:1px solid var(--border2); border-radius:var(--radius);
+  padding:8px 12px; font-size:13px; color:var(--text); width:240px;
+}
+#home-search::placeholder { color:var(--text3); }
+
+.hp-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(250px, 1fr)); gap:14px; }
+.hp-card {
+  background:var(--bg2); border:1px solid var(--border); border-radius:14px;
+  padding:18px; cursor:pointer; transition:all .15s; position:relative; overflow:hidden;
+}
+.hp-card:hover { border-color:var(--accent); transform:translateY(-2px); box-shadow:0 8px 24px rgba(0,0,0,0.35); }
+.hp-card .accent-bar { position:absolute; top:0; left:0; right:0; height:4px; }
+.hp-card-icon {
+  width:38px; height:38px; border-radius:10px; display:flex; align-items:center;
+  justify-content:center; font-size:17px; margin-bottom:12px;
+}
+.hp-card-title { font-size:14px; font-weight:600; color:var(--text); margin-bottom:4px; }
+.hp-card-desc {
+  font-size:12px; color:var(--text3); margin-bottom:14px; line-height:1.5; min-height:18px;
+  display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;
+}
+.hp-card-meta { display:flex; align-items:center; justify-content:space-between; font-size:11px; color:var(--text3); }
+.hp-badge {
+  background:var(--bg3); border:1px solid var(--border2); border-radius:20px;
+  padding:3px 9px; font-size:11px; color:var(--text2); font-weight:500;
+}
+.hp-new-card {
+  border:2px dashed var(--border2); background:transparent; display:flex; flex-direction:column;
+  align-items:center; justify-content:center; gap:6px; color:var(--text3); min-height:128px;
+}
+.hp-new-card:hover { border-color:var(--accent); color:var(--accent2); background:var(--accent-soft); }
+.hp-new-card .plus { font-size:24px; line-height:1; }
+
+.hp-doc-card { display:flex; align-items:center; gap:14px; padding:13px 16px; }
+.hp-doc-card .hp-card-icon { margin:0; width:34px; height:34px; font-size:14px; flex-shrink:0; background:var(--bg3); color:var(--text2); }
+.hp-doc-body { flex:1; min-width:0; }
+.hp-doc-title { font-size:13px; font-weight:600; margin-bottom:2px; }
+.hp-doc-meta { font-size:11px; color:var(--text3); }
+.hp-doc-card .hp-open-btn { opacity:0; transition:opacity .15s; }
+.hp-doc-card:hover .hp-open-btn { opacity:1; }
+
+.hp-empty { text-align:center; padding:50px 20px; color:var(--text3); font-size:13px; }
+
+/* Projekt / dokumentum létrehozó, migráló modalok — közös alap */
+.hp-modal-backdrop {
+  display:none; position:fixed; inset:0; background:rgba(0,0,0,0.65); z-index:250;
   align-items:center; justify-content:center;
 }
-#cloud-modal-backdrop.open { display:flex; }
-#cloud-modal {
-  background:var(--bg2); border:1px solid var(--border2);
-  border-radius:12px; padding:22px; width:480px; max-width:95vw;
-  max-height:88vh; overflow-y:auto;
-  box-shadow:0 24px 64px rgba(0,0,0,0.55);
+.hp-modal-backdrop.open { display:flex; }
+.hp-modal {
+  background:var(--bg2); border:1px solid var(--border2); border-radius:12px; padding:22px;
+  width:420px; max-width:95vw; max-height:88vh; overflow-y:auto; box-shadow:0 24px 64px rgba(0,0,0,0.55);
 }
-#cloud-modal h3 { font-size:14px; color:var(--text2); margin-bottom:14px; font-weight:600; }
-#cloud-modal-list { margin-bottom: 16px; }
-#cloud-new-form { border-top:1px solid var(--border); padding-top:14px; }
-#cloud-new-form label { display:block; font-size:12px; color:var(--text3); margin-bottom:4px; margin-top:10px; }
-#cloud-new-form input[type=text] {
+.hp-modal h3 { font-size:14px; color:var(--text2); margin-bottom:16px; font-weight:600; }
+.hp-modal label { display:block; font-size:12px; color:var(--text3); margin-bottom:4px; margin-top:12px; }
+.hp-modal input[type=text], .hp-modal textarea, .hp-modal select {
   width:100%; padding:7px 10px; background:var(--bg); border:1px solid var(--border2);
-  color:var(--text); border-radius:var(--radius); font-size:13px; box-sizing:border-box;
+  color:var(--text); border-radius:var(--radius); font-size:13px; box-sizing:border-box; font-family:var(--sans);
 }
-#cloud-modal-close {
-  margin-top:16px; padding:6px 16px; border-radius:var(--radius); border:1px solid var(--border2);
-  background:var(--bg3); color:var(--text2); cursor:pointer; font-size:13px;
+.hp-modal textarea { resize:vertical; min-height:50px; }
+.swatch-row, .icon-row { display:flex; flex-wrap:wrap; gap:6px; margin-top:6px; }
+.swatch { width:26px; height:26px; border-radius:50%; cursor:pointer; border:2px solid transparent; }
+.swatch.selected { border-color:var(--text); }
+.icon-opt {
+  width:32px; height:32px; border-radius:8px; display:flex; align-items:center; justify-content:center;
+  font-size:16px; cursor:pointer; background:var(--bg3); border:1px solid var(--border2);
 }
-#cloud-modal-close:hover { color:var(--text); }
+.icon-opt.selected { border-color:var(--accent); background:var(--accent-soft); }
 
 /* ── Jelszó módosítása modal ── */
 #pw-modal-backdrop {
@@ -585,20 +641,24 @@ body { font-family: var(--sans); background: var(--bg); color: var(--text); disp
 
 <!-- Top bar -->
 <div id="topbar">
-  <span class="logo">📖 Kézikönyv</span>
+  <span class="logo" onclick="showHomeView()" style="cursor:pointer" title="Kezdőlap">📖 Kézikönyv</span>
   <div class="sep"></div>
-  <select id="project-select" title="Projekt">
-    <option value="">— válassz projektet —</option>
-  </select>
-  <button class="btn" onclick="openProjModal()" title="Projektek kezelése" style="padding:5px 9px;font-size:13px">⚙</button>
-  <button class="btn" onclick="openCloudModal()" title="Közös, felhőben tárolt projektek — ide látnak rá a kollégáid is" style="padding:5px 9px;font-size:13px">☁️ Felhő</button>
-  <div class="sep"></div>
-  <button class="btn" onclick="saveCurrentFile()" title="Ctrl+S">💾 Mentés</button>
-  <button class="btn" onclick="openAiPanel()" title="AI fejezet generálás screenshotból" style="background:linear-gradient(135deg,#6366f1,#8b5cf6);border-color:#6366f1;color:#fff">✨ AI</button>
-  <button class="btn green" onclick="buildAndDownload(false)">⚡ Build</button>
-  <button class="btn green" onclick="buildAndDownload(true)" title="Képek WebP-re konvertálva, max 1440px — ~80% kisebb fájl">⚡ Build + Optimalizál</button>
-  <div class="sep"></div>
-  <button class="btn" onclick="togglePreviewPopout()" id="btn-preview-popout" title="Az előnézetet külön böngészőlapon nyitja meg, élőben frissülve — így a szerkesztő nagyobb helyet kap">🡵 Előnézet külön lapon</button>
+  <button class="btn" onclick="showHomeView()" title="Kezdőlap — projektek" style="padding:5px 9px;font-size:13px">🏠 Kezdőlap</button>
+  <div id="breadcrumb-bar"></div>
+  <div id="topbar-editor-tools" style="display:none">
+    <div class="sep"></div>
+    <select id="project-select" title="Projekt">
+      <option value="">— válassz projektet —</option>
+    </select>
+    <button class="btn" onclick="openProjModal()" title="Projektek kezelése" style="padding:5px 9px;font-size:13px">⚙</button>
+    <div class="sep"></div>
+    <button class="btn" onclick="saveCurrentFile()" title="Ctrl+S">💾 Mentés</button>
+    <button class="btn" onclick="openAiPanel()" title="AI fejezet generálás screenshotból" style="background:linear-gradient(135deg,#6366f1,#8b5cf6);border-color:#6366f1;color:#fff">✨ AI</button>
+    <button class="btn green" onclick="buildAndDownload(false)">⚡ Build</button>
+    <button class="btn green" onclick="buildAndDownload(true)" title="Képek WebP-re konvertálva, max 1440px — ~80% kisebb fájl">⚡ Build + Optimalizál</button>
+    <div class="sep"></div>
+    <button class="btn" onclick="togglePreviewPopout()" id="btn-preview-popout" title="Az előnézetet külön böngészőlapon nyitja meg, élőben frissülve — így a szerkesztő nagyobb helyet kap">🡵 Előnézet külön lapon</button>
+  </div>
   <div class="spacer"></div>
   <span id="status" title="Nyisd meg Chrome-ban, file:// protokollon is működik">Nincs betöltve projekt</span>
   <div class="sep"></div>
@@ -1014,24 +1074,80 @@ body { font-family: var(--sans); background: var(--bg); color: var(--text); disp
   </div>
 </div>
 
-<!-- Felhő projekt modal (Supabase Storage — közös, kollégákkal megosztott projektek) -->
-<div id="cloud-modal-backdrop">
-  <div id="cloud-modal" onclick="event.stopPropagation()">
-    <h3>☁️ Felhő projektek (közös, kollégákkal megosztott)</h3>
-    <div id="cloud-modal-list"></div>
-    <div id="cloud-migrate-form" style="border-top:1px solid var(--border);padding-top:14px">
-      <label style="display:block;font-size:12px;color:var(--text3);margin-bottom:4px">📤 Meglévő (helyi) projekt átvitele a felhőbe</label>
-      <select id="cloud-migrate-source" style="width:100%;padding:7px 10px;background:var(--bg);border:1px solid var(--border2);color:var(--text);border-radius:var(--radius);font-size:13px;box-sizing:border-box;margin-bottom:8px"></select>
-      <button class="btn primary" onclick="migrateProjectToCloud()" style="width:100%">☁️ Feltöltés a felhőbe</button>
+<!-- Kezdőlap nézet: Projektek listája -->
+<div id="view-home">
+  <div id="home-page">
+    <div class="hp-header-row">
+      <div>
+        <h1>Projektek</h1>
+        <div class="sub">Egy projekthez több dokumentum (kézikönyv) is tartozhat — mindenki, aki be tud jelentkezni, mindent lát.</div>
+      </div>
+      <input type="text" id="home-search" placeholder="🔍 Keresés projektek között..." oninput="renderHomeGrid()" />
     </div>
-    <div id="cloud-new-form">
-      <label>➕ Új felhő projekt — azonosító (szóköz nélkül)</label>
-      <input type="text" id="cloud-new-id" placeholder="pl. ugyfel-neve" />
-      <label>Megjelenített cím</label>
-      <input type="text" id="cloud-new-title" placeholder="pl. ÜgyfélNév — kézikönyv" />
-      <button class="btn primary" onclick="cloudCreateProject()" style="margin-top:10px;width:100%">➕ Létrehozás a felhőben</button>
+    <div class="hp-grid" id="home-grid"></div>
+  </div>
+</div>
+
+<!-- Projekt nézet: Dokumentumok listája -->
+<div id="view-project">
+  <div id="project-page">
+    <div class="hp-header-row">
+      <div>
+        <h1 id="project-page-title">—</h1>
+        <div class="sub" id="project-page-desc"></div>
+      </div>
+      <button class="btn" onclick="openMigrateModal()" title="Meglévő, csak nálad meglévő helyi projekt hozzáadása ehhez a projekthez, dokumentumként">📤 Helyi projekt importálása</button>
     </div>
-    <button id="cloud-modal-close" onclick="closeCloudModal()">Bezárás</button>
+    <div class="hp-grid" id="project-doc-grid"></div>
+  </div>
+</div>
+
+<!-- Új projekt modal -->
+<div class="hp-modal-backdrop" id="new-topproject-modal-backdrop" onclick="closeNewTopProjectModal()">
+  <div class="hp-modal" onclick="event.stopPropagation()">
+    <h3>➕ Új projekt</h3>
+    <label>Név</label>
+    <input type="text" id="ntp-name" placeholder="pl. ÜgyfélX Bevezetés" />
+    <label>Leírás (opcionális)</label>
+    <textarea id="ntp-desc" placeholder="Rövid leírás, mire szolgál ez a projekt..."></textarea>
+    <label>Szín</label>
+    <div class="swatch-row" id="ntp-color-row"></div>
+    <label>Ikon</label>
+    <div class="icon-row" id="ntp-icon-row"></div>
+    <div style="display:flex;gap:8px;margin-top:20px">
+      <button class="btn" onclick="closeNewTopProjectModal()" style="flex:1">Mégse</button>
+      <button class="btn primary" onclick="createTopProject()" style="flex:1">Létrehozás</button>
+    </div>
+  </div>
+</div>
+
+<!-- Új dokumentum modal -->
+<div class="hp-modal-backdrop" id="new-doc-modal-backdrop" onclick="closeNewDocModal()">
+  <div class="hp-modal" onclick="event.stopPropagation()">
+    <h3>➕ Új dokumentum</h3>
+    <label>Azonosító (szóköz nélkül — ez lesz a mappa neve)</label>
+    <input type="text" id="nd-id" placeholder="pl. felhasznaloi-kezikonyv" />
+    <label>Cím</label>
+    <input type="text" id="nd-title" placeholder="pl. Felhasználói kézikönyv" />
+    <div style="display:flex;gap:8px;margin-top:20px">
+      <button class="btn" onclick="closeNewDocModal()" style="flex:1">Mégse</button>
+      <button class="btn primary" onclick="createDocInProject()" style="flex:1">Létrehozás</button>
+    </div>
+  </div>
+</div>
+
+<!-- Helyi projekt importálása (dokumentumként egy felhő projektbe) modal -->
+<div class="hp-modal-backdrop" id="migrate-modal-backdrop" onclick="closeMigrateModal()">
+  <div class="hp-modal" onclick="event.stopPropagation()">
+    <h3>📤 Helyi projekt importálása dokumentumként</h3>
+    <label>Helyi projekt</label>
+    <select id="migrate-source-select"></select>
+    <label>Dokumentum azonosító (szóköz nélkül)</label>
+    <input type="text" id="migrate-doc-id" placeholder="pl. felhasznaloi-kezikonyv" />
+    <div style="display:flex;gap:8px;margin-top:20px">
+      <button class="btn" onclick="closeMigrateModal()" style="flex:1">Mégse</button>
+      <button class="btn primary" onclick="runMigrateToProject()" style="flex:1">☁️ Feltöltés</button>
+    </div>
   </div>
 </div>
 
@@ -1192,6 +1308,12 @@ const state = {
   currentFile: null,
   previewMode: 'section',
   previewTimer: null,
+  // Kezdőlap / Projekt-Dokumentum hierarchia (felhő mód)
+  uiView: 'home',              // 'home' | 'project' | 'editor'
+  currentTopProject: null,     // felhő Projekt azonosító (mappa neve)
+  currentTopProjectMeta: null, // { id, name, description, color, icon, docCount }
+  homeProjects: null,          // kezdőlap kártyák cache-e
+  projectDocs: null,           // az aktuális Projekt dokumentumainak cache-e
 };
 
 // ── Toast ─────────────────────────────────────────────────────────────────────
@@ -1248,6 +1370,7 @@ async function cloudLogin() {
 }
 async function cloudLogout() {
   await supabaseClient.auth.signOut();
+  showHomeView();
 }
 
 // Elfelejtett jelszó — a bejelentkező képernyőn, még bejelentkezés előtt.
@@ -1325,97 +1448,389 @@ async function cloudSaveOutput(proj, outputName, html) {
   await cloudUpload(proj.cloudFolder + '/' + outputName, html, 'text/html');
 }
 
-// ── Felhő projektek listázása / megnyitása / létrehozása ──
-async function cloudListProjects() {
+// ── Segéd ──
+function escapeHtml(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function formatRelativeDate(iso) {
+  try {
+    const diffDays = Math.floor((Date.now() - new Date(iso).getTime()) / 86400000);
+    if (diffDays <= 0) return 'ma';
+    if (diffDays === 1) return 'tegnap';
+    if (diffDays < 7) return diffDays + ' napja';
+    if (diffDays < 30) return Math.floor(diffDays / 7) + ' hete';
+    return Math.floor(diffDays / 30) + ' hónapja';
+  } catch(e) { return ''; }
+}
+function slugify(s) {
+  return String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+}
+
+// ── Felhő: Projekt (top-szint) és Dokumentum (Projekten belüli kézikönyv) hierarchia ──
+// Tárolási szerkezet a Supabase Storage bucket-ben:
+//   {projektId}/_project.json              — Projekt metaadat (név, leírás, szín, ikon)
+//   {projektId}/{dokumentumId}/config.json — pontosan úgy, mint eddig egy "felhő projektnél"
+//   {projektId}/{dokumentumId}/style.css, sections/*.md, stb.
+// A meglévő cloudSaveXxx/cloudDownloadText/cloudUpload függvények változatlanul working
+// hagyhatók, mert proj.cloudFolder egyszerűen "{projektId}/{dokumentumId}" alakú lesz.
+
+const PROJECT_COLORS = ['#7c6af7', '#4ade80', '#fbbf24', '#f87171', '#38bdf8', '#f472b6', '#fb923c', '#94a3b8'];
+const PROJECT_ICONS = ['📁', '📘', '🛠️', '🚀', '🔐', '💻', '📋', '🧯', '⭐', '📦', '🟣', '🟢', '🟡', '🔴', '🔵', '🟠'];
+
+async function cloudGetProjectMeta(projectId) {
+  const text = await cloudDownloadText(projectId + '/_project.json');
+  if (!text) return null;
+  try {
+    const m = JSON.parse(text);
+    return {
+      id: projectId,
+      name: m.name || projectId,
+      description: m.description || '',
+      color: m.color || PROJECT_COLORS[0],
+      icon: m.icon || PROJECT_ICONS[0]
+    };
+  } catch(e) { return null; }
+}
+
+async function cloudListTopProjects() {
   const { data, error } = await supabaseClient.storage.from(CLOUD_BUCKET)
     .list('', { limit: 200, sortBy: { column: 'name', order: 'asc' } });
   if (error) { console.warn('Cloud list failed:', error); return []; }
-  // A gyökérben lévő "mappák" (id === null) a projektek — önálló fájlt itt nem várunk.
-  return (data || []).filter(e => e.id === null).map(e => e.name);
+  const ids = (data || []).filter(e => e.id === null).map(e => e.name);
+  const projects = [];
+  for (const id of ids) {
+    const meta = (await cloudGetProjectMeta(id)) || { id, name: id, description: '', color: PROJECT_COLORS[0], icon: PROJECT_ICONS[0] };
+    const { data: docEntries } = await supabaseClient.storage.from(CLOUD_BUCKET).list(id, { limit: 200 });
+    meta.docCount = (docEntries || []).filter(e => e.id === null).length;
+    projects.push(meta);
+  }
+  return projects;
 }
 
-function openCloudModal() {
-  document.getElementById('cloud-modal-backdrop').classList.add('open');
-  refreshCloudModalList();
-  populateMigrateSourceSelect();
+async function cloudListDocuments(projectId) {
+  const { data, error } = await supabaseClient.storage.from(CLOUD_BUCKET)
+    .list(projectId, { limit: 200, sortBy: { column: 'name', order: 'asc' } });
+  if (error) { console.warn('Cloud doc list failed:', error); return []; }
+  const docIds = (data || []).filter(e => e.id === null).map(e => e.name);
+  const docs = [];
+  for (const docId of docIds) {
+    const meta = { id: docId, title: docId, chapterCount: 0, updatedAt: null };
+    const configText = await cloudDownloadText(projectId + '/' + docId + '/config.json');
+    if (configText) {
+      try {
+        const cfg = JSON.parse(configText);
+        meta.title = cfg.title || docId;
+      } catch(e) {}
+    }
+    const { data: entries } = await supabaseClient.storage.from(CLOUD_BUCKET).list(projectId + '/' + docId, { limit: 20 });
+    const cfgEntry = (entries || []).find(e => e.name === 'config.json');
+    if (cfgEntry && cfgEntry.updated_at) meta.updatedAt = cfgEntry.updated_at;
+    // A fejezetszámot a sections/ mappa tényleges .md fájljaiból számoljuk, nem a
+    // config.json-ban esetleg még el sem mentett fileOrder-ből — így friss dokumentumnál
+    // sem mutat hibásan "0 fejezet"-et.
+    const { data: sectionEntries } = await supabaseClient.storage.from(CLOUD_BUCKET)
+      .list(projectId + '/' + docId + '/sections', { limit: 500 });
+    meta.chapterCount = (sectionEntries || []).filter(e => e.id !== null && e.name.endsWith('.md') && e.name !== 'README.md').length;
+    docs.push(meta);
+  }
+  return docs;
 }
 
-function populateMigrateSourceSelect() {
-  const sel = document.getElementById('cloud-migrate-source');
-  if (!sel) return;
+// ── Nézetváltás: Kezdőlap / Projekt / Szerkesztő ──
+function updateTopbarToolsVisibility() {
+  const tools = document.getElementById('topbar-editor-tools');
+  if (tools) tools.style.display = (state.uiView === 'editor') ? 'contents' : 'none';
+}
+
+function updateBreadcrumb() {
+  const bar = document.getElementById('breadcrumb-bar');
+  if (!bar) return;
+  if (state.uiView === 'project') {
+    const name = state.currentTopProjectMeta ? state.currentTopProjectMeta.name : state.currentTopProject;
+    bar.innerHTML = `<span class="crumb-sep">/</span><span class="crumb" onclick="showHomeView()">Kezdőlap</span><span class="crumb-sep">/</span><span class="crumb-current">${escapeHtml(name)}</span>`;
+  } else if (state.uiView === 'editor') {
+    const proj = state.projects[state.currentProject];
+    const docTitle = (proj && (proj.config?.title || proj.docId || proj.name)) || state.currentProject || '';
+    if (proj && proj.topProjectId) {
+      const projName = (state.currentTopProjectMeta && state.currentTopProjectMeta.id === proj.topProjectId) ? state.currentTopProjectMeta.name : proj.topProjectId;
+      bar.innerHTML = `<span class="crumb-sep">/</span><span class="crumb" onclick="showHomeView()">Kezdőlap</span><span class="crumb-sep">/</span><span class="crumb" onclick="showProjectView('${proj.topProjectId}')">${escapeHtml(projName)}</span><span class="crumb-sep">/</span><span class="crumb-current">${escapeHtml(docTitle)}</span>`;
+    } else {
+      bar.innerHTML = `<span class="crumb-sep">/</span><span class="crumb-current">${escapeHtml(docTitle)} <span style="color:var(--text3)">(helyi)</span></span>`;
+    }
+  } else {
+    bar.innerHTML = '';
+  }
+}
+
+function enterEditorView() {
+  state.uiView = 'editor';
+  const home = document.getElementById('view-home'), proj = document.getElementById('view-project'), main = document.getElementById('main');
+  if (home) home.classList.remove('active');
+  if (proj) proj.classList.remove('active');
+  if (main) main.style.display = 'flex';
+  updateTopbarToolsVisibility();
+  updateBreadcrumb();
+}
+
+async function showHomeView() {
+  state.uiView = 'home';
+  state.currentTopProject = null;
+  state.currentTopProjectMeta = null;
+  const home = document.getElementById('view-home'), proj = document.getElementById('view-project'), main = document.getElementById('main');
+  if (main) main.style.display = 'none';
+  if (proj) proj.classList.remove('active');
+  if (home) home.classList.add('active');
+  updateTopbarToolsVisibility();
+  updateBreadcrumb();
+  const grid = document.getElementById('home-grid');
+  if (grid) grid.innerHTML = '<div class="hp-empty">Betöltés...</div>';
+  state.homeProjects = await cloudListTopProjects();
+  renderHomeGrid();
+}
+
+function renderHomeGrid() {
+  const grid = document.getElementById('home-grid');
+  if (!grid) return;
+  const searchInput = document.getElementById('home-search');
+  const q = (searchInput ? searchInput.value : '').trim().toLowerCase();
+  const list = (state.homeProjects || []).filter(p => !q || p.name.toLowerCase().includes(q) || (p.description || '').toLowerCase().includes(q));
+  grid.innerHTML = '';
+  if (!list.length) {
+    const msg = q ? ('Nincs találat "' + escapeHtml(q) + '" keresésre.') : 'Még nincs projekt — hozz létre egyet lent.';
+    grid.innerHTML = `<div class="hp-empty" style="grid-column:1/-1">${msg}</div>`;
+  } else {
+    list.forEach(p => {
+      const card = document.createElement('div');
+      card.className = 'hp-card';
+      card.onclick = () => showProjectView(p.id);
+      card.innerHTML = `
+        <div class="accent-bar" style="background:${p.color}"></div>
+        <div class="hp-card-icon" style="background:${p.color}22;color:${p.color}">${escapeHtml(p.icon)}</div>
+        <div class="hp-card-title">${escapeHtml(p.name)}</div>
+        <div class="hp-card-desc">${escapeHtml(p.description || '')}</div>
+        <div class="hp-card-meta"><span class="hp-badge">${p.docCount || 0} dokumentum</span></div>
+      `;
+      grid.appendChild(card);
+    });
+  }
+  const newCard = document.createElement('div');
+  newCard.className = 'hp-card hp-new-card';
+  newCard.onclick = openNewTopProjectModal;
+  newCard.innerHTML = '<div class="plus">+</div><div>Új projekt</div>';
+  grid.appendChild(newCard);
+}
+
+async function showProjectView(projectId) {
+  state.uiView = 'project';
+  state.currentTopProject = projectId;
+  const home = document.getElementById('view-home'), proj = document.getElementById('view-project'), main = document.getElementById('main');
+  if (main) main.style.display = 'none';
+  if (home) home.classList.remove('active');
+  if (proj) proj.classList.add('active');
+  updateTopbarToolsVisibility();
+
+  document.getElementById('project-page-title').textContent = 'Betöltés...';
+  document.getElementById('project-page-desc').textContent = '';
+  document.getElementById('project-doc-grid').innerHTML = '<div class="hp-empty" style="grid-column:1/-1">Betöltés...</div>';
+
+  let meta = (state.homeProjects || []).find(p => p.id === projectId) || await cloudGetProjectMeta(projectId);
+  if (!meta) meta = { id: projectId, name: projectId, description: '', color: PROJECT_COLORS[0], icon: PROJECT_ICONS[0] };
+  state.currentTopProjectMeta = meta;
+
+  document.getElementById('project-page-title').textContent = meta.name;
+  document.getElementById('project-page-desc').textContent = meta.description || '';
+  updateBreadcrumb();
+
+  state.projectDocs = await cloudListDocuments(projectId);
+  renderProjectDocGrid();
+}
+
+function renderProjectDocGrid() {
+  const grid = document.getElementById('project-doc-grid');
+  if (!grid) return;
+  grid.innerHTML = '';
+  const docs = state.projectDocs || [];
+  if (!docs.length) {
+    grid.innerHTML = '<div class="hp-empty" style="grid-column:1/-1">Ebben a projektben még nincs dokumentum — hozz létre egyet lent.</div>';
+  } else {
+    docs.forEach(d => {
+      const card = document.createElement('div');
+      card.className = 'hp-card hp-doc-card';
+      card.onclick = () => cloudLoadProject(state.currentTopProject + '/' + d.id, state.currentTopProject, d.id);
+      const metaBits = [d.chapterCount + ' fejezet'];
+      if (d.updatedAt) metaBits.push('frissítve ' + formatRelativeDate(d.updatedAt));
+      card.innerHTML = `
+        <div class="hp-card-icon">📘</div>
+        <div class="hp-doc-body">
+          <div class="hp-doc-title">${escapeHtml(d.title)}</div>
+          <div class="hp-doc-meta">${escapeHtml(metaBits.join(' · '))}</div>
+        </div>
+        <button class="btn primary hp-open-btn" style="pointer-events:none">Megnyitás</button>
+      `;
+      grid.appendChild(card);
+    });
+  }
+  const newCard = document.createElement('div');
+  newCard.className = 'hp-card hp-new-card';
+  newCard.style.minHeight = '68px';
+  newCard.onclick = (e) => { e.stopPropagation(); openNewDocModal(); };
+  newCard.innerHTML = '<div style="display:flex;align-items:center;gap:10px"><span class="plus" style="font-size:20px">+</span><span>Új dokumentum</span></div>';
+  grid.appendChild(newCard);
+}
+
+// ── Új Projekt modal (szín/ikon választóval) ──
+function renderSwatches() {
+  const row = document.getElementById('ntp-color-row');
+  if (!row) return;
+  row.innerHTML = '';
+  PROJECT_COLORS.forEach(c => {
+    const sw = document.createElement('div');
+    sw.className = 'swatch' + (c === state.ntpColor ? ' selected' : '');
+    sw.style.background = c;
+    sw.title = c;
+    sw.onclick = () => { state.ntpColor = c; renderSwatches(); };
+    row.appendChild(sw);
+  });
+}
+function renderIconOptions() {
+  const row = document.getElementById('ntp-icon-row');
+  if (!row) return;
+  row.innerHTML = '';
+  PROJECT_ICONS.forEach(ic => {
+    const opt = document.createElement('div');
+    opt.className = 'icon-opt' + (ic === state.ntpIcon ? ' selected' : '');
+    opt.textContent = ic;
+    opt.onclick = () => { state.ntpIcon = ic; renderIconOptions(); };
+    row.appendChild(opt);
+  });
+}
+function openNewTopProjectModal() {
+  document.getElementById('ntp-name').value = '';
+  document.getElementById('ntp-desc').value = '';
+  state.ntpColor = PROJECT_COLORS[0];
+  state.ntpIcon = PROJECT_ICONS[0];
+  renderSwatches();
+  renderIconOptions();
+  document.getElementById('new-topproject-modal-backdrop').classList.add('open');
+}
+function closeNewTopProjectModal() {
+  document.getElementById('new-topproject-modal-backdrop').classList.remove('open');
+}
+async function createTopProject() {
+  const name = document.getElementById('ntp-name').value.trim();
+  if (!name) { toast('Add meg a projekt nevét!', 'err'); return; }
+  const desc = document.getElementById('ntp-desc').value.trim();
+
+  const existing = state.homeProjects || (await cloudListTopProjects());
+  let id = slugify(name) || ('projekt-' + Math.floor(Math.random() * 100000));
+  if (existing.find(p => p.id === id)) id = id + '-' + Math.floor(Math.random() * 1000);
+
+  const meta = { name, description: desc, color: state.ntpColor, icon: state.ntpIcon };
+  toast('☁️ Projekt létrehozása...', 'ok', 2000);
+  await cloudUpload(id + '/_project.json', JSON.stringify(meta, null, 2), 'application/json');
+
+  closeNewTopProjectModal();
+  toast('✓ Projekt létrehozva');
+  state.homeProjects = null;
+  await showProjectView(id);
+}
+
+// ── Új Dokumentum modal (egy Projekten belül) ──
+function openNewDocModal() {
+  document.getElementById('nd-id').value = '';
+  document.getElementById('nd-title').value = '';
+  document.getElementById('new-doc-modal-backdrop').classList.add('open');
+}
+function closeNewDocModal() {
+  document.getElementById('new-doc-modal-backdrop').classList.remove('open');
+}
+async function createDocInProject() {
+  const projectId = state.currentTopProject;
+  if (!projectId) return;
+  const id = document.getElementById('nd-id').value.trim().replace(/\s+/g, '-');
+  const title = document.getElementById('nd-title').value.trim();
+  if (!id) { toast('Add meg a dokumentum azonosítóját!', 'err'); return; }
+  if ((state.projectDocs || []).find(d => d.id === id)) { toast('Már létezik ilyen azonosítójú dokumentum ebben a projektben!', 'err'); return; }
+
+  const config = { title: title || id, subtitle: title || id, description: '', lang: 'hu', output: id + '.html' };
+  const starterRaw = '---\nid: bevezetes\ntitle: Bevezetés\n---\n\n# Bevezetés\n\n';
+
+  toast('☁️ Létrehozás...', 'ok', 2000);
+  await cloudUpload(projectId + '/' + id + '/config.json', JSON.stringify(config, null, 2), 'application/json');
+  await cloudUpload(projectId + '/' + id + '/style.css', getDefaultCSS(), 'text/css');
+  await cloudUpload(projectId + '/' + id + '/sections/01_bevezetes.md', starterRaw, 'text/markdown');
+
+  closeNewDocModal();
+  await cloudLoadProject(projectId + '/' + id, projectId, id);
+}
+
+// ── Helyi projekt importálása egy Projektbe, dokumentumként ──
+function openMigrateModal() {
+  const sel = document.getElementById('migrate-source-select');
   const localNames = Object.keys(state.projects).filter(n => !state.projects[n].cloudFolder);
   if (!localNames.length) {
     sel.innerHTML = '<option value="">— nincs helyi projekt betöltve —</option>';
-    return;
+  } else {
+    sel.innerHTML = '';
+    localNames.forEach(name => {
+      const opt = document.createElement('option');
+      opt.value = name;
+      opt.textContent = state.projects[name].config?.title || name;
+      sel.appendChild(opt);
+    });
   }
-  sel.innerHTML = '';
-  localNames.forEach(name => {
-    const opt = document.createElement('option');
-    opt.value = name;
-    opt.textContent = state.projects[name].config?.title || name;
-    sel.appendChild(opt);
-  });
+  document.getElementById('migrate-doc-id').value = '';
+  document.getElementById('migrate-modal-backdrop').classList.add('open');
 }
-
-async function migrateProjectToCloud() {
-  const sourceName = document.getElementById('cloud-migrate-source').value;
+function closeMigrateModal() {
+  document.getElementById('migrate-modal-backdrop').classList.remove('open');
+}
+async function runMigrateToProject() {
+  const projectId = state.currentTopProject;
+  if (!projectId) return;
+  const sourceName = document.getElementById('migrate-source-select').value;
   if (!sourceName || !state.projects[sourceName]) { toast('Nincs kiválasztható helyi projekt!', 'err'); return; }
   const source = state.projects[sourceName];
-  if (source.cloudFolder) { toast('Ez már felhő projekt.', 'err'); return; }
+  if (source.cloudFolder) { toast('Ez már felhő dokumentum.', 'err'); return; }
 
-  let targetId = prompt('Add meg az új felhő projekt azonosítóját (szóköz nélkül):', sourceName.replace(/\s+/g, '-'));
-  if (!targetId) return;
-  targetId = targetId.trim().replace(/\s+/g, '-');
-  if (!targetId) return;
-
-  const existing = await cloudListProjects();
-  if (existing.includes(targetId)) { toast('Már létezik ilyen azonosítójú felhő projekt!', 'err'); return; }
+  let docId = document.getElementById('migrate-doc-id').value.trim().replace(/\s+/g, '-') || slugify(sourceName);
+  if (!docId) { toast('Add meg a dokumentum azonosítóját!', 'err'); return; }
+  if ((await cloudListDocuments(projectId)).find(d => d.id === docId)) { toast('Már létezik ilyen azonosítójú dokumentum ebben a projektben!', 'err'); return; }
 
   toast('☁️ Migrálás folyamatban, ez eltarthat pár másodpercig...', 'ok', 6000);
 
-  await cloudUpload(targetId + '/config.json', serializeConfig({ config: source.config, fileOrder: source.fileOrder }), 'application/json');
-  await cloudUpload(targetId + '/style.css', source.css || getDefaultCSS(), 'text/css');
-  if (source.logo) await cloudUpload(targetId + '/logo.txt', source.logo, 'text/plain');
+  const targetFolder = projectId + '/' + docId;
+  await cloudUpload(targetFolder + '/config.json', serializeConfig({ config: source.config, fileOrder: source.fileOrder }), 'application/json');
+  await cloudUpload(targetFolder + '/style.css', source.css || getDefaultCSS(), 'text/css');
+  if (source.logo) await cloudUpload(targetFolder + '/logo.txt', source.logo, 'text/plain');
 
   for (const fn of source.fileOrder) {
     const f = source.files[fn];
     if (!f) continue;
-    await cloudUpload(targetId + '/sections/' + fn, f.raw, 'text/markdown');
+    await cloudUpload(targetFolder + '/sections/' + fn, f.raw, 'text/markdown');
   }
 
   toast('✓ Migrálva — megnyitás a felhőből...', 'ok', 3000);
-  await cloudLoadProject(targetId);
-}
-function closeCloudModal() {
-  document.getElementById('cloud-modal-backdrop').classList.remove('open');
-}
-async function refreshCloudModalList() {
-  const list = document.getElementById('cloud-modal-list');
-  list.innerHTML = '<div style="font-size:12px;color:var(--text3)">Betöltés...</div>';
-  const names = await cloudListProjects();
-  if (!names.length) {
-    list.innerHTML = '<div style="font-size:12px;color:var(--text3)">Még nincs felhő projekt — hozz létre egyet lent.</div>';
-    return;
-  }
-  list.innerHTML = '';
-  names.forEach(name => {
-    const row = document.createElement('div');
-    row.className = 'proj-row';
-    row.innerHTML = `<span class="proj-name">☁️ ${name}</span><button class="btn-sm" onclick="cloudLoadProject('${name}')">Megnyitás</button>`;
-    list.appendChild(row);
-  });
+  closeMigrateModal();
+  await cloudLoadProject(targetFolder, projectId, docId);
 }
 
-async function cloudLoadProject(folderId) {
-  closeCloudModal();
-  toast('☁️ Felhő projekt betöltése...', 'ok', 2000);
+// ── Egy Dokumentum (felhő "projekt mappa") betöltése a szerkesztőbe ──
+async function cloudLoadProject(folderId, topProjectId, docId) {
+  toast('☁️ Dokumentum betöltése...', 'ok', 2000);
 
   const project = {
+    // FONTOS: name = folderId (a teljes "projektId/dokumentumId" útvonal), mert ez a
+    // kulcs az IndexedDB "projects" store-jában (keyPath: 'name') — ha csak a docId-t
+    // használnánk, két különböző Projekt azonos azonosítójú dokumentumai ütköznének.
     name: folderId,
     config: {}, css: '', logo: '',
     files: {}, fileOrder: [],
     fileObjects: {},
-    cloudFolder: folderId
+    cloudFolder: folderId,
+    topProjectId: topProjectId || null,
+    docId: docId || folderId
   };
 
   const configText = await cloudDownloadText(folderId + '/config.json');
@@ -1452,11 +1867,19 @@ async function cloudLoadProject(folderId) {
   state.projects[folderId] = project;
   state.currentProject = folderId;
 
+  if (topProjectId) {
+    state.currentTopProject = topProjectId;
+    if (!state.currentTopProjectMeta || state.currentTopProjectMeta.id !== topProjectId) {
+      state.currentTopProjectMeta = (state.homeProjects || []).find(p => p.id === topProjectId) || await cloudGetProjectMeta(topProjectId);
+    }
+  }
+
+  const displayTitle = project.config.title || project.docId;
   const sel = document.getElementById('project-select');
   if (![...sel.options].find(o => o.value === folderId)) {
     const opt = document.createElement('option');
     opt.value = folderId;
-    opt.textContent = '☁️ ' + (project.config.title || folderId);
+    opt.textContent = '☁️ ' + displayTitle;
     sel.appendChild(opt);
   }
   sel.value = folderId;
@@ -1466,35 +1889,14 @@ async function cloudLoadProject(folderId) {
   if (project.fileOrder.length > 0) {
     openFile(project.fileOrder[0]);
   } else {
-    toast('Üres felhő projekt — hozz létre egy fejezetet a + gombbal.', '', 4000);
+    toast('Üres dokumentum — hozz létre egy fejezetet a + gombbal.', '', 4000);
   }
-  setStatus('Felhő projekt betöltve: ' + folderId, 'saved');
+  setStatus('Felhő dokumentum betöltve: ' + displayTitle, 'saved');
   setTimeout(() => setStatus(''), 2500);
-  toast('✓ Felhő projekt betöltve — a mentés innentől mindenki számára közösen kerül el');
+  toast('✓ Dokumentum betöltve — a mentés innentől mindenki számára közösen kerül el');
   checkFolderAccessBtn();
   persistState();
-}
-
-async function cloudCreateProject() {
-  const id = document.getElementById('cloud-new-id').value.trim().replace(/\s+/g,'-');
-  const title = document.getElementById('cloud-new-title').value.trim();
-  if (!id) { toast('Add meg a projekt azonosítóját!', 'err'); return; }
-
-  const existing = await cloudListProjects();
-  if (existing.includes(id)) { toast('Már létezik ilyen azonosítójú felhő projekt!', 'err'); return; }
-
-  const config = { title: title || id, subtitle: title || id, description: '', lang: 'hu', output: id + '.html' };
-  const starterRaw = '---\nid: bevezetes\ntitle: Bevezetés\n---\n\n# Bevezetés\n\n';
-
-  toast('☁️ Létrehozás...', 'ok', 2000);
-  await cloudUpload(id + '/config.json', JSON.stringify(config, null, 2), 'application/json');
-  await cloudUpload(id + '/style.css', getDefaultCSS(), 'text/css');
-  await cloudUpload(id + '/sections/01_bevezetes.md', starterRaw, 'text/markdown');
-
-  document.getElementById('cloud-new-id').value = '';
-  document.getElementById('cloud-new-title').value = '';
-
-  await cloudLoadProject(id);
+  enterEditorView();
 }
 
 // ── Folder loading ────────────────────────────────────────────────────────────
@@ -1577,6 +1979,7 @@ async function loadFromInput(input) {
   // Persistálás: fájl tartalmak mentése IndexedDB-be
   persistState();
   input.value = '';
+  enterEditorView();
 }
 
 // ── Projekt mappa betöltése ÍRÁSI joggal, egy lépésben ────────────────────────
@@ -1682,6 +2085,7 @@ async function loadProjectFromDirectory() {
   checkFolderAccessBtn();
 
   persistState();
+  enterEditorView();
 }
 
 // A 📂 gomb ezt hívja: ha a böngésző támogatja, közvetlen írási joggal tölt be,
@@ -2801,7 +3205,14 @@ function activateProject(name) {
   if (proj.fileOrder.length > 0) openFile(proj.fileOrder[0]);
   checkFolderAccessBtn();
   closeProjModal();
-  toast('→ Projekt: ' + (proj.config.title || name));
+  toast('→ Projekt: ' + (proj.config.title || proj.docId || name));
+  if (proj.topProjectId) {
+    state.currentTopProject = proj.topProjectId;
+    if (!state.currentTopProjectMeta || state.currentTopProjectMeta.id !== proj.topProjectId) {
+      cloudGetProjectMeta(proj.topProjectId).then(m => { if (m) { state.currentTopProjectMeta = m; updateBreadcrumb(); } });
+    }
+  }
+  enterEditorView();
 }
 
 async function deleteProject(name) {
@@ -3587,7 +3998,10 @@ async function persistState() {
       css: proj.css,
       logo: proj.logo,
       fileOrder: proj.fileOrder,
-      currentFile: state.currentFile
+      currentFile: state.currentFile,
+      cloudFolder: proj.cloudFolder || null,
+      topProjectId: proj.topProjectId || null,
+      docId: proj.docId || null
     };
     const tx = db.transaction([STORE, FILES_STORE], 'readwrite');
     tx.objectStore(STORE).put(meta);
@@ -3616,7 +4030,8 @@ async function persistCurrentFile() {
     // A meta rekordot is frissítjük (currentFile mutató), de fájltartalom nélkül — olcsó írás.
     tx.objectStore(STORE).put({
       name: proj.name, config: proj.config, css: proj.css, logo: proj.logo,
-      fileOrder: proj.fileOrder, currentFile: state.currentFile
+      fileOrder: proj.fileOrder, currentFile: state.currentFile,
+      cloudFolder: proj.cloudFolder || null, topProjectId: proj.topProjectId || null, docId: proj.docId || null
     });
     tx.objectStore(FILES_STORE).put({
       key: fileKey(proj.name, state.currentFile), project: proj.name, fn: state.currentFile,
@@ -3695,6 +4110,9 @@ async function loadPersistedProjects() {
         files: {},
         fileObjects: {}
       };
+      if (saved.cloudFolder) project.cloudFolder = saved.cloudFolder;
+      if (saved.topProjectId) project.topProjectId = saved.topProjectId;
+      if (saved.docId) project.docId = saved.docId;
       for (const fn of project.fileOrder) {
         // v1 (régi) rekordoknál a fájltartalom még a projekt meta rekordba volt ágyazva;
         // v2-től külön 'files' store-ban van, projektenként/fejezetenként lekérve.
@@ -3715,7 +4133,7 @@ async function loadPersistedProjects() {
       if (![...sel.options].find(o => o.value === saved.name)) {
         const opt = document.createElement('option');
         opt.value = saved.name;
-        opt.textContent = project.config.title || saved.name;
+        opt.textContent = (project.cloudFolder ? '☁️ ' : '') + (project.config.title || project.docId || saved.name);
         sel.appendChild(opt);
       }
     }
@@ -3735,8 +4153,14 @@ async function loadPersistedProjects() {
       openFile(lastProject.fileOrder[0]);
     }
 
-    setStatus('Visszatöltve: ' + lastProject.name);
+    setStatus('Visszatöltve: ' + (state.projects[lastProject.name].config?.title || lastProject.docId || lastProject.name));
     toast('✓ Utolsó projekt visszatöltve', 'ok', 2000);
+
+    if (lastProject.topProjectId) {
+      state.currentTopProject = lastProject.topProjectId;
+      cloudGetProjectMeta(lastProject.topProjectId).then(m => { if (m) { state.currentTopProjectMeta = m; updateBreadcrumb(); } });
+    }
+    enterEditorView();
     return true;
   } catch(e) {
     console.warn('Load persisted failed:', e);
@@ -4548,7 +4972,9 @@ async function optimizeImages(html) {
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 updateLineNums();
-loadPersistedProjects();
+loadPersistedProjects().then(hadLocalProject => {
+  if (!hadLocalProject) showHomeView();
+});
 </script>
 </body>
 </html>
