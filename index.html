@@ -40,12 +40,21 @@ body { font-family: var(--sans); background: var(--bg); color: var(--text); disp
   display: flex; align-items: center; gap: 0;
   padding: 0 14px; gap: 10px;
   z-index: 10;
+  /* Sok elem fér a sávba (logó, projekt-eszközök, státusz, felhasználó) — ha valamelyik
+     hosszú szöveg (státusz, email) nem férne ki, ne törje több sorba az egész sávot,
+     hanem ő maga csonkuljon el három ponttal (lásd lent), a gombok pedig soha ne
+     zsugorodjanak/tördelődjenek. Szélsőséges esetben (nagyon keskeny ablak) inkább
+     vízszintesen görgethető legyen, mint hogy összecsúszva, olvashatatlanul törjön.
+     A morzsamenü NEM itt van (lásd #breadcrumb-row) — külön sorban, hogy ne kelljen
+     versengenie ezekkel a rögzített szélességű elemekkel a helyért. */
+  flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden;
 }
-#topbar .logo { font-size: 13px; font-weight: 600; color: var(--accent2); letter-spacing: -.02em; margin-right: 6px; }
-#topbar .sep { width: 1px; height: 20px; background: var(--border); margin: 0 4px; }
+#topbar .logo { font-size: 13px; font-weight: 600; color: var(--accent2); letter-spacing: -.02em; margin-right: 6px; flex-shrink: 0; white-space: nowrap; }
+#topbar .sep { width: 1px; height: 20px; background: var(--border); margin: 0 4px; flex-shrink: 0; }
 #topbar select {
   background: var(--bg3); border: 1px solid var(--border2); color: var(--text);
   padding: 4px 10px; border-radius: var(--radius); font-size: 13px; cursor: pointer;
+  flex-shrink: 0; max-width: 220px; text-overflow: ellipsis;
 }
 #topbar select:focus { outline: 2px solid var(--accent); }
 .btn {
@@ -53,13 +62,18 @@ body { font-family: var(--sans); background: var(--bg); color: var(--text); disp
   cursor: pointer; border: 1px solid var(--border2); background: var(--bg3); color: var(--text);
   transition: all .15s; white-space: nowrap;
 }
+#topbar .btn { flex-shrink: 0; }
 .btn:hover { border-color: var(--accent); color: var(--accent2); background: var(--accent-soft); }
 .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
 .btn.primary:hover { background: var(--accent2); border-color: var(--accent2); }
 .btn.green { background: var(--green-soft); border-color: var(--green); color: var(--green); }
 .btn.green:hover { background: var(--green); color: #000; }
-#topbar .spacer { flex: 1; }
-#status { font-size: 12px; color: var(--text3); }
+#topbar .spacer { flex: 1 1 auto; min-width: 8px; }
+#status {
+  font-size: 12px; color: var(--text3);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  max-width: 260px; flex-shrink: 1; min-width: 60px;
+}
 #status.saved { color: var(--green); }
 #status.unsaved { color: var(--amber); }
 
@@ -530,15 +544,32 @@ body { font-family: var(--sans); background: var(--bg); color: var(--text); disp
 }
 #auth-box .btn { width: 100%; margin-top: 4px; }
 #auth-error { color: var(--red); font-size: 12px; margin-top: 10px; min-height: 14px; }
-#user-bar { display: flex; align-items: center; gap: 8px; }
-#user-email { font-size: 11px; color: var(--text3); }
+#user-bar { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+#user-email { font-size: 11px; color: var(--text3); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:170px; display:inline-block; vertical-align:middle; }
 
-/* ── Kezdőlap / Projekt nézet (Projekt → Dokumentum) ── */
-#breadcrumb-bar { display:flex; align-items:center; gap:6px; font-size:13px; color:var(--text2); }
-#breadcrumb-bar .crumb { cursor:pointer; }
+/* ── Kezdőlap / Projekt nézet (Projekt → Dokumentum) ──
+   A morzsamenü saját, teljes szélességű sorban van a topbar alatt (lásd #breadcrumb-row),
+   ezért nem kell versengenie a topbar rögzített szélességű gombjaival a helyért — csak
+   nagyon keskeny ablaknál csonkul le, akkor is egyenletesen minden szintje. */
+#breadcrumb-row {
+  display: none;
+  align-items: center;
+  min-height: 30px;
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+  padding: 4px 14px;
+  overflow: hidden;
+}
+#breadcrumb-row.visible { display: flex; }
+#breadcrumb-bar { display:flex; align-items:center; gap:6px; font-size:13px; color:var(--text2); flex-wrap:wrap; min-width:0; }
+#breadcrumb-bar .crumb, #breadcrumb-bar .crumb-current {
+  cursor:pointer; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  max-width:280px; min-width:0; display:inline-block; vertical-align:bottom;
+}
+#breadcrumb-bar .crumb-current { cursor:default; }
 #breadcrumb-bar .crumb:hover { color:var(--accent2); text-decoration:underline; }
 #breadcrumb-bar .crumb-current { color:var(--text); font-weight:500; }
-#breadcrumb-bar .crumb-sep { color:var(--text3); }
+#breadcrumb-bar .crumb-sep { color:var(--text3); flex-shrink:0; }
 
 #view-home, #view-project { display:none; overflow-y:auto; }
 #view-home.active, #view-project.active { display:block; flex:1; }
@@ -652,7 +683,6 @@ body { font-family: var(--sans); background: var(--bg); color: var(--text); disp
   <span class="logo" onclick="showHomeView()" style="cursor:pointer" title="Kezdőlap">📖 Kézikönyv</span>
   <div class="sep"></div>
   <button class="btn" onclick="showHomeView()" title="Kezdőlap — projektek" style="padding:5px 9px;font-size:13px">🏠</button>
-  <div id="breadcrumb-bar"></div>
   <div id="topbar-editor-tools" style="display:none">
     <div class="sep"></div>
     <select id="project-select" title="Projekt">
@@ -675,6 +705,13 @@ body { font-family: var(--sans); background: var(--bg); color: var(--text); disp
     <button class="btn" onclick="openPasswordModal()" style="padding:4px 10px;font-size:12px">🔑 Jelszó</button>
     <button class="btn" onclick="cloudLogout()" style="padding:4px 10px;font-size:12px">Kilépés</button>
   </div>
+</div>
+
+<!-- Morzsamenü — külön, teljes szélességű sor a topbar alatt, hogy sose kelljen
+     versengenie a topbar rögzített szélességű gombjaival a helyért. Csak akkor
+     látszik, ha van értelme (Projekt / Szerkesztő nézetben). -->
+<div id="breadcrumb-row">
+  <div id="breadcrumb-bar"></div>
 </div>
 
 <!-- Main -->
@@ -1574,20 +1611,24 @@ function updateTopbarToolsVisibility() {
 
 function updateBreadcrumb() {
   const bar = document.getElementById('breadcrumb-bar');
+  const row = document.getElementById('breadcrumb-row');
   if (!bar) return;
   if (state.uiView === 'project') {
+    if (row) row.classList.add('visible');
     const name = state.currentTopProjectMeta ? state.currentTopProjectMeta.name : state.currentTopProject;
-    bar.innerHTML = `<span class="crumb-sep">/</span><span class="crumb" onclick="showHomeView()">Kezdőlap</span><span class="crumb-sep">/</span><span class="crumb-current">${escapeHtml(name)}</span>`;
+    bar.innerHTML = `<span class="crumb" onclick="showHomeView()">Kezdőlap</span><span class="crumb-sep">/</span><span class="crumb-current">${escapeHtml(name)}</span>`;
   } else if (state.uiView === 'editor') {
+    if (row) row.classList.add('visible');
     const proj = state.projects[state.currentProject];
     const docTitle = (proj && (proj.config?.title || proj.docId || proj.name)) || state.currentProject || '';
     if (proj && proj.topProjectId) {
       const projName = (state.currentTopProjectMeta && state.currentTopProjectMeta.id === proj.topProjectId) ? state.currentTopProjectMeta.name : proj.topProjectId;
-      bar.innerHTML = `<span class="crumb-sep">/</span><span class="crumb" onclick="showHomeView()">Kezdőlap</span><span class="crumb-sep">/</span><span class="crumb" onclick="showProjectView('${proj.topProjectId}')">${escapeHtml(projName)}</span><span class="crumb-sep">/</span><span class="crumb-current">${escapeHtml(docTitle)}</span>`;
+      bar.innerHTML = `<span class="crumb" onclick="showHomeView()">Kezdőlap</span><span class="crumb-sep">/</span><span class="crumb" onclick="showProjectView('${proj.topProjectId}')">${escapeHtml(projName)}</span><span class="crumb-sep">/</span><span class="crumb-current">${escapeHtml(docTitle)}</span>`;
     } else {
-      bar.innerHTML = `<span class="crumb-sep">/</span><span class="crumb-current">${escapeHtml(docTitle)} <span style="color:var(--text3)">(helyi)</span></span>`;
+      bar.innerHTML = `<span class="crumb-current">${escapeHtml(docTitle)} <span style="color:var(--text3)">(helyi)</span></span>`;
     }
   } else {
+    if (row) row.classList.remove('visible');
     bar.innerHTML = '';
   }
 }
@@ -3469,14 +3510,23 @@ function refreshProjList() {
   }
   names.forEach(name => {
     const proj = state.projects[name];
-    const displayName = proj.config.title || name;
+    const displayName = proj.config.title || proj.docId || name;
     const isActive = name === state.currentProject;
+    const isCloud = !!proj.cloudFolder;
+    // Felhő dokumentumnál a szülő Projekt nevét (ha ismert) is kiírjuk zárójelben —
+    // e nélkül két különböző Projektben lévő, azonos című Dokumentum megkülönböztethetetlen
+    // lenne ebben a listában.
+    let subtitleText = '';
+    if (isCloud && proj.topProjectId) {
+      const meta = (state.homeProjects || []).find(p => p.id === proj.topProjectId);
+      subtitleText = meta ? meta.name : proj.topProjectId;
+    }
     const row = document.createElement('div');
     row.className = 'proj-row' + (isActive ? ' active-proj' : '');
     row.dataset.name = name;
     row.innerHTML = `
-      <span class="proj-name" title="${name}">${displayName}${isActive ? ' <span style="font-size:10px;color:var(--accent2)">(aktív)</span>' : ''}</span>
-      <input class="proj-rename" type="text" value="${displayName}" />
+      <span class="proj-name" title="${escapeHtml(name)}">${isCloud ? '<span title="Felhőben tárolt dokumentum">☁️</span> ' : ''}${escapeHtml(displayName)}${subtitleText ? ' <span style="color:var(--text3);font-weight:400;font-size:11px">— ' + escapeHtml(subtitleText) + '</span>' : ''}${isActive ? ' <span style="font-size:10px;color:var(--accent2)">(aktív)</span>' : ''}</span>
+      <input class="proj-rename" type="text" value="${escapeHtml(displayName)}" />
       <button class="btn-sm" onclick="startRename('${name}')">✏</button>
       <button class="btn-sm confirm-btn" onclick="confirmRename('${name}')" style="display:none">✓</button>
       <button class="btn-sm" onclick="activateProject('${name}')" ${isActive ? 'disabled style="opacity:.4"' : ''}>→ Váltás</button>
@@ -3500,14 +3550,22 @@ async function confirmRename(name) {
   if (!row) return;
   const newTitle = row.querySelector('.proj-rename').value.trim();
   if (!newTitle) return;
-  state.projects[name].config.title = newTitle;
+  const proj = state.projects[name];
+  proj.config.title = newTitle;
   const opt = [...document.getElementById('project-select').options].find(o => o.value === name);
-  if (opt) opt.textContent = newTitle;
-  row.classList.remove('renaming');
-  row.querySelector('.confirm-btn').style.display = 'none';
-  row.querySelector('.proj-name').innerHTML = newTitle + (name === state.currentProject ? ' <span style="font-size:10px;color:var(--accent2)">(aktív)</span>' : '');
+  if (opt) opt.textContent = (proj.cloudFolder ? '☁️ ' : '') + newTitle;
   await persistState();
-  toast('✓ Átnevezve');
+  if (proj.cloudFolder) {
+    // Felhő dokumentumnál a config.json-t is frissíteni kell, különben a Projekt nézet
+    // dokumentum-listája és a többi kolléga továbbra is a régi címet látná.
+    await cloudSaveConfig(proj);
+    if (state.projectDocs && proj.docId) {
+      const d = state.projectDocs.find(x => x.id === proj.docId);
+      if (d) d.title = newTitle;
+    }
+  }
+  refreshProjList();
+  toast('✓ Átnevezve' + (proj.cloudFolder ? ' (a felhőben is)' : ''));
 }
 
 function activateProject(name) {
@@ -3532,8 +3590,21 @@ function activateProject(name) {
 }
 
 async function deleteProject(name) {
-  if (!confirm(`Törlöd a "${state.projects[name]?.config?.title || name}" projektet?
-(Fájlok a lemezen megmaradnak.)`)) return;
+  const proj = state.projects[name];
+  const isCloud = !!(proj && proj.cloudFolder);
+  const label = proj?.config?.title || proj?.docId || name;
+  const confirmMsg = isCloud
+    ? `Törlöd a(z) "${label}" dokumentumot?\nEz véglegesen törli az összes fejezetét, a CSS-ét és a beállításait a felhőből — ez nem vonható vissza, és minden kollégának eltűnik.`
+    : `Törlöd a "${label}" projektet?\n(Fájlok a lemezen megmaradnak.)`;
+  if (!confirm(confirmMsg)) return;
+
+  if (isCloud) {
+    toast('🗑 Törlés a felhőből...', 'ok', 2500);
+    await cloudDeleteAllUnder(proj.cloudFolder);
+    state.homeProjects = null;
+    if (state.projectDocs && proj.docId) state.projectDocs = state.projectDocs.filter(d => d.id !== proj.docId);
+  }
+
   try {
     const db = await openDB();
     const tx = db.transaction(STORE, 'readwrite');
@@ -3560,7 +3631,7 @@ async function deleteProject(name) {
         '<div style="padding:20px 14px;font-size:12px;color:var(--text3);text-align:center">Tölts be egy projektet</div>';
     }
   }
-  toast('🗑 Törölve'); refreshProjList();
+  toast(isCloud ? '✓ Dokumentum törölve a felhőből' : '🗑 Törölve'); refreshProjList();
 }
 
 // ── Új projekt ────────────────────────────────────────────────────────────────
