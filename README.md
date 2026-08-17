@@ -47,11 +47,13 @@ Bejelentkezés után a **Kezdőlap** mutatja a közös, felhőben tárolt **Proj
 - **Projekt kártyák**: mindegyik mutatja a nevét, leírását, a hozzá tartozó dokumentumok számát, valamint a projekthez választott színt és ikont. Kattintásra megnyílik a Projekt nézete, ahol a benne lévő Dokumentumok listája látszik.
 - **🔍 Keresés**: a Kezdőlap tetején lévő keresőmezővel a Projektek nevére és leírására lehet szűrni.
 - **➕ Új projekt**: a rácsban lévő szaggatott keretű kártyára kattintva nyílik meg az űrlap — itt adható meg a Projekt neve, egy opcionális leírás, valamint egy szín és egy ikon (kattintással választható egy előre elkészített készletből). Ezek csak a Kezdőlapon és a Projekt nézetben, megkülönböztetésül szolgálnak.
+- **Dokumentum-kártyák egy Projekt nézetében**: két, széles kártya kerül egy sorba, mindegyiken a cím, a fejezetszám és az utolsó frissítés alatt egy fix gombsor látszik — ez mindig látható, nem csak kártya fölé húzáskor:
+  - **✏ Szerkesztés**: bekéri a Dokumentum új, megjelenített címét. (Ez csak a címet változtatja, a Dokumentum azonosítóját — vagyis a felhőben lévő mappa nevét — nem.)
+  - **🗑 Törlés**: törli a teljes Dokumentumot — ez véglegesen eltávolítja az összes fejezetét, a CSS-ét és a beállításait a felhőből (megerősítést kér, mert nem vonható vissza).
+  - **Megnyitás**: megnyitja a Dokumentumot a szerkesztőben (ugyanezt teszi, ha magára a kártyára kattintasz).
 - **➕ Új dokumentum**: egy Projekt nézetében, a dokumentum-lista végén lévő kártyával hozható létre egy új, üres Dokumentum (egy induló "Bevezetés" fejezettel) — ehhez azonosítót (szóköz nélkül) és egy megjelenített címet kell megadni.
 - **📤 Helyi projekt importálása**: egy Projekt nézetében elérhető gomb — egy már betöltött, *helyi* (nem felhő) projekt egy kattintással feltölthető ebbe a Projektbe, új Dokumentumként. Az összes fejezet, a CSS és a beállítások (config.json) átmásolódnak; az eredeti, helyi másolat közben változatlanul megmarad a gépen / böngészőben.
-- **✏ Dokumentum átnevezése**: egy Projekt nézetében, egy Dokumentum-kártya fölé húzva megjelenik egy ✏ gomb — erre kattintva megadható a Dokumentum új, megjelenített címe. (Ez csak a címet változtatja, a Dokumentum azonosítóját — vagyis a felhőben lévő mappa nevét — nem.)
-- **🗑 Dokumentum törlése**: ugyanígy, a Dokumentum-kártya fölé húzva megjelenő 🗑 gombbal törölhető egy teljes Dokumentum — ez véglegesen eltávolítja az összes fejezetét, a CSS-ét és a beállításait a felhőből (megerősítést kér, mert nem vonható vissza).
-- **Morzsamenü (breadcrumb)** a felső sávban mindig mutatja, hol jársz (Kezdőlap / Projekt neve / Dokumentum címe), és bármelyik szintre vissza lehet kattintani belőle. A 🏠 gomb mindig egyenesen a Kezdőlapra visz.
+- **Morzsamenü (breadcrumb)** a felső sávban mindig mutatja, hol jársz (Kezdőlap / Projekt neve / Dokumentum címe), és bármelyik szintre vissza lehet kattintani belőle. A 🏠 gomb (a felső sáv bal oldalán) mindig egyenesen a Kezdőlapra visz.
 - A jogosultság-modell egyszerű: **minden bejelentkezett felhasználó minden Projektet és Dokumentumot lát és szerkeszthet** — nincs Projektenkénti vagy Dokumentumonkénti hozzáférés-korlátozás.
 
 Helyi mappa módban dolgozva (lásd lent) a Kezdőlap nem jelenik meg — a szerkesztő rögtön a mappa tartalmával nyílik meg, ahogy eddig is.
