@@ -59,7 +59,7 @@ Mind a Kezdőlapon (Projekt kártyák), mind egy Projekt nézetében (Dokumentum
   - **Megnyitás**: megnyitja a Dokumentumot a szerkesztőben (ugyanezt teszi, ha magára a kártyára kattintasz).
 - **➕ Új dokumentum**: egy Projekt nézetében, a dokumentum-lista végén lévő kártyával hozható létre egy új, üres Dokumentum (egy induló "Bevezetés" fejezettel) — ehhez azonosítót (szóköz nélkül) és egy megjelenített címet kell megadni.
 - **📤 Helyi projekt importálása**: egy Projekt nézetében elérhető gomb — egy már betöltött, *helyi* (nem felhő) projekt egy kattintással feltölthető ebbe a Projektbe, új Dokumentumként. Az összes fejezet, a CSS és a beállítások (config.json) átmásolódnak; az eredeti, helyi másolat közben változatlanul megmarad a gépen / böngészőben.
-- **Morzsamenü (breadcrumb)** a felső sávban mindig mutatja, hol jársz (Kezdőlap / Projekt neve / Dokumentum címe), és bármelyik szintre vissza lehet kattintani belőle. A 🏠 gomb (a felső sáv bal oldalán) mindig egyenesen a Kezdőlapra visz.
+- **Morzsamenü (breadcrumb)** a felső sáv *alatt*, egy önálló, teljes szélességű sorban mindig mutatja, hol jársz (Kezdőlap / Projekt neve / Dokumentum címe), és bármelyik szintre vissza lehet kattintani belőle. (Ez a sor csak Projekt- vagy szerkesztő nézetben jelenik meg — a Kezdőlapon nincs rá szükség, hiszen ott vagy.) A 🏠 gomb (a felső sáv bal oldalán) mindig egyenesen a Kezdőlapra visz. A morzsamenü azért kapott saját sort a gombokkal teli felső sáv alatt, hogy hosszú Projekt- vagy Dokumentum-nevek se törhessék több, egymásra csúszó sorba a felső sávot — helyette önmaguk csonkulnak "…"-tal, ha nagyon hosszúak.
 - A jogosultság-modell egyszerű: **minden bejelentkezett felhasználó minden Projektet és Dokumentumot lát és szerkeszthet** — nincs Projektenkénti vagy Dokumentumonkénti hozzáférés-korlátozás.
 
 Helyi mappa módban dolgozva (lásd lent) a Kezdőlap nem jelenik meg — a szerkesztő rögtön a mappa tartalmával nyílik meg, ahogy eddig is.
@@ -90,6 +90,16 @@ A bal oldali sávban látod a fejezeteket, középen a markdown szerkesztő, job
 - **🔄 Frissítés** gomb az előnézet fejlécében: csak az előnézetet tölti újra, az egész oldal nem frissül.
 - **Fejezet / Teljes dokumentum** váltó: az előnézet mutathatja csak az aktuális fejezetet, vagy az egész kézikönyvet egyben (ez utóbbi a navigációval és kereséssel együtt — ez felel meg a végleges, buildelt oldalnak).
 - Képek beillesztése: **beillesztéssel (Ctrl+V)** vagy **húzd-és-ejtsd**-del a szerkesztőbe. A képek automatikusan tömörödnek (WebP, max. 1440px szélesség), hogy a fejezet fájlja és a mentés ne híz­zon el feleslegesen sok kép esetén sem.
+
+### ⚙ Projektek kezelése (a szerkesztő felső sávjában)
+
+A szerkesztő felső sávjában lévő legördülő + ⚙ gomb egy régebbi, a Kezdőlap/Projekt-hierarchia bevezetése előtti panelt nyit meg, amely az adott böngészőben **éppen betöltött** összes Dokumentumot (és helyi projektet) egy listában mutatja, gyors váltás/átnevezés/törlés céljából.
+
+- Minden **felhőben tárolt** Dokumentum sora ☁️ ikonnal, a neve mellett pedig — gondolatjellel elválasztva — a szülő **Projekt** nevével jelenik meg (pl. „☁️ Felhasználói kézikönyv — Peers"). Erre azért van szükség, mert két különböző Projektben lehet azonos című Dokumentum — enélkül a lista megkülönböztethetetlen sorokat mutatna.
+- A **helyi** (nem felhő) projektek sora nem kap ☁️ jelölést, se alcímet.
+- Az itteni **✏ átnevezés** felhő Dokumentumnál nemcsak a böngésző memóriájában/IndexedDB-jében írja át a címet, hanem a Supabase Storage-ban lévő `config.json`-t is frissíti — így a Projekt nézet dokumentum-listája és a kollégák is azonnal a új címet látják.
+- Az itteni **🗑 törlés** felhő Dokumentumnál a Supabase Storage-ból is véglegesen törli a Dokumentum összes fájlját (fejezetek, CSS, beállítások) — nem csak a helyi hivatkozást felejti el. (Megerősítést kér, mert nem vonható vissza.)
+- Ugyanez az átnevezés/törlés a Kezdőlap → Projekt nézet Dokumentum-kártyáinak ✏/🗑 gombjaival is elvégezhető — a kettő ugyanazt az adatot módosítja, csak két különböző felületről.
 
 ---
 
