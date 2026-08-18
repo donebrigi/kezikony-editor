@@ -69,6 +69,28 @@ body { font-family: var(--sans); background: var(--bg); color: var(--text); disp
 .btn.green { background: var(--green-soft); border-color: var(--green); color: var(--green); }
 .btn.green:hover { background: var(--green); color: #000; }
 #topbar .spacer { flex: 1 1 auto; min-width: 8px; }
+
+/* ── Letöltés gomb + legördülő menü ──
+   A korábbi külön "Build" / "Build + Optimalizál" gomb helyett egyetlen "Letöltés"
+   gomb van, ami egy kis menüt nyit: itt választható, hogy a képek optimalizálva
+   (kisebb fájl) vagy eredeti minőségben kerüljenek-e a letöltött HTML-be. */
+.dl-menu-wrap { position: relative; flex-shrink: 0; }
+.dl-menu {
+  display: none;
+  position: absolute; top: calc(100% + 6px); left: 0;
+  width: 260px; z-index: 30;
+  background: var(--bg3); border: 1px solid var(--border2); border-radius: var(--radius);
+  box-shadow: 0 8px 24px rgba(0,0,0,.35);
+  padding: 12px;
+  flex-direction: column; gap: 10px;
+}
+.dl-menu.open { display: flex; }
+.dl-menu-option {
+  display: flex; align-items: flex-start; gap: 8px;
+  font-size: 12px; color: var(--text2); cursor: pointer; line-height: 1.4;
+}
+.dl-menu-option input[type="checkbox"] { margin-top: 2px; flex-shrink: 0; }
+.dl-menu-option small { color: var(--text3); }
 #status {
   font-size: 12px; color: var(--text3);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
@@ -708,8 +730,16 @@ body { font-family: var(--sans); background: var(--bg); color: var(--text); disp
     <div class="sep"></div>
     <button class="btn" onclick="saveCurrentFile()" title="Ctrl+S">💾 Mentés</button>
     <button class="btn" onclick="openAiPanel()" title="AI fejezet generálás screenshotból" style="background:linear-gradient(135deg,#6366f1,#8b5cf6);border-color:#6366f1;color:#fff">✨ AI</button>
-    <button class="btn green" onclick="buildAndDownload(false)">⚡ Build</button>
-    <button class="btn green" onclick="buildAndDownload(true)" title="Képek WebP-re konvertálva, max 1440px — ~80% kisebb fájl">⚡ Build + Optimalizál</button>
+    <div class="dl-menu-wrap">
+      <button class="btn green" onclick="toggleDownloadMenu(event)" id="btn-download" title="A kész HTML letöltése — felhő Dokumentumnál emellett a publikált oldal is frissül">⬇ Letöltés</button>
+      <div id="download-menu" class="dl-menu">
+        <label class="dl-menu-option">
+          <input type="checkbox" id="dl-optimize-images"/>
+          <span>🖼 Képek optimalizálása<br><small>WebP, max 1440px — kisebb fájl, de a képek minősége kicsit romlik</small></span>
+        </label>
+        <button class="btn primary" onclick="confirmDownload()" style="width:100%">⬇ Letöltés indítása</button>
+      </div>
+    </div>
     <div class="sep"></div>
     <button class="btn" onclick="togglePreviewPopout()" id="btn-preview-popout" title="Az előnézetet külön böngészőlapon nyitja meg, élőben frissülve — így a szerkesztő nagyobb helyet kap">🡵 Előnézet külön lapon</button>
   </div>
@@ -3151,6 +3181,30 @@ function mdToHtml(md) {
   if (accItemOpen) html.push('</div></details>');
   if (inAccordion) html.push('</div>');
   return html.join('\n');
+}
+
+// ── Letöltés menü ──
+// A korábbi két külön gomb ("Build" / "Build + Optimalizál") helyett egy "Letöltés"
+// gomb van, ami egy kis menüt nyit — itt választható a kép-optimalizálás, majd a
+// "Letöltés indítása" gombbal fut le ugyanaz a buildAndDownload(), mint eddig.
+function toggleDownloadMenu(e) {
+  if (e) e.stopPropagation();
+  document.getElementById('download-menu').classList.toggle('open');
+}
+function closeDownloadMenu() {
+  document.getElementById('download-menu').classList.remove('open');
+}
+document.addEventListener('click', (e) => {
+  const menu = document.getElementById('download-menu');
+  const wrap = document.querySelector('.dl-menu-wrap');
+  if (menu && menu.classList.contains('open') && wrap && !wrap.contains(e.target)) {
+    closeDownloadMenu();
+  }
+});
+async function confirmDownload() {
+  const optimize = document.getElementById('dl-optimize-images').checked;
+  closeDownloadMenu();
+  await buildAndDownload(optimize);
 }
 
 // ── Build & Download ──────────────────────────────────────────────────────────
