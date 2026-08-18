@@ -143,9 +143,13 @@ body { font-family: var(--sans); background: var(--bg); color: var(--text); disp
   background: transparent; border: none; outline: none; resize: none;
   color: var(--text); font-family: var(--mono); font-size: 13px; line-height: 1.65;
   padding: 16px; tab-size: 2;
-  white-space: pre;
-  overflow-wrap: normal;
-  overflow-x: auto;
+  /* A szerkesztőben a hosszú sorok (pl. egy hosszú mondat vagy egy beágyazott base64
+     kép data-URL-je) az oldal szélességéhez törnek, nem kell miattuk oldalra
+     görgetni — ez KIZÁRÓLAG a szerkesztő nézetét érinti, a mentett .md fájlban és a
+     generált HTML-ben nem kerül be semmilyen új sortörés. */
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+  overflow-x: hidden;
 }
 /* Line numbers overlay */
 #line-nums {
@@ -158,6 +162,18 @@ body { font-family: var(--sans); background: var(--bg); color: var(--text); disp
   user-select: none;
 }
 #line-nums.visible ~ #editor { padding-left: 52px; }
+#line-nums > div { box-sizing: border-box; padding-right: 8px; overflow: hidden; }
+/* Láthatatlan "tükör" a sorszám-magasságok kiszámításához: ugyanazzal a betűtípussal,
+   mérettel és sortöréssel jeleníti meg (off-screen) az egyes sorok szövegét, mint maga
+   a #editor — így minden sorszám pontosan annyi magas lesz, ahány vizuális sorra
+   ténylegesen törik a hozzá tartozó szövegsor (lásd updateLineNums()). */
+#line-nums-mirror {
+  position: absolute; visibility: hidden; height: auto; top: -9999px; left: -9999px;
+  box-sizing: content-box;
+  font-family: var(--mono); font-size: 13px; line-height: 1.65; tab-size: 2;
+  white-space: pre-wrap; overflow-wrap: break-word;
+}
+#line-nums-mirror > div { min-height: 1.65em; }
 
 /* ── Preview ── */
 #preview-pane {
@@ -779,6 +795,7 @@ body { font-family: var(--sans); background: var(--bg); color: var(--text); disp
     </div>
     <div id="editor-wrap">
       <div id="line-nums" class="visible"></div>
+      <div id="line-nums-mirror" aria-hidden="true"></div>
       <textarea id="editor" spellcheck="false" placeholder="Nyiss meg egy fejezetet..."></textarea>
       <div id="img-drop-overlay">
         <div id="img-drop-msg">🖼 Engedd el a képet</div>
@@ -2549,9 +2566,31 @@ document.getElementById('editor').addEventListener('keydown', e => {
 
 function updateLineNums() {
   const ta = document.getElementById('editor');
-  const lines = ta.value.split('\n').length;
   const ln = document.getElementById('line-nums');
-  ln.innerHTML = Array.from({length: lines}, (_,i) => `<div>${i+1}</div>`).join('');
+  const mirror = document.getElementById('line-nums-mirror');
+  const lines = ta.value.split('\n');
+
+  // Mivel a szerkesztő most a sor szélességéhez töri a hosszú sorokat (lásd #editor
+  // CSS-t), egy logikai sor a képernyőn több vizuális sorra is eshet — a sorszám-sáv
+  // ilyenkor nem lehet egyszerűen "egy szám = egy fix magas sor". A láthatatlan
+  // #line-nums-mirror-ba pontosan ugyanazzal a betűtípussal/szélességgel/sortöréssel
+  // kirakjuk az összes sor szövegét, majd lemérjük, ténylegesen hány pixel magasra
+  // törtek — ez alapján állítjuk be az egyes sorszám-cellák magasságát, hogy azok
+  // pontosan illeszkedjenek a hozzájuk tartozó (esetleg több sorra tört) szöveghez.
+  const cs = getComputedStyle(ta);
+  const contentWidth = ta.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+  mirror.style.width = Math.max(0, contentWidth) + 'px';
+  mirror.innerHTML = lines.map(l => `<div>${escapeHtml(l)}</div>`).join('');
+
+  const rowEls = mirror.children;
+  const lineHeightPx = parseFloat(cs.lineHeight) || (parseFloat(cs.fontSize) * 1.65);
+  const html = [];
+  for (let i = 0; i < lines.length; i++) {
+    const h = rowEls[i] ? rowEls[i].offsetHeight : lineHeightPx;
+    const rows = Math.max(1, Math.round(h / lineHeightPx));
+    html.push(`<div style="height:${rows * lineHeightPx}px">${i + 1}</div>`);
+  }
+  ln.innerHTML = html.join('');
 }
 
 // Gépelés közben az overlay frissítését a következő animációs keretre toljuk,
@@ -2871,6 +2910,7 @@ function togglePreviewPopout() {
     editorPane.style.width = '';
     editorPane.style.maxWidth = '';
     btn.textContent = '🡵 Előnézet külön lapon';
+    scheduleLineNumsUpdate();
   } else {
     const win = window.open('', 'kk_preview_window');
     if (!win) {
@@ -2886,6 +2926,7 @@ function togglePreviewPopout() {
     editorPane.style.maxWidth = 'none';
     btn.textContent = '🡴 Vissza a beépített előnézetre';
     renderPreview();
+    scheduleLineNumsUpdate();
     win.focus();
   }
 }
@@ -5258,6 +5299,9 @@ document.getElementById('editor').addEventListener('keydown', e => {
     editorPane.style.width = newW + 'px';
     editorPane.style.minWidth = newW + 'px';
     editorPane.style.maxWidth = newW + 'px';
+    // A panel szélessége változott, tehát a sortörés is máshol történhet a
+    // szerkesztőben — a sorszám-sávot (lásd updateLineNums()) újra kell méretezni.
+    scheduleLineNumsUpdate();
   });
 
   document.addEventListener('mouseup', () => {
@@ -5267,6 +5311,10 @@ document.getElementById('editor').addEventListener('keydown', e => {
     document.body.style.cursor = '';
     document.body.style.userSelect = '';
   });
+
+  // Böngészőablak átméretezésekor (nem csak a panel-húzáskor) is újratörhetnek a
+  // sorok, mert a #editor szélessége a flex-elrendezés miatt vele együtt változik.
+  window.addEventListener('resize', scheduleLineNumsUpdate);
 })();
 
 // ── HTML kép optimalizáló (Canvas API alapú, WebP konverzió) ─────────────────
