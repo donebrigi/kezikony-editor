@@ -30,7 +30,7 @@ Az oldal megnyitásakor egy bejelentkező képernyő fogad — ez addig fedi le 
 
 Bejelentkezés után a **Kezdőlap** fogad (lásd következő szakasz) — innen érhető el az összes közös, felhőben tárolt Projekt és az azokban lévő Dokumentum (kézikönyv).
 
-Amíg egy felhőben tárolt **Dokumentum** van megnyitva a szerkesztőben, minden mentés — fejezet gépelése közbeni automatikus mentés, kézi **💾 Mentés**, új fejezet létrehozása, fejezet átnevezése, sorrend átrendezése, menü- és CSS-mentés, valamint a **⚡ Build** kimenete is — közvetlenül a Supabase Storage-ba kerül, nem a böngésző helyi tárolójába vagy a gép mappájába. Így amit az egyik kolléga elment, azt egy másik — ugyanazt a Dokumentumot megnyitva — azonnal látja.
+Amíg egy felhőben tárolt **Dokumentum** van megnyitva a szerkesztőben, minden mentés — fejezet gépelése közbeni automatikus mentés, kézi **💾 Mentés**, új fejezet létrehozása, fejezet átnevezése, sorrend átrendezése, menü- és CSS-mentés, valamint a **⬇ Letöltés** kimenete is — közvetlenül a Supabase Storage-ba kerül, nem a böngésző helyi tárolójába vagy a gép mappájába. Így amit az egyik kolléga elment, azt egy másik — ugyanazt a Dokumentumot megnyitva — azonnal látja.
 
 A jobb felső **"🔑 Jelszó"** gombbal bármikor lecserélhető a saját jelszó (nem kell hozzá a régi jelszó megadása, csak be kell lenni jelentkezve). A bejelentkező képernyőn az **"Elfelejtett jelszó?"** linkkel jelszó-visszaállító email kérhető — ez, ahogy a felhasználó-meghívó email is, a Supabase alapértelmezett email-küldőjén megy, aminek szigorú (óránkénti néhány email) korlátja van; ha nem érkezik meg az email, ez a korlát az oka, és a bejelentkezés utáni "🔑 Jelszó" gombbal (vagy egy adminisztrátor által a Supabase felületén kézzel beállított új jelszóval) lehet megkerülni.
 
@@ -73,7 +73,7 @@ Helyi mappa módban dolgozva (lásd lent) a Kezdőlap nem jelenik meg — a szer
 A **📂 Projekt mappa megnyitása** gombra kattintva válaszd ki a projekt mappáját.
 
 - **Chrome / Edge (asztali gép):** a mappa-választó rögtön **írási jogot** is kér. Ettől kezdve minden mentés — gépelés közbeni automatikus mentés, fejezet létrehozás, sorrend átrendezés, menü- és megjelenés-mentés — közvetlenül **ebbe a mappába** kerül, külön le- vagy feltöltés nélkül.
-- **Más böngésző / nem támogatott környezet:** a szerkesztő automatikusan visszaesik a régi, csak-olvasható betöltésre — ott a **💾 Mentés** gombbal (vagy Ctrl+S-sel) fájlonként kell menteni, és a végén a **⚡ Build**-del előállított HTML-t manuálisan kell feltölteni.
+- **Más böngésző / nem támogatott környezet:** a szerkesztő automatikusan visszaesik a régi, csak-olvasható betöltésre — ott a **💾 Mentés** gombbal (vagy Ctrl+S-sel) fájlonként kell menteni, és a végén a **⬇ Letöltés**-sel előállított HTML-t manuálisan kell feltölteni.
 
 ### Automatikus mentés
 
@@ -188,9 +188,11 @@ A projekt-beállítások **Beállítások** fülén, a "Navigáció csoportok" a
 
 ## Build / exportálás
 
-- **⚡ Build**: legenerálja a végleges, önálló HTML fájlt (a projekt `config.json`-jában megadott `output` néven, alapból `<projektnév>.html`).
-- **⚡ Build + Optimalizál**: ugyanez, de a beágyazott képeket PNG-ről WebP-re konvertálja és max. 1440px szélességre kicsinyíti buildeléskor — ez tud számottevően kisebb fájlt eredményezni, ha sok, tömörítetlen képet tartalmaz a projekt.
-- Ha van írási jog a mappához, a build automatikusan a mappába íródik; egyébként letöltésre kerül.
+- **⬇ Letöltés**: legenerálja a végleges, önálló HTML fájlt (a projekt `config.json`-jában megadott `output` néven, alapból `<projektnév>.html`). Kattintva egy kis menü nyílik:
+  - **🖼 Képek optimalizálása** (kipipálható): ha be van pipálva, a beágyazott képek PNG-ről WebP-re konvertálódnak és max. 1440px szélességre kicsinyülnek — ez tud számottevően kisebb fájlt eredményezni, ha sok, tömörítetlen képet tartalmaz a projekt, de a képek minősége kicsit romlik. Alapból nincs bepipálva (eredeti minőség).
+  - **⬇ Letöltés indítása**: a kiválasztott beállítással lefuttatja a buildet.
+- Felhő Dokumentumnál a Letöltés a generált HTML-t a közös Supabase Storage-ba is felmenti (ez frissíti a publikált oldalt, pl. a GitHub Pages-en), a kép-optimalizálás választásától függetlenül.
+- Ha van írási jog a mappához (helyi mappa mód, Chrome/Edge), a build automatikusan a mappába íródik; egyébként letöltésre kerül.
 
 ### GitHub Pages-re feltöltés
 
