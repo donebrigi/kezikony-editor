@@ -77,7 +77,13 @@ body { font-family: var(--sans); background: var(--bg); color: var(--text); disp
 .dl-menu-wrap { position: relative; flex-shrink: 0; }
 .dl-menu {
   display: none;
-  position: absolute; top: calc(100% + 6px); left: 0;
+  /* FONTOS: position:fixed (nem absolute) — a #topbar-nak overflow-y:hidden van
+     beállítva (lásd fent, a sorok-ne-törjenek-tördelt-sorba javításnál), ami levágná
+     a lenyíló menüt, ha az a topbar dobozon belüli, absolute pozicionált elem lenne.
+     Fixed pozícióval a menü a viewporthoz képest, a topbar overflow-vágásától
+     függetlenül jelenik meg — a pontos helyét (top/left) a toggleDownloadMenu() adja
+     meg, a gomb tényleges képernyő-pozíciója alapján. */
+  position: fixed;
   width: 260px; z-index: 30;
   background: var(--bg3); border: 1px solid var(--border2); border-radius: var(--radius);
   box-shadow: 0 8px 24px rgba(0,0,0,.35);
@@ -3189,7 +3195,20 @@ function mdToHtml(md) {
 // "Letöltés indítása" gombbal fut le ugyanaz a buildAndDownload(), mint eddig.
 function toggleDownloadMenu(e) {
   if (e) e.stopPropagation();
-  document.getElementById('download-menu').classList.toggle('open');
+  const menu = document.getElementById('download-menu');
+  if (menu.classList.contains('open')) { closeDownloadMenu(); return; }
+  // Mivel a menü position:fixed, a helyét (top/left) manuálisan, a gomb tényleges
+  // képernyő-pozíciója (getBoundingClientRect) alapján kell beállítani, minden
+  // megnyitáskor újra — a gomb helye változhat (pl. ha közben átméretezték az ablakot,
+  // vagy a topbar oldalra volt görgetve).
+  const btn = document.getElementById('btn-download');
+  const r = btn.getBoundingClientRect();
+  menu.style.top = (r.bottom + 6) + 'px';
+  let left = r.left;
+  const maxLeft = window.innerWidth - 260 - 12; // 260px a menü szélessége, 12px margó
+  if (left > maxLeft) left = Math.max(12, maxLeft);
+  menu.style.left = left + 'px';
+  menu.classList.add('open');
 }
 function closeDownloadMenu() {
   document.getElementById('download-menu').classList.remove('open');
@@ -3197,10 +3216,15 @@ function closeDownloadMenu() {
 document.addEventListener('click', (e) => {
   const menu = document.getElementById('download-menu');
   const wrap = document.querySelector('.dl-menu-wrap');
-  if (menu && menu.classList.contains('open') && wrap && !wrap.contains(e.target)) {
+  if (menu && menu.classList.contains('open') && wrap && !wrap.contains(e.target) && !menu.contains(e.target)) {
     closeDownloadMenu();
   }
 });
+// Ha közben görgetik a topbart (vízszintesen, keskeny ablaknál) vagy az oldalt,
+// a fixed menü már nem lenne a gomb alatt — ilyenkor egyszerűbb bezárni, mint
+// élőben újraszámolni a pozícióját.
+document.getElementById('topbar').addEventListener('scroll', closeDownloadMenu);
+window.addEventListener('resize', closeDownloadMenu);
 async function confirmDownload() {
   const optimize = document.getElementById('dl-optimize-images').checked;
   closeDownloadMenu();
