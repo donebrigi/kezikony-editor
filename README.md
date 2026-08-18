@@ -89,6 +89,7 @@ A bal oldali sávban látod a fejezeteket, középen a markdown szerkesztő, job
 
 - **🔄 Frissítés** gomb az előnézet fejlécében: csak az előnézetet tölti újra, az egész oldal nem frissül.
 - **Fejezet / Teljes dokumentum** váltó: az előnézet mutathatja csak az aktuális fejezetet, vagy az egész kézikönyvet egyben (ez utóbbi a navigációval és kereséssel együtt — ez felel meg a végleges, buildelt oldalnak).
+- A szerkesztő a hosszú sorokat (pl. egy hosszú mondatot, vagy egy beillesztett kép base64-be ágyazott adatát) a panel szélességéhez töri, nem kell miattuk oldalra görgetni. Ez kizárólag a szerkesztő nézetét érinti — a mentett `.md` fájlba és a generált HTML-be nem kerül be emiatt semmilyen új sortörés, a bal oldali sorszámok pedig a több sorra tört szöveggel együtt, azzal pontosan egyező magassággal jelennek meg.
 - Képek beillesztése: **beillesztéssel (Ctrl+V)** vagy **húzd-és-ejtsd**-del a szerkesztőbe. A képek automatikusan tömörödnek (WebP, max. 1440px szélesség), hogy a fejezet fájlja és a mentés ne híz­zon el feleslegesen sok kép esetén sem.
 
 ### ⚙ Projektek kezelése (a szerkesztő felső sávjában)
