@@ -681,7 +681,7 @@ body { font-family: var(--sans); background: var(--bg); color: var(--text); disp
 .hp-doc-body { flex:1; min-width:0; }
 .hp-doc-title { font-size:14px; font-weight:600; margin-bottom:2px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .hp-doc-meta { font-size:11px; color:var(--text3); }
-.hp-actions-row { display:flex; align-items:center; gap:8px; border-top:1px solid var(--border); padding-top:12px; margin-top:2px; }
+.hp-actions-row { display:flex; align-items:center; gap:8px; flex-wrap:wrap; border-top:1px solid var(--border); padding-top:12px; margin-top:2px; }
 .hp-actions-row .btn-sm { flex-shrink:0; white-space:nowrap; }
 .hp-actions-row .btn.primary { margin-left:auto; padding:6px 18px; font-size:12px; flex-shrink:0; }
 
@@ -1450,6 +1450,7 @@ const state = {
   projectDocs: null,           // az aktuális Projekt dokumentumainak cache-e
   editingProjectId: null,      // ha nem null, az "Új/szerkesztés Projekt" modal szerkeszt, nem létrehoz
   moveDocSource: null,         // { projectId, docId, title } — a "Dokumentum áthelyezése" modal forrása
+  isAuthed: false,             // van-e érvényes bejelentkezés (a megosztott linkek kapuőrzéséhez)
 };
 
 // ── Toast ─────────────────────────────────────────────────────────────────────
@@ -1475,6 +1476,11 @@ const SUPABASE_URL = 'https://xnycxkbegnbaxkhtpcev.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_caGEy-9KlDt1vKsICEHv7w_LbUQZADL';
 const CLOUD_BUCKET = 'kezikonyv';
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+// A "⬇ Letöltés" felhős mentése minden alkalommal ide is felkerül, ettől függetlenül,
+// hogy a proj.config.output (helyi mappa módban használt, a felhasználó által is
+// átnevezhető) fájlnévvel is elmenti — ez egy fix nevű, mindig a legutóbbi build-et
+// tartalmazó másolat, amire a megosztható link és a gyors letöltés gomb épül.
+const PUBLISH_HTML_NAME = 'published.html';
 
 // ── Bejelentkezés ──
 async function cloudCheckSession() {
@@ -1505,17 +1511,88 @@ function updateAuthUI(session) {
   const wasGateVisible = gate && !gate.classList.contains('hidden');
   if (session && session.user) {
     gate.classList.add('hidden');
+    state.isAuthed = true;
     const email = session.user.email || '';
     if (emailSpan) emailSpan.textContent = email;
     if (profileBtn) profileBtn.textContent = getUserInitials(email);
-    if (wasGateVisible && state.uiView === 'home') showHomeView();
+    if (wasGateVisible && state.uiView === 'home') {
+      // Ha a linkben egy megosztott Dokumentum-hivatkozás van (#view/…), bejelentkezés
+      // után ne a Kezdőlap töltődjön be, hanem egyből a megosztott kézikönyv.
+      const shared = parseSharedViewHash();
+      if (shared) openSharedView(shared.projectId, shared.docId);
+      else showHomeView();
+    }
   } else {
     gate.classList.remove('hidden');
+    state.isAuthed = false;
     if (emailSpan) emailSpan.textContent = '';
     if (profileBtn) profileBtn.textContent = '👤';
   }
 }
 supabaseClient.auth.onAuthStateChange((_event, session) => updateAuthUI(session));
+
+// ── Megosztható Dokumentum-link (#view/{projektId}/{dokumentumId}) ──
+// Csak bejelentkezett felhasználónak nyílik meg — lásd updateAuthUI, ahol a
+// bejelentkezés-utáni átirányítás a Kezdőlap helyett ide vezet, ha a hash ilyen
+// linket tartalmaz. A megnyitott tartalom mindig a legutóbbi "⬇ Letöltés"-sel
+// mentett HTML (lásd PUBLISH_HTML_NAME), tehát nem kell külön linket generálni
+// minden módosítás után.
+function parseSharedViewHash() {
+  const h = location.hash || '';
+  const m = h.match(/^#view\/([^/]+)\/([^/]+)$/);
+  if (!m) return null;
+  return { projectId: decodeURIComponent(m[1]), docId: decodeURIComponent(m[2]) };
+}
+function getDocShareUrl(projectId, docId) {
+  return location.origin + location.pathname + location.search +
+    '#view/' + encodeURIComponent(projectId) + '/' + encodeURIComponent(docId);
+}
+async function openSharedView(projectId, docId) {
+  toast('☁️ Kézikönyv betöltése...', 'ok', 2500);
+  const html = await cloudDownloadText(projectId + '/' + docId + '/' + PUBLISH_HTML_NAME);
+  if (!html) {
+    toast('⚠ Ehhez a Dokumentumhoz még nincs legenerálva HTML — nyisd meg a szerkesztőben, és kattints a Letöltésre.', 'err', 6000);
+    location.hash = '';
+    showHomeView();
+    return;
+  }
+  // A teljes oldal tartalmát lecseréljük a legenerált kézikönyvre — ugyanúgy, mintha
+  // közvetlenül azt a HTML fájlt nyitottad volna meg.
+  document.open();
+  document.write(html);
+  document.close();
+}
+window.addEventListener('hashchange', () => {
+  if (!state.isAuthed) return;
+  const shared = parseSharedViewHash();
+  if (shared) openSharedView(shared.projectId, shared.docId);
+});
+async function copyDocShareLink(projectId, docId) {
+  const url = getDocShareUrl(projectId, docId);
+  try {
+    await navigator.clipboard.writeText(url);
+    toast('✓ Link vágólapra másolva — csak bejelentkezett felhasználók nyithatják meg');
+  } catch(e) {
+    window.prompt('Másold ki a linket:', url);
+  }
+}
+async function downloadPublishedHtml(projectId, docId, title) {
+  toast('☁️ Letöltés előkészítése...', 'ok', 2000);
+  const html = await cloudDownloadText(projectId + '/' + docId + '/' + PUBLISH_HTML_NAME);
+  if (!html) {
+    toast('⚠ Ehhez a Dokumentumhoz még nincs legenerálva HTML — nyisd meg a szerkesztőben, és kattints a Letöltésre.', 'err', 6000);
+    return;
+  }
+  const blob = new Blob([html], { type: 'text/html' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = (slugify(title) || docId) + '.html';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+}
 
 async function cloudLogin() {
   const email = document.getElementById('auth-email').value.trim();
@@ -1854,12 +1931,16 @@ function renderProjectDocGrid() {
         <div class="hp-actions-row">
           <button class="btn-sm hp-doc-edit-btn" title="Dokumentum átnevezése">✏ Szerkesztés</button>
           <button class="btn-sm hp-doc-move-btn" title="Áthelyezés másik projektbe">➡️ Áthelyezés</button>
+          <button class="btn-sm hp-doc-dl-btn" title="A legutóbb legenerált HTML letöltése — szerkesztő megnyitása nélkül">⬇ HTML</button>
+          <button class="btn-sm hp-doc-link-btn" title="Megosztható link másolása (csak bejelentkezett felhasználók nyithatják meg)">🔗 Link</button>
           <button class="btn-sm del hp-doc-del-btn" title="Dokumentum törlése">🗑 Törlés</button>
           <button class="btn primary hp-doc-open-btn">Megnyitás</button>
         </div>
       `;
       card.querySelector('.hp-doc-edit-btn').onclick = (e) => { e.stopPropagation(); renameDocInProject(projectId, d.id, d.title); };
       card.querySelector('.hp-doc-move-btn').onclick = (e) => { e.stopPropagation(); openMoveDocModal(projectId, d.id, d.title); };
+      card.querySelector('.hp-doc-dl-btn').onclick = (e) => { e.stopPropagation(); downloadPublishedHtml(projectId, d.id, d.title); };
+      card.querySelector('.hp-doc-link-btn').onclick = (e) => { e.stopPropagation(); copyDocShareLink(projectId, d.id); };
       card.querySelector('.hp-doc-del-btn').onclick = (e) => { e.stopPropagation(); deleteDocInProject(projectId, d.id, d.title); };
       card.querySelector('.hp-doc-open-btn').onclick = (e) => { e.stopPropagation(); openDoc(); };
       grid.appendChild(card);
@@ -3345,6 +3426,9 @@ async function buildAndDownload(optimize = false) {
   // másként" ablakot nyitja meg, lásd 3. pont).
   if (proj.cloudFolder) {
     await cloudSaveOutput(proj, outputName, html);
+    // Fix nevű, mindig-legfrissebb másolat is készül — erre épül a Projekt nézet
+    // gyors ⬇ letöltés gombja és a megosztható #view/… link (lásd PUBLISH_HTML_NAME).
+    await cloudSaveOutput(proj, PUBLISH_HTML_NAME, html);
     toast('✓ HTML elmentve a felhőbe: ' + outputName);
   }
 
