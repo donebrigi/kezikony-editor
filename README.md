@@ -32,9 +32,11 @@ Bejelentkezés után a **Kezdőlap** fogad (lásd következő szakasz) — innen
 
 Amíg egy felhőben tárolt **Dokumentum** van megnyitva a szerkesztőben, minden mentés — fejezet gépelése közbeni automatikus mentés, kézi **💾 Mentés**, új fejezet létrehozása, fejezet átnevezése, sorrend átrendezése, menü- és CSS-mentés, valamint a **⬇ Letöltés** kimenete is — közvetlenül a Supabase Storage-ba kerül, nem a böngésző helyi tárolójába vagy a gép mappájába. Így amit az egyik kolléga elment, azt egy másik — ugyanazt a Dokumentumot megnyitva — azonnal látja.
 
-A jobb felső **"🔑 Jelszó"** gombbal bármikor lecserélhető a saját jelszó (nem kell hozzá a régi jelszó megadása, csak be kell lenni jelentkezve). A bejelentkező képernyőn az **"Elfelejtett jelszó?"** linkkel jelszó-visszaállító email kérhető — ez, ahogy a felhasználó-meghívó email is, a Supabase alapértelmezett email-küldőjén megy, aminek szigorú (óránkénti néhány email) korlátja van; ha nem érkezik meg az email, ez a korlát az oka, és a bejelentkezés utáni "🔑 Jelszó" gombbal (vagy egy adminisztrátor által a Supabase felületén kézzel beállított új jelszóval) lehet megkerülni.
+A jobb felső sarokban, a felhasználó email-monogramját mutató kör gombra kattintva nyílik meg a **Profil** menü, ez tartalmazza a teljes email címet, a **"🔑 Jelszó módosítása"** és a **"Kilépés"** gombokat.
 
-A jobb felső **"Kilépés"** gomb kijelentkeztet és visszavisz a Kezdőlapra; ezután a bejelentkező képernyő újra megjelenik.
+A **"🔑 Jelszó módosítása"** gombbal bármikor lecserélhető a saját jelszó (nem kell hozzá a régi jelszó megadása, csak be kell lenni jelentkezve). A bejelentkező képernyőn az **"Elfelejtett jelszó?"** linkkel jelszó-visszaállító email kérhető — ez, ahogy a felhasználó-meghívó email is, a Supabase alapértelmezett email-küldőjén megy, aminek szigorú (óránkénti néhány email) korlátja van; ha nem érkezik meg az email, ez a korlát az oka, és a Profil menü "🔑 Jelszó módosítása" gombjával (vagy egy adminisztrátor által a Supabase felületén kézzel beállított új jelszóval) lehet megkerülni.
+
+A **"Kilépés"** gomb kijelentkeztet és visszavisz a Kezdőlapra; ezután a bejelentkező képernyő újra megjelenik.
 
 **Fontos korlát:** ha két ember *egyszerre*, ugyanabban a fejezetben dolgozik, a később mentett verzió felülírja a korábbit — nincs beépített ütközéskezelés vagy zárolás. Érdemes egy fejezetet egyszerre csak egy embernek szerkesztenie.
 
@@ -59,7 +61,21 @@ Mind a Kezdőlapon (Projekt kártyák), mind egy Projekt nézetében (Dokumentum
   - **Megnyitás**: megnyitja a Dokumentumot a szerkesztőben (ugyanezt teszi, ha magára a kártyára kattintasz).
 - **➕ Új dokumentum**: egy Projekt nézetében, a dokumentum-lista végén lévő kártyával hozható létre egy új, üres Dokumentum (egy induló "Bevezetés" fejezettel) — ehhez azonosítót (szóköz nélkül) és egy megjelenített címet kell megadni.
 - **📤 Helyi projekt importálása**: egy Projekt nézetében elérhető gomb — egy már betöltött, *helyi* (nem felhő) projekt egy kattintással feltölthető ebbe a Projektbe, új Dokumentumként. Az összes fejezet, a CSS és a beállítások (config.json) átmásolódnak; az eredeti, helyi másolat közben változatlanul megmarad a gépen / böngészőben.
-- **Morzsamenü (breadcrumb)** a felső sáv *alatt*, egy önálló, teljes szélességű sorban mindig mutatja, hol jársz (Kezdőlap / Projekt neve / Dokumentum címe), és bármelyik szintre vissza lehet kattintani belőle. (Ez a sor csak Projekt- vagy szerkesztő nézetben jelenik meg — a Kezdőlapon nincs rá szükség, hiszen ott vagy.) A 🏠 gomb (a felső sáv bal oldalán) mindig egyenesen a Kezdőlapra visz. A morzsamenü azért kapott saját sort a gombokkal teli felső sáv alatt, hogy hosszú Projekt- vagy Dokumentum-nevek se törhessék több, egymásra csúszó sorba a felső sávot — helyette önmaguk csonkulnak "…"-tal, ha nagyon hosszúak.
+- **Morzsamenü (breadcrumb)** a felső sáv *alatt*, egy önálló, teljes szélességű sorban mindig mutatja, hol jársz (Kezdőlap / Projekt neve / Dokumentum címe), és bármelyik szintre vissza lehet kattintani belőle. (Ez a sor csak Projekt- vagy szerkesztő nézetben jelenik meg — a Kezdőlapon nincs rá szükség, hiszen ott vagy.) A morzsamenü azért kapott saját sort a gombokkal teli felső sáv alatt, hogy hosszú Projekt- vagy Dokumentum-nevek se törhessék több, egymásra csúszó sorba a felső sávot — helyette önmaguk csonkulnak "…"-tal, ha nagyon hosszúak.
+
+### Felső sáv elrendezése
+
+A felső sáv bal oldalán egyetlen **"🏠 Kezdőlap"** gomb van (korábban ez egy külön logó és egy külön házikó-gomb volt, most egy gomb, egy célponttal), mellette a Projekt-választó legördülő (gyors váltás a már betöltött Dokumentumok között — szerkesztő nézetben jelenik meg).
+
+A jobb oldalon, szerkesztő nézetben, ebben a sorrendben:
+
+1. **⚙ Beállítások** — megnyitja a "Projektek kezelése" gyors váltó/átnevező/törlő panelt (lásd lent).
+2. **💾 Mentés**
+3. **✨ AI**
+4. **⬇ Letöltés**
+5. **↗ Előnézet** — az élő előnézetet külön böngészőlapra nyitja ki, hogy a szerkesztő nagyobb helyet kapjon.
+
+Egészen a jobb szélen a kerek **Profil**-gomb (a felhasználó email-monogramja, pl. „DB”) — erre kattintva nyílik meg a jelszó módosítása és a kijelentkezés (lásd fent).
 - A jogosultság-modell egyszerű: **minden bejelentkezett felhasználó minden Projektet és Dokumentumot lát és szerkeszthet** — nincs Projektenkénti vagy Dokumentumonkénti hozzáférés-korlátozás.
 
 Helyi mappa módban dolgozva (lásd lent) a Kezdőlap nem jelenik meg — a szerkesztő rögtön a mappa tartalmával nyílik meg, ahogy eddig is.
