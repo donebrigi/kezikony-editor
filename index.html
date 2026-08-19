@@ -49,7 +49,6 @@ body { font-family: var(--sans); background: var(--bg); color: var(--text); disp
      versengenie ezekkel a rögzített szélességű elemekkel a helyért. */
   flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden;
 }
-#topbar .logo { font-size: 13px; font-weight: 600; color: var(--accent2); letter-spacing: -.02em; margin-right: 6px; flex-shrink: 0; white-space: nowrap; }
 #topbar .sep { width: 1px; height: 20px; background: var(--border); margin: 0 4px; flex-shrink: 0; }
 #topbar select {
   background: var(--bg3); border: 1px solid var(--border2); color: var(--text);
@@ -588,8 +587,23 @@ body { font-family: var(--sans); background: var(--bg); color: var(--text); disp
 }
 #auth-box .btn { width: 100%; margin-top: 4px; }
 #auth-error { color: var(--red); font-size: 12px; margin-top: 10px; min-height: 14px; }
-#user-bar { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
-#user-email { font-size: 11px; color: var(--text3); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:170px; display:inline-block; vertical-align:middle; }
+
+/* ── Profil gomb + legördülő menü ──
+   A korábban külön látszó email cím + 🔑 Jelszó + Kilépés gombok helyett egy kerek
+   "monogram" gomb van a topbar jobb szélén (lásd getUserInitials()), ami a
+   Letöltés-menühöz hasonló, fixed-pozíciós legördülőt nyit. */
+.profile-menu-wrap { position: relative; flex-shrink: 0; }
+.profile-btn {
+  width: 32px; height: 32px; padding: 0; border-radius: 50%;
+  background: var(--accent); border-color: var(--accent); color: #fff;
+  font-size: 12px; font-weight: 700; letter-spacing: .02em;
+  display: flex; align-items: center; justify-content: center;
+}
+.profile-btn:hover { background: var(--accent2); border-color: var(--accent2); color: #fff; }
+#profile-menu-email {
+  font-size: 12px; color: var(--text2); word-break: break-all;
+  padding-bottom: 10px; margin-bottom: 2px; border-bottom: 1px solid var(--border);
+}
 
 /* ── Kezdőlap / Projekt nézet (Projekt → Dokumentum) ──
    A morzsamenü saját, teljes szélességű sorban van a topbar alatt (lásd #breadcrumb-row),
@@ -724,20 +738,26 @@ body { font-family: var(--sans); background: var(--bg); color: var(--text); disp
 
 <!-- Top bar -->
 <div id="topbar">
-  <span class="logo" onclick="showHomeView()" style="cursor:pointer" title="Kezdőlap">📖 Kézikönyv</span>
-  <div class="sep"></div>
-  <button class="btn" onclick="showHomeView()" title="Kezdőlap — projektek" style="padding:5px 9px;font-size:13px">🏠</button>
-  <div id="topbar-editor-tools" style="display:none">
+  <!-- Bal oldal: egyetlen Kezdőlap-gomb (korábban a "📖 Kézikönyv" felirat és a
+       külön 🏠 gomb is ugyanoda vitt — most egy gomb, egy célponttal), mellette a
+       Projekt-választó legördülő (a tartalma/logikája változatlan). -->
+  <button class="btn" onclick="showHomeView()" title="Kezdőlap — projektek" style="padding:5px 10px;font-size:13px">🏠 Kezdőlap</button>
+  <div id="topbar-editor-tools-left" style="display:none">
     <div class="sep"></div>
     <select id="project-select" title="Projekt">
       <option value="">— válassz projektet —</option>
     </select>
-    <button class="btn" onclick="openProjModal()" title="Projektek kezelése" style="padding:5px 9px;font-size:13px">⚙</button>
+  </div>
+  <div class="spacer"></div>
+  <span id="status" title="Nyisd meg Chrome-ban, file:// protokollon is működik">Nincs betöltve projekt</span>
+  <!-- Jobb oldal: Beállítások / Mentés / AI / Letöltés / Előnézet, ebben a sorrendben. -->
+  <div id="topbar-editor-tools-right" style="display:none">
     <div class="sep"></div>
+    <button class="btn" onclick="openProjModal()" title="Projektek kezelése (gyors váltás, átnevezés, törlés)" style="padding:5px 10px;font-size:13px">⚙ Beállítások</button>
     <button class="btn" onclick="saveCurrentFile()" title="Ctrl+S">💾 Mentés</button>
     <button class="btn" onclick="openAiPanel()" title="AI fejezet generálás screenshotból" style="background:linear-gradient(135deg,#6366f1,#8b5cf6);border-color:#6366f1;color:#fff">✨ AI</button>
     <div class="dl-menu-wrap">
-      <button class="btn green" onclick="toggleDownloadMenu(event)" id="btn-download" title="A kész HTML letöltése — felhő Dokumentumnál emellett a publikált oldal is frissül">⬇ Letöltés</button>
+      <button class="btn primary" onclick="toggleDownloadMenu(event)" id="btn-download" title="A kész HTML letöltése — felhő Dokumentumnál emellett a publikált oldal is frissül">⬇ Letöltés</button>
       <div id="download-menu" class="dl-menu">
         <label class="dl-menu-option">
           <input type="checkbox" id="dl-optimize-images"/>
@@ -746,16 +766,19 @@ body { font-family: var(--sans); background: var(--bg); color: var(--text); disp
         <button class="btn primary" onclick="confirmDownload()" style="width:100%">⬇ Letöltés indítása</button>
       </div>
     </div>
-    <div class="sep"></div>
-    <button class="btn" onclick="togglePreviewPopout()" id="btn-preview-popout" title="Az előnézetet külön böngészőlapon nyitja meg, élőben frissülve — így a szerkesztő nagyobb helyet kap">🡵 Előnézet külön lapon</button>
+    <button class="btn" onclick="togglePreviewPopout()" id="btn-preview-popout" title="Az előnézetet külön böngészőlapon nyitja meg, élőben frissülve — így a szerkesztő nagyobb helyet kap">↗ Előnézet</button>
   </div>
-  <div class="spacer"></div>
-  <span id="status" title="Nyisd meg Chrome-ban, file:// protokollon is működik">Nincs betöltve projekt</span>
   <div class="sep"></div>
-  <div id="user-bar">
-    <span id="user-email"></span>
-    <button class="btn" onclick="openPasswordModal()" style="padding:4px 10px;font-size:12px">🔑 Jelszó</button>
-    <button class="btn" onclick="cloudLogout()" style="padding:4px 10px;font-size:12px">Kilépés</button>
+  <!-- Profil: a korábban külön látszó email cím, 🔑 Jelszó és Kilépés gombok most
+       egy legördülő menü alá kerültek, a Letöltés-menühöz hasonló módon — a gombon
+       csak a felhasználó monogramja látszik. -->
+  <div class="profile-menu-wrap">
+    <button class="btn profile-btn" onclick="toggleProfileMenu(event)" id="btn-profile" title="Profil">👤</button>
+    <div id="profile-menu" class="dl-menu">
+      <div id="profile-menu-email"></div>
+      <button class="btn" onclick="closeProfileMenu();openPasswordModal()" style="width:100%">🔑 Jelszó módosítása</button>
+      <button class="btn" onclick="cloudLogout()" style="width:100%">Kilépés</button>
+    </div>
   </div>
 </div>
 
@@ -1458,9 +1481,21 @@ async function cloudCheckSession() {
   const { data: { session } } = await supabaseClient.auth.getSession();
   updateAuthUI(session);
 }
+// A Profil-gombon (a topbar jobb szélén) nincs hely egy teljes email címnek — helyette
+// a felhasználó "monogramját" mutatjuk (pl. "dobos.brigitta@..." → "DB"), a teljes
+// email cím pedig a Profil-menü tetején, kiírva jelenik meg.
+function getUserInitials(email) {
+  if (!email) return '👤';
+  const local = email.split('@')[0];
+  const parts = local.split(/[.\-_+0-9]+/).filter(Boolean);
+  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return '👤';
+}
 function updateAuthUI(session) {
   const gate = document.getElementById('auth-gate');
-  const emailSpan = document.getElementById('user-email');
+  const emailSpan = document.getElementById('profile-menu-email');
+  const profileBtn = document.getElementById('btn-profile');
   // Az induláskor (még a bejelentkezés eldőlte előtt) lefutó showHomeView() a Projekt-listát
   // hitelesítés nélkül próbálja lekérni — ez üresen/hibásan tér vissza, mert a Supabase még
   // nem tudja, ki vagyunk. Ha ilyenkor épp most (ebben a hívásban) válik érvényessé a
@@ -1470,11 +1505,14 @@ function updateAuthUI(session) {
   const wasGateVisible = gate && !gate.classList.contains('hidden');
   if (session && session.user) {
     gate.classList.add('hidden');
-    if (emailSpan) emailSpan.textContent = session.user.email || '';
+    const email = session.user.email || '';
+    if (emailSpan) emailSpan.textContent = email;
+    if (profileBtn) profileBtn.textContent = getUserInitials(email);
     if (wasGateVisible && state.uiView === 'home') showHomeView();
   } else {
     gate.classList.remove('hidden');
     if (emailSpan) emailSpan.textContent = '';
+    if (profileBtn) profileBtn.textContent = '👤';
   }
 }
 supabaseClient.auth.onAuthStateChange((_event, session) => updateAuthUI(session));
@@ -1666,8 +1704,11 @@ async function cloudListDocuments(projectId) {
 
 // ── Nézetváltás: Kezdőlap / Projekt / Szerkesztő ──
 function updateTopbarToolsVisibility() {
-  const tools = document.getElementById('topbar-editor-tools');
-  if (tools) tools.style.display = (state.uiView === 'editor') ? 'contents' : 'none';
+  const isEditor = state.uiView === 'editor';
+  const left = document.getElementById('topbar-editor-tools-left');
+  const right = document.getElementById('topbar-editor-tools-right');
+  if (left) left.style.display = isEditor ? 'contents' : 'none';
+  if (right) right.style.display = isEditor ? 'contents' : 'none';
 }
 
 function updateBreadcrumb() {
@@ -3189,7 +3230,31 @@ function mdToHtml(md) {
   return html.join('\n');
 }
 
-// ── Letöltés menü ──
+// ── Topbar legördülő menük (Letöltés, Profil) ──
+// Mindkét menü position:fixed (lásd .dl-menu CSS-t) — a #topbar-nak overflow-y:hidden
+// van beállítva, ami levágna egy topbaron belüli, absolute pozicionált lenyíló menüt,
+// ezért a helyét (top/left vagy top/right) mindig a gomb tényleges képernyő-pozíciója
+// (getBoundingClientRect) alapján, JS-ből számoljuk ki, minden megnyitáskor újra.
+function positionFixedMenu(menu, btn, align) {
+  const r = btn.getBoundingClientRect();
+  const menuWidth = 260;
+  menu.style.top = (r.bottom + 6) + 'px';
+  if (align === 'right') {
+    // Jobbra igazítva (a menü jobb széle essen egybe a gomb jobb szélével) — ez kell
+    // a topbar jobb szélén ülő Profil-gombnál, különben a menü kilógna a képernyőből.
+    let right = window.innerWidth - r.right;
+    right = Math.max(12, right);
+    menu.style.right = right + 'px';
+    menu.style.left = 'auto';
+  } else {
+    let left = r.left;
+    const maxLeft = window.innerWidth - menuWidth - 12;
+    if (left > maxLeft) left = Math.max(12, maxLeft);
+    menu.style.left = left + 'px';
+    menu.style.right = 'auto';
+  }
+}
+
 // A korábbi két külön gomb ("Build" / "Build + Optimalizál") helyett egy "Letöltés"
 // gomb van, ami egy kis menüt nyit — itt választható a kép-optimalizálás, majd a
 // "Letöltés indítása" gombbal fut le ugyanaz a buildAndDownload(), mint eddig.
@@ -3197,34 +3262,45 @@ function toggleDownloadMenu(e) {
   if (e) e.stopPropagation();
   const menu = document.getElementById('download-menu');
   if (menu.classList.contains('open')) { closeDownloadMenu(); return; }
-  // Mivel a menü position:fixed, a helyét (top/left) manuálisan, a gomb tényleges
-  // képernyő-pozíciója (getBoundingClientRect) alapján kell beállítani, minden
-  // megnyitáskor újra — a gomb helye változhat (pl. ha közben átméretezték az ablakot,
-  // vagy a topbar oldalra volt görgetve).
-  const btn = document.getElementById('btn-download');
-  const r = btn.getBoundingClientRect();
-  menu.style.top = (r.bottom + 6) + 'px';
-  let left = r.left;
-  const maxLeft = window.innerWidth - 260 - 12; // 260px a menü szélessége, 12px margó
-  if (left > maxLeft) left = Math.max(12, maxLeft);
-  menu.style.left = left + 'px';
+  closeProfileMenu();
+  positionFixedMenu(menu, document.getElementById('btn-download'), 'left');
   menu.classList.add('open');
 }
 function closeDownloadMenu() {
   document.getElementById('download-menu').classList.remove('open');
 }
+
+// A korábban külön látszó email cím + 🔑 Jelszó + Kilépés gombok most egy Profil
+// legördülő alá kerültek — ugyanaz a minta, mint a Letöltés menünél.
+function toggleProfileMenu(e) {
+  if (e) e.stopPropagation();
+  const menu = document.getElementById('profile-menu');
+  if (menu.classList.contains('open')) { closeProfileMenu(); return; }
+  closeDownloadMenu();
+  positionFixedMenu(menu, document.getElementById('btn-profile'), 'right');
+  menu.classList.add('open');
+}
+function closeProfileMenu() {
+  document.getElementById('profile-menu').classList.remove('open');
+}
+
 document.addEventListener('click', (e) => {
-  const menu = document.getElementById('download-menu');
-  const wrap = document.querySelector('.dl-menu-wrap');
-  if (menu && menu.classList.contains('open') && wrap && !wrap.contains(e.target) && !menu.contains(e.target)) {
+  const dlMenu = document.getElementById('download-menu');
+  const dlWrap = document.querySelector('.dl-menu-wrap');
+  if (dlMenu && dlMenu.classList.contains('open') && dlWrap && !dlWrap.contains(e.target) && !dlMenu.contains(e.target)) {
     closeDownloadMenu();
   }
+  const profMenu = document.getElementById('profile-menu');
+  const profWrap = document.querySelector('.profile-menu-wrap');
+  if (profMenu && profMenu.classList.contains('open') && profWrap && !profWrap.contains(e.target) && !profMenu.contains(e.target)) {
+    closeProfileMenu();
+  }
 });
-// Ha közben görgetik a topbart (vízszintesen, keskeny ablaknál) vagy az oldalt,
-// a fixed menü már nem lenne a gomb alatt — ilyenkor egyszerűbb bezárni, mint
-// élőben újraszámolni a pozícióját.
-document.getElementById('topbar').addEventListener('scroll', closeDownloadMenu);
-window.addEventListener('resize', closeDownloadMenu);
+// Ha közben görgetik a topbart (vízszintesen, keskeny ablaknál) vagy az oldalt, a
+// fixed menük már nem lennének a gombjuk alatt — ilyenkor egyszerűbb bezárni őket,
+// mint élőben újraszámolni a pozíciójukat.
+document.getElementById('topbar').addEventListener('scroll', () => { closeDownloadMenu(); closeProfileMenu(); });
+window.addEventListener('resize', () => { closeDownloadMenu(); closeProfileMenu(); });
 async function confirmDownload() {
   const optimize = document.getElementById('dl-optimize-images').checked;
   closeDownloadMenu();
