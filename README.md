@@ -191,8 +191,10 @@ A projekt-beállítások **Beállítások** fülén, a "Navigáció csoportok" a
 - **⬇ Letöltés**: legenerálja a végleges, önálló HTML fájlt (a projekt `config.json`-jában megadott `output` néven, alapból `<projektnév>.html`). Kattintva egy kis menü nyílik:
   - **🖼 Képek optimalizálása** (kipipálható): ha be van pipálva, a beágyazott képek PNG-ről WebP-re konvertálódnak és max. 1440px szélességre kicsinyülnek — ez tud számottevően kisebb fájlt eredményezni, ha sok, tömörítetlen képet tartalmaz a projekt, de a képek minősége kicsit romlik. Alapból nincs bepipálva (eredeti minőség).
   - **⬇ Letöltés indítása**: a kiválasztott beállítással lefuttatja a buildet.
-- Felhő Dokumentumnál a Letöltés a generált HTML-t a közös Supabase Storage-ba is felmenti (ez frissíti a publikált oldalt, pl. a GitHub Pages-en), a kép-optimalizálás választásától függetlenül.
-- Ha van írási jog a mappához (helyi mappa mód, Chrome/Edge), a build automatikusan a mappába íródik; egyébként letöltésre kerül.
+- Felhő Dokumentumnál a Letöltés a generált HTML-t a közös Supabase Storage-ba is felmenti (ez frissíti a publikált oldalt, pl. a GitHub Pages-en), a kép-optimalizálás választásától függetlenül — **és emellett a saját gépedre is lekerül egy másolat**:
+  - **Chrome / Edge:** egy natív "Mentés másként" ablak kérdezi meg, hova mentse a fájlt a gépeden.
+  - **Más böngésző (pl. Firefox, Safari):** nincs ilyen "hova mentsem" választás, a fájl automatikusan a böngésző alapértelmezett Letöltések mappájába kerül.
+- Helyi mappa módban: ha van írási jog a mappához (Chrome/Edge), a build automatikusan a mappába íródik; egyébként ugyanígy a "Mentés másként" ablak (vagy annak hiányában a Letöltések mappa) kerül elő.
 
 ### GitHub Pages-re feltöltés
 
