@@ -1442,6 +1442,7 @@ const state = {
   currentFile: null,
   previewMode: 'section',
   previewTimer: null,
+  previewRenderKey: null, // az utolsó előnézet-render "kulcsa" (fájl+mód) — ha nem változik, gépeléskor megmarad a görgetési pozíció
   // Kezdőlap / Projekt-Dokumentum hierarchia (felhő mód)
   uiView: 'home',              // 'home' | 'project' | 'editor'
   currentTopProject: null,     // felhő Projekt azonosító (mappa neve)
@@ -3017,6 +3018,29 @@ function renderPreview() {
   const frame = document.getElementById('preview-frame');
   const info = document.getElementById('preview-info');
 
+  // Gépelés közben ez a függvény ~400ms-enként újratölti az előnézetet (srcdoc/
+  // document.write), ami egy vadonatúj dokumentumot hoz létre — ez alapból mindig a
+  // lap tetejére ugorna vissza. Ehelyett elmentjük, hol állt a görgetés, és az új
+  // tartalom betöltése után oda állunk vissza, hogy a felhasználó a begépelt szöveget
+  // ott lássa, ahol éppen dolgozik. Fájlváltáskor (vagy nézetmód-váltáskor) viszont a
+  // régi görgetési pozíció más tartalomra nem lenne értelmes, ezért ilyenkor a tetejéről
+  // indulunk — ezt a renderKey (fájl + nézetmód) változása jelzi.
+  const renderKey = state.previewMode + ':' + (state.previewMode === 'section' ? state.currentFile : state.currentProject);
+  const sameAsLastRender = state.previewRenderKey === renderKey;
+  state.previewRenderKey = renderKey;
+
+  let scrollX = 0, scrollY = 0;
+  if (sameAsLastRender) {
+    try {
+      if (frame.contentWindow) { scrollX = frame.contentWindow.scrollX || 0; scrollY = frame.contentWindow.scrollY || 0; }
+    } catch(e) {}
+  }
+  let popScrollX = 0, popScrollY = 0;
+  const popWin = (state.previewWindow && !state.previewWindow.closed) ? state.previewWindow : null;
+  if (popWin && sameAsLastRender) {
+    try { popScrollX = popWin.scrollX || 0; popScrollY = popWin.scrollY || 0; } catch(e) {}
+  }
+
   let html;
   if (state.previewMode === 'section') {
     const f = state.currentFile ? proj.files[state.currentFile] : null;
@@ -3036,15 +3060,50 @@ function renderPreview() {
     info.textContent = 'Teljes dokumentum';
   }
 
+  // A legenerált kézikönyv saját CSS-e "scroll-behavior:smooth"-t állít be (a
+  // tartalomjegyzék-linkekhez) — ez a görgetési pozíció bármilyen programozott
+  // beállítását animálva futtatná le, a scrollTop tulajdonság közvetlen írását is
+  // beleértve, ami gépelés közben, minden újrarenderelésnél zökkenős csúszást
+  // okozna. Ezért a visszaállításhoz ideiglenesen "auto"-ra kapcsoljuk, hogy azonnali
+  // (nem animált) legyen — a felhasználó így nem is érzékeli, hogy újratöltődött.
+  if (scrollX || scrollY) {
+    frame.onload = () => {
+      frame.onload = null;
+      try {
+        const d = frame.contentDocument;
+        if (d && d.documentElement) {
+          d.documentElement.style.scrollBehavior = 'auto';
+          d.documentElement.scrollTop = scrollY; d.documentElement.scrollLeft = scrollX;
+        }
+        if (d && d.body) { d.body.scrollTop = scrollY; d.body.scrollLeft = scrollX; }
+      } catch(e) {}
+    };
+  } else {
+    frame.onload = null;
+  }
   frame.srcdoc = html;
 
   // Ha van külön lapra kiugrasztott előnézet ablak (lásd togglePreviewPopout), azt is
   // frissítjük — ugyanaz a friss HTML kerül bele, mint a beépített előnézet iframe-jébe.
-  if (state.previewWindow && !state.previewWindow.closed) {
+  if (popWin) {
     try {
-      state.previewWindow.document.open();
-      state.previewWindow.document.write(html);
-      state.previewWindow.document.close();
+      popWin.document.open();
+      popWin.document.write(html);
+      popWin.document.close();
+      if (popScrollX || popScrollY) {
+        // A document.write utáni layout nem mindig kész azonnal (pl. betűtípus-betöltés
+        // miatt) — egy rAF-fal várunk egy festési ciklust, mielőtt visszaállítjuk a görgetést.
+        requestAnimationFrame(() => {
+          try {
+            const d = popWin.document;
+            if (d && d.documentElement) {
+              d.documentElement.style.scrollBehavior = 'auto';
+              d.documentElement.scrollTop = popScrollY; d.documentElement.scrollLeft = popScrollX;
+            }
+            if (d && d.body) { d.body.scrollTop = popScrollY; d.body.scrollLeft = popScrollX; }
+          } catch(e) {}
+        });
+      }
     } catch(e) { console.warn('Külön lapos előnézet frissítése sikertelen:', e); }
   }
 }
