@@ -57,6 +57,8 @@ Mind a Kezdőlapon (Projekt kártyák), mind egy Projekt nézetében (Dokumentum
 - **Dokumentum kártyák egy Projekt nézetében**: a cím, a fejezetszám és az utolsó frissítés alatt egy gombsor:
   - **✏ Szerkesztés**: bekéri a Dokumentum új, megjelenített címét. (Ez csak a címet változtatja, a Dokumentum azonosítóját — vagyis a felhőben lévő mappa nevét — nem.)
   - **➡️ Áthelyezés**: a Dokumentum átvihető egy másik, meglévő Projektbe — a legördülőben kiválasztott célprojektbe átmásolódik az összes fejezete, a CSS-e és a beállításai, majd törlődik a régi helyéről. (Ha a célprojektben már van ugyanilyen azonosítójú Dokumentum, az áthelyezés meghiúsul — ilyenkor előbb nevezd át valamelyiket.)
+  - **⬇ HTML**: a legutóbb "⬇ Letöltés"-sel legenerált HTML-t tölti le közvetlenül, a szerkesztő megnyitása nélkül — lásd lent, "Gyors letöltés és megosztható link".
+  - **🔗 Link**: egy egyedi, megosztható linket másol a vágólapra, ami a Dokumentum legutóbb legenerált HTML-jét nyitja meg — lásd lent.
   - **🗑 Törlés**: törli a teljes Dokumentumot — ez véglegesen eltávolítja az összes fejezetét, a CSS-ét és a beállításait a felhőből (megerősítést kér, mert nem vonható vissza).
   - **Megnyitás**: megnyitja a Dokumentumot a szerkesztőben (ugyanezt teszi, ha magára a kártyára kattintasz).
 - **➕ Új dokumentum**: egy Projekt nézetében, a dokumentum-lista végén lévő kártyával hozható létre egy új, üres Dokumentum (egy induló "Bevezetés" fejezettel) — ehhez azonosítót (szóköz nélkül) és egy megjelenített címet kell megadni.
@@ -211,6 +213,15 @@ A projekt-beállítások **Beállítások** fülén, a "Navigáció csoportok" a
   - **Chrome / Edge:** egy natív "Mentés másként" ablak kérdezi meg, hova mentse a fájlt a gépeden.
   - **Más böngésző (pl. Firefox, Safari):** nincs ilyen "hova mentsem" választás, a fájl automatikusan a böngésző alapértelmezett Letöltések mappájába kerül.
 - Helyi mappa módban: ha van írási jog a mappához (Chrome/Edge), a build automatikusan a mappába íródik; egyébként ugyanígy a "Mentés másként" ablak (vagy annak hiányában a Letöltések mappa) kerül elő.
+
+### Gyors letöltés és megosztható link (felhő Dokumentumoknál)
+
+A szerkesztőben elért "⬇ Letöltés" minden alkalommal egy fix nevű (`published.html`) másolatot is felment a Dokumentum felhő-mappájába — ez mindig a legutóbb legenerált verziót tartalmazza, nincs hozzá külön verziózás vagy dátumozás. Erre épül két dolog a Projekt nézet Dokumentum-kártyáin:
+
+- **⬇ HTML** — egy kattintással letölti ezt a legutóbbi HTML-t, anélkül hogy meg kellene nyitni a szerkesztőt. Ha a Dokumentumhoz még sosem futott le a Letöltés, egy figyelmeztető üzenet jelzi ezt.
+- **🔗 Link** — egy egyedi linket másol a vágólapra (`…#view/projekt-azonosító/dokumentum-azonosító` alakban), amivel a legutóbbi HTML bárkinek elküldhető. A linkre kattintva a normál bejelentkező ablak fogadja a címzettet — csak sikeres bejelentkezés **után** nyílik meg maga a kézikönyv, a szerkesztő felülete nélkül, közvetlenül úgy, mintha magát a HTML fájlt nyitották volna meg. Mivel a link mindig ugyanahhoz a `published.html`-hez vezet, egy újabb Letöltés után nem kell új linket generálni — a régi link is már az új tartalmat mutatja.
+
+> Egyelőre nincs mód arra, hogy egy linket bejelentkezés nélkül, kívülállóknak is megnyithatóvá tegyünk — ez egy jövőbeli bővítési lehetőség.
 
 ### GitHub Pages-re feltöltés
 
