@@ -3263,11 +3263,13 @@ async function buildAndDownload(optimize = false) {
     toast(`✓ Optimalizálva — ${origKB} KB`, 'ok', 3000);
   }
 
-  // 0. Felhő projekt: a legenerált HTML a Storage-ba kerül fel
+  // 0. Felhő projekt: a legenerált HTML a Storage-ba is felkerül (ez frissíti a
+  // publikált oldalt) — ez nem záró lépés, utána a lenti logika a gépre is lementi
+  // (Dokumentumnál nincs outputHandle/dirHandle, ezért ez jellemzően a "Mentés
+  // másként" ablakot nyitja meg, lásd 3. pont).
   if (proj.cloudFolder) {
     await cloudSaveOutput(proj, outputName, html);
     toast('✓ HTML elmentve a felhőbe: ' + outputName);
-    return;
   }
 
   // 1. Közvetlen írás a projekt mappájába
