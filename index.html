@@ -839,6 +839,7 @@ body { font-family: var(--sans); background: var(--bg); color: var(--text); disp
       <button class="fmt-btn" onclick="fmtWrap('**','**')" title="Félkövér (Ctrl+B)"><b>B</b></button>
       <button class="fmt-btn" onclick="fmtWrap('*','*')" title="Dőlt (Ctrl+I)"><i>I</i></button>
       <button class="fmt-btn" onclick="fmtWrap('`','`')" title="Kód"><code style="font-size:11px">code</code></button>
+      <button class="fmt-btn" onclick="fmtWrap('==','==')" title="Kiemelt szöveg (színe a Megjelenés fülön állítható)">🖍 Kiemelés</button>
       <div class="fmt-sep"></div>
       <button class="fmt-btn" onclick="fmtLine('# ')" title="H1 — Főcím">H1</button>
       <button class="fmt-btn" onclick="fmtLine('## ')" title="H2 — Alcím">H2</button>
@@ -1103,6 +1104,13 @@ body { font-family: var(--sans); background: var(--bg); color: var(--text); disp
           </div>
         </div>
         <div class="design-field">
+          <label>Kiemelt szöveg színe <span class="hint">(== szöveg == jelöléssel a szövegben)</span></label>
+          <div class="color-row">
+            <input type="color" id="df-hl-color" oninput="onDesignFieldChange()"/>
+            <input type="text" class="hex-input" id="df-hl-color-hex" oninput="onHexChange('hl-color', this.value)"/>
+          </div>
+        </div>
+        <div class="design-field">
           <label>Sarok lekerekítés <span class="hint" id="df-radius-val">14px</span></label>
           <input type="range" id="df-radius" min="0" max="28" step="1" oninput="onDesignFieldChange()" style="width:100%"/>
         </div>
@@ -1142,6 +1150,46 @@ body { font-family: var(--sans); background: var(--bg); color: var(--text); disp
             <div class="fontsize-item">
               <label for="df-fs-h5">Címsor 5 (H5)</label>
               <input type="number" id="df-fs-h5" min="10" max="24" step="1" oninput="onDesignFieldChange()"/>
+            </div>
+          </div>
+        </div>
+        <div class="design-field">
+          <label>Címsor színek <span class="hint">(szintenként külön állítható)</span></label>
+          <div class="fontsize-grid">
+            <div class="fontsize-item">
+              <label for="df-h1-color">Címsor 1 (H1)</label>
+              <div class="color-row">
+                <input type="color" id="df-h1-color" oninput="onDesignFieldChange()"/>
+                <input type="text" class="hex-input" id="df-h1-color-hex" oninput="onHexChange('h1-color', this.value)"/>
+              </div>
+            </div>
+            <div class="fontsize-item">
+              <label for="df-h2-color">Címsor 2 (H2)</label>
+              <div class="color-row">
+                <input type="color" id="df-h2-color" oninput="onDesignFieldChange()"/>
+                <input type="text" class="hex-input" id="df-h2-color-hex" oninput="onHexChange('h2-color', this.value)"/>
+              </div>
+            </div>
+            <div class="fontsize-item">
+              <label for="df-h3-color">Címsor 3 (H3)</label>
+              <div class="color-row">
+                <input type="color" id="df-h3-color" oninput="onDesignFieldChange()"/>
+                <input type="text" class="hex-input" id="df-h3-color-hex" oninput="onHexChange('h3-color', this.value)"/>
+              </div>
+            </div>
+            <div class="fontsize-item">
+              <label for="df-h4-color">Címsor 4 (H4)</label>
+              <div class="color-row">
+                <input type="color" id="df-h4-color" oninput="onDesignFieldChange()"/>
+                <input type="text" class="hex-input" id="df-h4-color-hex" oninput="onHexChange('h4-color', this.value)"/>
+              </div>
+            </div>
+            <div class="fontsize-item">
+              <label for="df-h5-color">Címsor 5 (H5)</label>
+              <div class="color-row">
+                <input type="color" id="df-h5-color" oninput="onDesignFieldChange()"/>
+                <input type="text" class="hex-input" id="df-h5-color-hex" oninput="onHexChange('h5-color', this.value)"/>
+              </div>
             </div>
           </div>
         </div>
@@ -3282,6 +3330,7 @@ function mdToHtml(md) {
 
   const inline = t => t
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/==(.+?)==/g, '<span class="hl">$1</span>')
     .replace(/`(.+?)`/g, '<code>$1</code>')
     .replace(/\[(.+?)\]\((.+?)\)/g, '<a href="$2">$1</a>')
     .replace(/(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)/g, '<em>$1</em>');
@@ -3324,7 +3373,7 @@ function mdToHtml(md) {
 
     if (line.startsWith('> ')) { closeLists(); html.push(`<div class="callout"><p>${inline(line.slice(2))}</p></div>`); i++; continue; }
     if (s.startsWith('# ')) { closeLists(); const t=inline(s.slice(2)); html.push(`<h2 id="${slug(t)}">${t}</h2>`); i++; continue; }
-    if (s.startsWith('## ')) { closeLists(); const t=inline(s.slice(3)); html.push(`<h3 id="${slug(t)}" style="margin:18px 0 10px;color:var(--brand-pink-deep)">${t}</h3>`); i++; continue; }
+    if (s.startsWith('## ')) { closeLists(); const t=inline(s.slice(3)); html.push(`<h3 id="${slug(t)}" style="margin:18px 0 10px">${t}</h3>`); i++; continue; }
     if (s.startsWith('### ')) { closeLists(); const t=inline(s.slice(4)); html.push(`<h4 id="${slug(t)}" style="margin:14px 0 8px">${t}</h4>`); i++; continue; }
     if (s.startsWith('#### ')) { closeLists(); const t=inline(s.slice(5)); html.push(`<h5 id="${slug(t)}" style="margin:12px 0 6px">${t}</h5>`); i++; continue; }
 
@@ -3565,7 +3614,7 @@ mark.doc-hit.doc-hit-active{background:color-mix(in srgb,var(--brand-pink,#ec008
 }
 
 function getDefaultCSS() {
-  return `:root{--primary-50:oklch(98.2% 0.018 155.826);--primary-100:oklch(96.2% 0.044 156.743);--primary-200:oklch(92.5% 0.084 155.995);--primary-500:oklch(72.3% 0.219 149.579);--primary-600:oklch(62.7% 0.194 149.214);--primary-700:oklch(52.7% 0.154 150.069);--neutral-50:oklch(98.4% 0.003 247.858);--neutral-100:oklch(96.8% 0.007 247.896);--neutral-200:oklch(92.9% 0.013 255.508);--neutral-500:oklch(55.4% 0.046 257.417);--neutral-600:oklch(44.6% 0.043 257.281);--neutral-700:oklch(37.2% 0.044 257.287);--neutral-900:oklch(20.8% 0.042 265.755);--brand-blue:#00a3d5;--brand-pink:#ec008c;--brand-pink-deep:#c40075;--bg:var(--neutral-50);--bg-elev:#ffffff;--bg-card:#ffffff;--text:var(--neutral-900);--muted:var(--neutral-600);--accent:var(--brand-pink-deep);--accent-soft:color-mix(in srgb,var(--brand-pink) 16%,white);--border:var(--neutral-200);--radius:14px;--shadow:0 10px 30px oklch(20.8% 0.042 265.755 / 0.08);--font:"Inter",ui-sans-serif,system-ui,sans-serif;--font-head:"Lexend",ui-sans-serif,system-ui,sans-serif;--mono:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;--callout-bg:linear-gradient(135deg,color-mix(in srgb,var(--brand-pink-deep) 35%,var(--bg-card)) 0%,color-mix(in srgb,var(--brand-pink-deep) 12%,var(--bg-card)) 55%,var(--bg-card) 100%);--callout-text:var(--text);--callout-border:var(--brand-pink-deep)}*{box-sizing:border-box}html{scroll-behavior:smooth}main [id]{scroll-margin-top:18px}body{margin:0;font-family:var(--font);color:var(--text);background:var(--bg);line-height:1.55}main p{font-size:16px}main ul,main ol{font-size:16px}a{color:var(--accent);text-decoration:none}a:hover{color:var(--brand-pink);text-decoration:underline}.wrap{max-width:1400px;margin:0 auto;padding:28px 20px;display:grid;grid-template-columns:300px 1fr;gap:24px}@media(max-width:920px){.wrap{grid-template-columns:1fr;padding:20px 16px 56px}aside{position:static!important}}aside{position:sticky;top:18px;align-self:start;max-height:calc(100vh - 36px);overflow:hidden;display:flex;flex-direction:column;border:1px solid color-mix(in srgb,var(--brand-pink) 14%,var(--border));background:var(--bg-elev);border-radius:var(--radius);padding:14px 10px;box-shadow:var(--shadow)}.aside-scroll{overflow-y:auto;overflow-x:hidden;padding-right:4px;flex:1 1 auto;scrollbar-width:thin}.brand{padding:10px 8px 14px;border-bottom:1px solid var(--border);margin-bottom:10px}.brand h1{font-family:var(--font-head);font-size:1.0625rem;font-weight:700;line-height:1.25;margin:8px 0 2px;letter-spacing:-0.02em;color:var(--brand-pink-deep)}.brand p{margin:0;color:var(--muted);font-size:13px}.brand-logo{display:flex;align-items:center;gap:10px}.nav-acc-root{list-style:none;margin:0;padding:4px 4px 2px}.nav-acc-root>li{margin:5px 0}nav a{display:block;padding:10px 10px;border-radius:10px;color:var(--text);border:1px solid transparent}nav a:hover{text-decoration:none;background:var(--accent-soft);border-color:color-mix(in srgb,var(--border) 70%,transparent)}nav details.nav-acc{border:none;border-radius:12px;background:var(--bg-card)}nav details.nav-acc>summary{list-style:none;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 10px;border-radius:12px;cursor:pointer;color:var(--brand-pink-deep);font-weight:600;font-size:14px;user-select:none}nav details.nav-acc>summary::-webkit-details-marker{display:none}nav details.nav-acc>summary::after{content:"";width:7px;height:7px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(45deg);margin-top:-4px;flex-shrink:0;opacity:.85;transition:transform .18s ease,margin .18s ease}nav details.nav-acc[open]>summary::after{transform:rotate(225deg);margin-top:2px}nav details.nav-acc>summary:hover{background:var(--accent-soft)}nav .nav-acc-panel{padding:0 8px 8px 10px}nav .nav-acc-panel ul{list-style:none;margin:0;padding:2px 0 2px 10px;border-left:1px solid var(--border)}nav .nav-acc-panel li{margin:3px 0}nav .nav-acc-panel a{padding:8px 10px;font-size:14px;font-weight:400}.hero,.section{border:1px solid var(--border);background:var(--bg-card);border-radius:var(--radius);padding:18px;box-shadow:var(--shadow);margin-bottom:18px}.hero h1{font-family:var(--font-head);font-size:clamp(1.28rem,2.4vw,1.55rem);font-weight:600;line-height:1.22;margin:0 0 8px;letter-spacing:-0.02em;color:var(--brand-pink-deep)}main h1,main h2,main h3{color:var(--brand-pink-deep)}main h4,main h5,main h6{color:var(--text)}main h3{font-size:15px}main h4{font-size:14px}main h5{font-size:13px}.accordion{margin:14px 0;display:flex;flex-direction:column;gap:8px}.acc-item{border:1px solid var(--border);border-radius:10px;overflow:hidden;background:var(--bg-card)}.acc-item>summary{list-style:none;cursor:pointer;padding:12px 14px;font-weight:600;color:var(--brand-pink-deep);display:flex;align-items:center;justify-content:space-between;gap:10px}.acc-item>summary::-webkit-details-marker{display:none}.acc-item>summary::after{content:"";width:8px;height:8px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(45deg);margin-top:-4px;flex-shrink:0;transition:transform .18s ease,margin .18s ease}.acc-item[open]>summary::after{transform:rotate(225deg);margin-top:2px}.acc-item>summary:hover{background:var(--accent-soft)}.acc-body{padding:0 14px 14px;font-size:15px}.acc-body p:first-child{margin-top:0}.acc-body p:last-child{margin-bottom:0}main ul li::marker,main ol li::marker{color:var(--brand-pink-deep)}.shot{margin:0 0 16px;border:1px solid var(--border);border-radius:12px;overflow:hidden;background:var(--bg-card);box-shadow:0 8px 28px oklch(20.8% 0.042 265.755 / 0.08)}.shot img{display:block;width:auto;height:auto;max-width:100%;margin:0 auto}.shot figcaption{padding:8px 14px;font-size:13px;color:var(--muted);background:color-mix(in srgb,var(--neutral-100) 60%,transparent);border-top:1px solid var(--border)}.shot.shot-stack img+img{border-top:1px solid var(--border)}.callout{margin:14px 0;padding:12px 14px;background:var(--callout-bg);color:var(--callout-text);border:none;border-left:4px solid var(--callout-border);border-radius:14px}.steps{padding-left:18px}code{font-family:var(--mono);font-size:.92em;background:var(--neutral-100);padding:.12em .35em;border-radius:6px;border:1px solid var(--border)}
+  return `:root{--primary-50:oklch(98.2% 0.018 155.826);--primary-100:oklch(96.2% 0.044 156.743);--primary-200:oklch(92.5% 0.084 155.995);--primary-500:oklch(72.3% 0.219 149.579);--primary-600:oklch(62.7% 0.194 149.214);--primary-700:oklch(52.7% 0.154 150.069);--neutral-50:oklch(98.4% 0.003 247.858);--neutral-100:oklch(96.8% 0.007 247.896);--neutral-200:oklch(92.9% 0.013 255.508);--neutral-500:oklch(55.4% 0.046 257.417);--neutral-600:oklch(44.6% 0.043 257.281);--neutral-700:oklch(37.2% 0.044 257.287);--neutral-900:oklch(20.8% 0.042 265.755);--brand-blue:#00a3d5;--brand-pink:#ec008c;--brand-pink-deep:#c40075;--bg:var(--neutral-50);--bg-elev:#ffffff;--bg-card:#ffffff;--text:var(--neutral-900);--muted:var(--neutral-600);--accent:var(--brand-pink-deep);--accent-soft:color-mix(in srgb,var(--brand-pink) 16%,white);--border:var(--neutral-200);--radius:14px;--shadow:0 10px 30px oklch(20.8% 0.042 265.755 / 0.08);--font:"Inter",ui-sans-serif,system-ui,sans-serif;--font-head:"Lexend",ui-sans-serif,system-ui,sans-serif;--mono:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;--callout-bg:linear-gradient(135deg,color-mix(in srgb,var(--brand-pink-deep) 35%,var(--bg-card)) 0%,color-mix(in srgb,var(--brand-pink-deep) 12%,var(--bg-card)) 55%,var(--bg-card) 100%);--callout-text:var(--text);--callout-border:var(--brand-pink-deep);--hl-color:var(--brand-pink-deep);--h1-color:var(--brand-pink-deep);--h2-color:var(--brand-pink-deep);--h3-color:var(--brand-pink-deep);--h4-color:var(--text);--h5-color:var(--text)}*{box-sizing:border-box}html{scroll-behavior:smooth}main [id]{scroll-margin-top:18px}body{margin:0;font-family:var(--font);color:var(--text);background:var(--bg);line-height:1.55}main p{font-size:16px}main ul,main ol{font-size:16px}a{color:var(--accent);text-decoration:none}a:hover{color:var(--brand-pink);text-decoration:underline}.wrap{max-width:1400px;margin:0 auto;padding:28px 20px;display:grid;grid-template-columns:300px 1fr;gap:24px}@media(max-width:920px){.wrap{grid-template-columns:1fr;padding:20px 16px 56px}aside{position:static!important}}aside{position:sticky;top:18px;align-self:start;max-height:calc(100vh - 36px);overflow:hidden;display:flex;flex-direction:column;border:1px solid color-mix(in srgb,var(--brand-pink) 14%,var(--border));background:var(--bg-elev);border-radius:var(--radius);padding:14px 10px;box-shadow:var(--shadow)}.aside-scroll{overflow-y:auto;overflow-x:hidden;padding-right:4px;flex:1 1 auto;scrollbar-width:thin}.brand{padding:10px 8px 14px;border-bottom:1px solid var(--border);margin-bottom:10px}.brand h1{font-family:var(--font-head);font-size:1.0625rem;font-weight:700;line-height:1.25;margin:8px 0 2px;letter-spacing:-0.02em;color:var(--brand-pink-deep)}.brand p{margin:0;color:var(--muted);font-size:13px}.brand-logo{display:flex;align-items:center;gap:10px}.nav-acc-root{list-style:none;margin:0;padding:4px 4px 2px}.nav-acc-root>li{margin:5px 0}nav a{display:block;padding:10px 10px;border-radius:10px;color:var(--text);border:1px solid transparent}nav a:hover{text-decoration:none;background:var(--accent-soft);border-color:color-mix(in srgb,var(--border) 70%,transparent)}nav details.nav-acc{border:none;border-radius:12px;background:var(--bg-card)}nav details.nav-acc>summary{list-style:none;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 10px;border-radius:12px;cursor:pointer;color:var(--brand-pink-deep);font-weight:600;font-size:14px;user-select:none}nav details.nav-acc>summary::-webkit-details-marker{display:none}nav details.nav-acc>summary::after{content:"";width:7px;height:7px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(45deg);margin-top:-4px;flex-shrink:0;opacity:.85;transition:transform .18s ease,margin .18s ease}nav details.nav-acc[open]>summary::after{transform:rotate(225deg);margin-top:2px}nav details.nav-acc>summary:hover{background:var(--accent-soft)}nav .nav-acc-panel{padding:0 8px 8px 10px}nav .nav-acc-panel ul{list-style:none;margin:0;padding:2px 0 2px 10px;border-left:1px solid var(--border)}nav .nav-acc-panel li{margin:3px 0}nav .nav-acc-panel a{padding:8px 10px;font-size:14px;font-weight:400}.hero,.section{border:1px solid var(--border);background:var(--bg-card);border-radius:var(--radius);padding:18px;box-shadow:var(--shadow);margin-bottom:18px}.hero h1{font-family:var(--font-head);font-size:clamp(1.28rem,2.4vw,1.55rem);font-weight:600;line-height:1.22;margin:0 0 8px;letter-spacing:-0.02em;color:var(--brand-pink-deep)}main h1{color:var(--h1-color)}main h2{color:var(--h2-color)}main h3{color:var(--h3-color)}main h4{color:var(--h4-color)}main h5{color:var(--h5-color)}main h6{color:var(--text)}main h3{font-size:15px}main h4{font-size:14px}main h5{font-size:13px}.hl{color:var(--hl-color)}.accordion{margin:14px 0;display:flex;flex-direction:column;gap:8px}.acc-item{border:1px solid var(--border);border-radius:10px;overflow:hidden;background:var(--bg-card)}.acc-item>summary{list-style:none;cursor:pointer;padding:12px 14px;font-weight:600;color:var(--brand-pink-deep);display:flex;align-items:center;justify-content:space-between;gap:10px}.acc-item>summary::-webkit-details-marker{display:none}.acc-item>summary::after{content:"";width:8px;height:8px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(45deg);margin-top:-4px;flex-shrink:0;transition:transform .18s ease,margin .18s ease}.acc-item[open]>summary::after{transform:rotate(225deg);margin-top:2px}.acc-item>summary:hover{background:var(--accent-soft)}.acc-body{padding:0 14px 14px;font-size:15px}.acc-body p:first-child{margin-top:0}.acc-body p:last-child{margin-bottom:0}main ul li::marker,main ol li::marker{color:var(--brand-pink-deep)}.shot{margin:0 0 16px;border:1px solid var(--border);border-radius:12px;overflow:hidden;background:var(--bg-card);box-shadow:0 8px 28px oklch(20.8% 0.042 265.755 / 0.08)}.shot img{display:block;width:auto;height:auto;max-width:100%;margin:0 auto}.shot figcaption{padding:8px 14px;font-size:13px;color:var(--muted);background:color-mix(in srgb,var(--neutral-100) 60%,transparent);border-top:1px solid var(--border)}.shot.shot-stack img+img{border-top:1px solid var(--border)}.callout{margin:14px 0;padding:12px 14px;background:var(--callout-bg);color:var(--callout-text);border:none;border-left:4px solid var(--callout-border);border-radius:14px}.steps{padding-left:18px}code{font-family:var(--mono);font-size:.92em;background:var(--neutral-100);padding:.12em .35em;border-radius:6px;border:1px solid var(--border)}
 .doc-searchbar{margin-top:12px;display:flex;flex-direction:column;gap:0;padding:0;border:1px solid #e2e4e9;background:#fff;border-radius:14px;box-shadow:0 2px 12px rgba(0,0,0,0.07);overflow:hidden}
 .doc-searchbar input[type=search]{width:100%;height:42px;padding:0 14px;border:none;border-bottom:1px solid #e2e4e9;background:#fff;color:#1a1a2e;outline:none;font-size:14px;box-sizing:border-box;-webkit-appearance:none}
 .doc-searchbar input[type=search]::placeholder{color:#aaa;font-size:14px}
@@ -3622,7 +3671,13 @@ function parseDesignBlock(cssText) {
     fsH4: grab('fs-h4'),
     fsH5: grab('fs-h5'),
     calloutBg: grab('callout-bg'),
-    calloutText: grab('callout-text')
+    calloutText: grab('callout-text'),
+    hlColor: grab('hl-color'),
+    h1Color: grab('h1-color'),
+    h2Color: grab('h2-color'),
+    h3Color: grab('h3-color'),
+    h4Color: grab('h4-color'),
+    h5Color: grab('h5-color')
   };
   Object.keys(vars).forEach(k => { if (vars[k] === null) delete vars[k]; });
   return { vars, fontPair: m[1] || 'modern' };
@@ -3669,6 +3724,14 @@ function buildDesignBlock(vars, fontPairKey) {
   const calloutTint = vars.calloutBg || vars.accent;
   const calloutBgGradient = `linear-gradient(135deg,color-mix(in srgb, ${calloutTint} 35%, ${vars.card}) 0%,color-mix(in srgb, ${calloutTint} 12%, ${vars.card}) 55%,${vars.card} 100%)`;
   const calloutText = vars.calloutText || vars.text;
+  // Kiemelt szöveg (== szöveg == jelölés) és a címsorok szín alapból a Kiemelő színt (accent)
+  // vagy a H4/H5-nél a normál szöveg színét öröklik, de mindegyik külön is felülírható.
+  const hlColor = vars.hlColor || vars.accent;
+  const h1Color = vars.h1Color || vars.accent;
+  const h2Color = vars.h2Color || vars.accent;
+  const h3Color = vars.h3Color || vars.accent;
+  const h4Color = vars.h4Color || vars.text;
+  const h5Color = vars.h5Color || vars.text;
   return `/* @kezikonyv-design-start font-pair=${fontPairKey} */
 :root{
   --bg:${vars.bg};
@@ -3693,6 +3756,12 @@ function buildDesignBlock(vars, fontPairKey) {
   --callout-bg:${calloutBgGradient};
   --callout-text:${calloutText};
   --callout-border:${vars.accent};
+  --hl-color:${hlColor};
+  --h1-color:${h1Color};
+  --h2-color:${h2Color};
+  --h3-color:${h3Color};
+  --h4-color:${h4Color};
+  --h5-color:${h5Color};
 }
 main p{font-size:var(--fs-p)}
 .hero h1,main h1{font-size:var(--fs-h1)}
@@ -3701,6 +3770,12 @@ main h3{font-size:var(--fs-h3)}
 main h4{font-size:var(--fs-h4)}
 main h5{font-size:var(--fs-h5)}
 .callout{background:${calloutBgGradient};color:${calloutText};border-left-color:${vars.accent}}
+.hl{color:${hlColor}}
+main h1{color:${h1Color}}
+main h2{color:${h2Color}}
+main h3{color:${h3Color}}
+main h4{color:${h4Color}}
+main h5{color:${h5Color}}
 /* @kezikonyv-design-end */`;
 }
 
@@ -3757,6 +3832,12 @@ function loadDesignForm() {
   // színt mutatjuk — ebből a form egy lágy átmenetet számol a kártya háttere felé.
   setColorField('df-callout-bg', vars.calloutBg || vars.accent);
   setColorField('df-callout-text', vars.calloutText || vars.text);
+  setColorField('df-hl-color', vars.hlColor || vars.accent);
+  setColorField('df-h1-color', vars.h1Color || vars.accent);
+  setColorField('df-h2-color', vars.h2Color || vars.accent);
+  setColorField('df-h3-color', vars.h3Color || vars.accent);
+  setColorField('df-h4-color', vars.h4Color || vars.text);
+  setColorField('df-h5-color', vars.h5Color || vars.text);
 }
 
 function onHexChange(field, val) {
@@ -3768,7 +3849,7 @@ function onHexChange(field, val) {
 
 function onDesignFieldChange() {
   // A színválasztó (natív color picker) és a mellette lévő hex mező mindig szinkronban marad.
-  ['accent','bg','card','text','muted','border','callout-bg','callout-text'].forEach(k => {
+  ['accent','bg','card','text','muted','border','callout-bg','callout-text','hl-color','h1-color','h2-color','h3-color','h4-color','h5-color'].forEach(k => {
     document.getElementById('df-' + k + '-hex').value = document.getElementById('df-' + k).value;
   });
   document.getElementById('df-radius-val').textContent = document.getElementById('df-radius').value + 'px';
@@ -3794,7 +3875,13 @@ function applyDesignForm(doSaveAndToast) {
     fsH4: document.getElementById('df-fs-h4').value,
     fsH5: document.getElementById('df-fs-h5').value,
     calloutBg: document.getElementById('df-callout-bg').value,
-    calloutText: document.getElementById('df-callout-text').value
+    calloutText: document.getElementById('df-callout-text').value,
+    hlColor: document.getElementById('df-hl-color').value,
+    h1Color: document.getElementById('df-h1-color').value,
+    h2Color: document.getElementById('df-h2-color').value,
+    h3Color: document.getElementById('df-h3-color').value,
+    h4Color: document.getElementById('df-h4-color').value,
+    h5Color: document.getElementById('df-h5-color').value
   };
   const fontPair = document.getElementById('df-fontpair').value;
   const base = stripDesignBlock(proj.css || getDefaultCSS());
