@@ -849,6 +849,8 @@ body { font-family: var(--sans); background: var(--bg); color: var(--text); disp
       <button class="fmt-btn" onclick="fmtList('1. ')" title="Számozott lista">1. Lista</button>
       <button class="fmt-btn" onclick="fmtLine('> ')" title="Kiemelő doboz">&gt; Callout</button>
       <button class="fmt-btn" onclick="fmtAccordion()" title="Lenyíló elem (harmonika) beszúrása">⬇ Harmonika</button>
+      <button class="fmt-btn" onclick="openIconPicker()" title="Ikon beszúrása (Lucide ikonkészlet)">🧩 Ikon</button>
+      <button class="fmt-btn" onclick="fmtNote()" title="Szerkesztői jegyzet — az előnézetben buborékban látszik, a végleges buildelt oldalon nem jelenik meg">📝 Jegyzet</button>
       <div class="fmt-sep"></div>
       <button class="fmt-btn" onclick="fmtLink()" title="Link beszúrása">🔗 Link</button>
       <button class="fmt-btn" onclick="fmtCodeBlock()" title="Kód blokk">```kód```</button>
@@ -1314,6 +1316,19 @@ body { font-family: var(--sans); background: var(--bg); color: var(--text); disp
     <div style="display:flex;gap:8px;margin-top:20px">
       <button class="btn" onclick="closeNewDocModal()" style="flex:1">Mégse</button>
       <button class="btn primary" onclick="createDocInProject()" style="flex:1">Létrehozás</button>
+    </div>
+  </div>
+</div>
+
+<!-- Lucide ikon beszúró modal -->
+<div class="hp-modal-backdrop" id="icon-picker-modal-backdrop" onclick="closeIconPicker()">
+  <div class="hp-modal" style="width:560px" onclick="event.stopPropagation()">
+    <h3>🧩 Ikon beszúrása <span style="font-weight:400;color:var(--text3);font-size:12px">(lucide.dev)</span></h3>
+    <input type="text" id="icon-picker-search" placeholder="Keresés (pl. house, mail, check)..." oninput="filterIconPicker()" autocomplete="off"/>
+    <div id="icon-picker-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(58px,1fr));gap:6px;margin-top:10px;max-height:360px;overflow-y:auto"></div>
+    <div id="icon-picker-hint" class="hint" style="font-size:11px;color:var(--text3);margin-top:8px"></div>
+    <div style="display:flex;gap:8px;margin-top:14px">
+      <button class="btn" onclick="closeIconPicker()" style="flex:1">Bezárás</button>
     </div>
   </div>
 </div>
@@ -3093,7 +3108,7 @@ function renderPreview() {
   if (state.previewMode === 'section') {
     const f = state.currentFile ? proj.files[state.currentFile] : null;
     if (!f) return;
-    const sectionHtml = mdToHtml(f.content);
+    const sectionHtml = mdToHtml(f.content, {showNotes:true});
     const secId = f.meta.id || 'section';
     html = buildPreviewHtml(proj, `<section class="section" id="${secId}">${sectionHtml}</section>`, false);
     info.textContent = f.meta.title || state.currentFile;
@@ -3102,7 +3117,7 @@ function renderPreview() {
       const f = proj.files[fn];
       const tag = proj.fileOrder.indexOf(fn) === 0 ? 'header class="hero"' : 'section class="section"';
       const close = proj.fileOrder.indexOf(fn) === 0 ? 'header' : 'section';
-      return `<${tag} id="${f.meta.id || fn}">${mdToHtml(f.content)}</${close}>`;
+      return `<${tag} id="${f.meta.id || fn}">${mdToHtml(f.content, {showNotes:true})}</${close}>`;
     });
     html = buildPreviewHtml(proj, parts.join('\n'), true);
     info.textContent = 'Teljes dokumentum';
@@ -3317,8 +3332,13 @@ function buildNavHtml(proj) {
 }
 
 // ── Markdown → HTML ───────────────────────────────────────────────────────────
-function mdToHtml(md) {
+function mdToHtml(md, opts) {
   if (!md) return '';
+  // showNotes: az élő előnézetben (renderPreview) true — ilyenkor a szerkesztői
+  // jegyzetek egy vizuálisan elkülönülő buborékban megjelennek. A végleges
+  // build/exportálásnál (buildAndDownload) nincs megadva, ezért false marad,
+  // és a jegyzetek egyáltalán nem kerülnek bele a legenerált oldalba.
+  const showNotes = !!(opts && opts.showNotes);
   const lines = md.split('\n');
   const html = [];
   let i = 0, inOl = false, inUl = false, shotStack = false, inAccordion = false, accItemOpen = false;
@@ -3331,6 +3351,7 @@ function mdToHtml(md) {
   const inline = t => t
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
     .replace(/==(.+?)==/g, '<span class="hl">$1</span>')
+    .replace(/:([a-z][a-z0-9-]*):/g, '<img class="mdi" src="https://unpkg.com/lucide-static@latest/icons/$1.svg" alt="" />')
     .replace(/`(.+?)`/g, '<code>$1</code>')
     .replace(/\[(.+?)\]\((.+?)\)/g, '<a href="$2">$1</a>')
     .replace(/(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)/g, '<em>$1</em>');
@@ -3342,6 +3363,28 @@ function mdToHtml(md) {
     const line = lines[i], s = line.trim();
     if (s === '<!-- shot-stack -->') { closeLists(); html.push('<figure class="shot shot-stack">'); shotStack=true; i++; continue; }
     if (s === '<!-- /shot-stack -->') { html.push('</figure>'); shotStack=false; i++; continue; }
+
+    // Szerkesztői jegyzet: <!-- jegyzet --> ... <!-- /jegyzet --> (több soros), vagy
+    // egy sorban: <!-- jegyzet: rövid szöveg -->. Az élő előnézetben (showNotes) egy
+    // elkülönülő buborékban látszik, de a végleges buildelt/exportált oldalra soha
+    // nem kerül bele — lásd a showNotes ág fölötti magyarázatot.
+    if (s === '<!-- jegyzet -->') {
+      closeLists();
+      const noteLines = [];
+      i++;
+      while (i < lines.length && lines[i].trim() !== '<!-- /jegyzet -->') { noteLines.push(lines[i]); i++; }
+      if (i < lines.length) i++; // a záró <!-- /jegyzet --> sor átlépése
+      if (showNotes) {
+        html.push(`<div class="note-bubble"><div class="note-bubble-label">📝 Jegyzet</div>${mdToHtml(noteLines.join('\n'), {showNotes:true})}</div>`);
+      }
+      continue;
+    }
+    const noteInline = s.match(/^<!--\s*jegyzet\s*:\s*([\s\S]*?)\s*-->$/);
+    if (noteInline) {
+      closeLists();
+      if (showNotes) html.push(`<div class="note-bubble"><div class="note-bubble-label">📝 Jegyzet</div><p>${inline(noteInline[1])}</p></div>`);
+      i++; continue;
+    }
 
     // Accordion (lenyíló/harmonika elemek): <!-- accordion --> ... +++ Cím ... <!-- /accordion -->
     if (s === '<!-- accordion -->') { closeLists(); html.push('<div class="accordion">'); inAccordion=true; accItemOpen=false; i++; continue; }
@@ -3614,7 +3657,7 @@ mark.doc-hit.doc-hit-active{background:color-mix(in srgb,var(--brand-pink,#ec008
 }
 
 function getDefaultCSS() {
-  return `:root{--primary-50:oklch(98.2% 0.018 155.826);--primary-100:oklch(96.2% 0.044 156.743);--primary-200:oklch(92.5% 0.084 155.995);--primary-500:oklch(72.3% 0.219 149.579);--primary-600:oklch(62.7% 0.194 149.214);--primary-700:oklch(52.7% 0.154 150.069);--neutral-50:oklch(98.4% 0.003 247.858);--neutral-100:oklch(96.8% 0.007 247.896);--neutral-200:oklch(92.9% 0.013 255.508);--neutral-500:oklch(55.4% 0.046 257.417);--neutral-600:oklch(44.6% 0.043 257.281);--neutral-700:oklch(37.2% 0.044 257.287);--neutral-900:oklch(20.8% 0.042 265.755);--brand-blue:#00a3d5;--brand-pink:#ec008c;--brand-pink-deep:#c40075;--bg:var(--neutral-50);--bg-elev:#ffffff;--bg-card:#ffffff;--text:var(--neutral-900);--muted:var(--neutral-600);--accent:var(--brand-pink-deep);--accent-soft:color-mix(in srgb,var(--brand-pink) 16%,white);--border:var(--neutral-200);--radius:14px;--shadow:0 10px 30px oklch(20.8% 0.042 265.755 / 0.08);--font:"Inter",ui-sans-serif,system-ui,sans-serif;--font-head:"Lexend",ui-sans-serif,system-ui,sans-serif;--mono:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;--callout-bg:linear-gradient(135deg,color-mix(in srgb,var(--brand-pink-deep) 35%,var(--bg-card)) 0%,color-mix(in srgb,var(--brand-pink-deep) 12%,var(--bg-card)) 55%,var(--bg-card) 100%);--callout-text:var(--text);--callout-border:var(--brand-pink-deep);--hl-color:var(--brand-pink-deep);--h1-color:var(--brand-pink-deep);--h2-color:var(--brand-pink-deep);--h3-color:var(--brand-pink-deep);--h4-color:var(--text);--h5-color:var(--text)}*{box-sizing:border-box}html{scroll-behavior:smooth}main [id]{scroll-margin-top:18px}body{margin:0;font-family:var(--font);color:var(--text);background:var(--bg);line-height:1.55}main p{font-size:16px}main ul,main ol{font-size:16px}a{color:var(--accent);text-decoration:none}a:hover{color:var(--brand-pink);text-decoration:underline}.wrap{max-width:1400px;margin:0 auto;padding:28px 20px;display:grid;grid-template-columns:300px 1fr;gap:24px}@media(max-width:920px){.wrap{grid-template-columns:1fr;padding:20px 16px 56px}aside{position:static!important}}aside{position:sticky;top:18px;align-self:start;max-height:calc(100vh - 36px);overflow:hidden;display:flex;flex-direction:column;border:1px solid color-mix(in srgb,var(--brand-pink) 14%,var(--border));background:var(--bg-elev);border-radius:var(--radius);padding:14px 10px;box-shadow:var(--shadow)}.aside-scroll{overflow-y:auto;overflow-x:hidden;padding-right:4px;flex:1 1 auto;scrollbar-width:thin}.brand{padding:10px 8px 14px;border-bottom:1px solid var(--border);margin-bottom:10px}.brand h1{font-family:var(--font-head);font-size:1.0625rem;font-weight:700;line-height:1.25;margin:8px 0 2px;letter-spacing:-0.02em;color:var(--brand-pink-deep)}.brand p{margin:0;color:var(--muted);font-size:13px}.brand-logo{display:flex;align-items:center;gap:10px}.nav-acc-root{list-style:none;margin:0;padding:4px 4px 2px}.nav-acc-root>li{margin:5px 0}nav a{display:block;padding:10px 10px;border-radius:10px;color:var(--text);border:1px solid transparent}nav a:hover{text-decoration:none;background:var(--accent-soft);border-color:color-mix(in srgb,var(--border) 70%,transparent)}nav details.nav-acc{border:none;border-radius:12px;background:var(--bg-card)}nav details.nav-acc>summary{list-style:none;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 10px;border-radius:12px;cursor:pointer;color:var(--brand-pink-deep);font-weight:600;font-size:14px;user-select:none}nav details.nav-acc>summary::-webkit-details-marker{display:none}nav details.nav-acc>summary::after{content:"";width:7px;height:7px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(45deg);margin-top:-4px;flex-shrink:0;opacity:.85;transition:transform .18s ease,margin .18s ease}nav details.nav-acc[open]>summary::after{transform:rotate(225deg);margin-top:2px}nav details.nav-acc>summary:hover{background:var(--accent-soft)}nav .nav-acc-panel{padding:0 8px 8px 10px}nav .nav-acc-panel ul{list-style:none;margin:0;padding:2px 0 2px 10px;border-left:1px solid var(--border)}nav .nav-acc-panel li{margin:3px 0}nav .nav-acc-panel a{padding:8px 10px;font-size:14px;font-weight:400}.hero,.section{border:1px solid var(--border);background:var(--bg-card);border-radius:var(--radius);padding:18px;box-shadow:var(--shadow);margin-bottom:18px}.hero h1{font-family:var(--font-head);font-size:clamp(1.28rem,2.4vw,1.55rem);font-weight:600;line-height:1.22;margin:0 0 8px;letter-spacing:-0.02em;color:var(--brand-pink-deep)}main h1{color:var(--h1-color)}main h2{color:var(--h2-color)}main h3{color:var(--h3-color)}main h4{color:var(--h4-color)}main h5{color:var(--h5-color)}main h6{color:var(--text)}main h3{font-size:15px}main h4{font-size:14px}main h5{font-size:13px}.hl{color:var(--hl-color)}.accordion{margin:14px 0;display:flex;flex-direction:column;gap:8px}.acc-item{border:1px solid var(--border);border-radius:10px;overflow:hidden;background:var(--bg-card)}.acc-item>summary{list-style:none;cursor:pointer;padding:12px 14px;font-weight:600;color:var(--brand-pink-deep);display:flex;align-items:center;justify-content:space-between;gap:10px}.acc-item>summary::-webkit-details-marker{display:none}.acc-item>summary::after{content:"";width:8px;height:8px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(45deg);margin-top:-4px;flex-shrink:0;transition:transform .18s ease,margin .18s ease}.acc-item[open]>summary::after{transform:rotate(225deg);margin-top:2px}.acc-item>summary:hover{background:var(--accent-soft)}.acc-body{padding:0 14px 14px;font-size:15px}.acc-body p:first-child{margin-top:0}.acc-body p:last-child{margin-bottom:0}main ul li::marker,main ol li::marker{color:var(--brand-pink-deep)}.shot{margin:0 0 16px;border:1px solid var(--border);border-radius:12px;overflow:hidden;background:var(--bg-card);box-shadow:0 8px 28px oklch(20.8% 0.042 265.755 / 0.08)}.shot img{display:block;width:auto;height:auto;max-width:100%;margin:0 auto}.shot figcaption{padding:8px 14px;font-size:13px;color:var(--muted);background:color-mix(in srgb,var(--neutral-100) 60%,transparent);border-top:1px solid var(--border)}.shot.shot-stack img+img{border-top:1px solid var(--border)}.callout{margin:14px 0;padding:12px 14px;background:var(--callout-bg);color:var(--callout-text);border:none;border-left:4px solid var(--callout-border);border-radius:14px}.steps{padding-left:18px}code{font-family:var(--mono);font-size:.92em;background:var(--neutral-100);padding:.12em .35em;border-radius:6px;border:1px solid var(--border)}
+  return `:root{--primary-50:oklch(98.2% 0.018 155.826);--primary-100:oklch(96.2% 0.044 156.743);--primary-200:oklch(92.5% 0.084 155.995);--primary-500:oklch(72.3% 0.219 149.579);--primary-600:oklch(62.7% 0.194 149.214);--primary-700:oklch(52.7% 0.154 150.069);--neutral-50:oklch(98.4% 0.003 247.858);--neutral-100:oklch(96.8% 0.007 247.896);--neutral-200:oklch(92.9% 0.013 255.508);--neutral-500:oklch(55.4% 0.046 257.417);--neutral-600:oklch(44.6% 0.043 257.281);--neutral-700:oklch(37.2% 0.044 257.287);--neutral-900:oklch(20.8% 0.042 265.755);--brand-blue:#00a3d5;--brand-pink:#ec008c;--brand-pink-deep:#c40075;--bg:var(--neutral-50);--bg-elev:#ffffff;--bg-card:#ffffff;--text:var(--neutral-900);--muted:var(--neutral-600);--accent:var(--brand-pink-deep);--accent-soft:color-mix(in srgb,var(--brand-pink) 16%,white);--border:var(--neutral-200);--radius:14px;--shadow:0 10px 30px oklch(20.8% 0.042 265.755 / 0.08);--font:"Inter",ui-sans-serif,system-ui,sans-serif;--font-head:"Lexend",ui-sans-serif,system-ui,sans-serif;--mono:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;--callout-bg:linear-gradient(135deg,color-mix(in srgb,var(--brand-pink-deep) 35%,var(--bg-card)) 0%,color-mix(in srgb,var(--brand-pink-deep) 12%,var(--bg-card)) 55%,var(--bg-card) 100%);--callout-text:var(--text);--callout-border:var(--brand-pink-deep);--hl-color:var(--brand-pink-deep);--h1-color:var(--brand-pink-deep);--h2-color:var(--brand-pink-deep);--h3-color:var(--brand-pink-deep);--h4-color:var(--text);--h5-color:var(--text)}*{box-sizing:border-box}html{scroll-behavior:smooth}main [id]{scroll-margin-top:18px}body{margin:0;font-family:var(--font);color:var(--text);background:var(--bg);line-height:1.55}main p{font-size:16px}main ul,main ol{font-size:16px}a{color:var(--accent);text-decoration:none}a:hover{color:var(--brand-pink);text-decoration:underline}.wrap{max-width:1400px;margin:0 auto;padding:28px 20px;display:grid;grid-template-columns:300px 1fr;gap:24px}@media(max-width:920px){.wrap{grid-template-columns:1fr;padding:20px 16px 56px}aside{position:static!important}}aside{position:sticky;top:18px;align-self:start;max-height:calc(100vh - 36px);overflow:hidden;display:flex;flex-direction:column;border:1px solid color-mix(in srgb,var(--brand-pink) 14%,var(--border));background:var(--bg-elev);border-radius:var(--radius);padding:14px 10px;box-shadow:var(--shadow)}.aside-scroll{overflow-y:auto;overflow-x:hidden;padding-right:4px;flex:1 1 auto;scrollbar-width:thin}.brand{padding:10px 8px 14px;border-bottom:1px solid var(--border);margin-bottom:10px}.brand h1{font-family:var(--font-head);font-size:1.0625rem;font-weight:700;line-height:1.25;margin:8px 0 2px;letter-spacing:-0.02em;color:var(--brand-pink-deep)}.brand p{margin:0;color:var(--muted);font-size:13px}.brand-logo{display:flex;align-items:center;gap:10px}.nav-acc-root{list-style:none;margin:0;padding:4px 4px 2px}.nav-acc-root>li{margin:5px 0}nav a{display:block;padding:10px 10px;border-radius:10px;color:var(--text);border:1px solid transparent}nav a:hover{text-decoration:none;background:var(--accent-soft);border-color:color-mix(in srgb,var(--border) 70%,transparent)}nav details.nav-acc{border:none;border-radius:12px;background:var(--bg-card)}nav details.nav-acc>summary{list-style:none;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 10px;border-radius:12px;cursor:pointer;color:var(--brand-pink-deep);font-weight:600;font-size:14px;user-select:none}nav details.nav-acc>summary::-webkit-details-marker{display:none}nav details.nav-acc>summary::after{content:"";width:7px;height:7px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(45deg);margin-top:-4px;flex-shrink:0;opacity:.85;transition:transform .18s ease,margin .18s ease}nav details.nav-acc[open]>summary::after{transform:rotate(225deg);margin-top:2px}nav details.nav-acc>summary:hover{background:var(--accent-soft)}nav .nav-acc-panel{padding:0 8px 8px 10px}nav .nav-acc-panel ul{list-style:none;margin:0;padding:2px 0 2px 10px;border-left:1px solid var(--border)}nav .nav-acc-panel li{margin:3px 0}nav .nav-acc-panel a{padding:8px 10px;font-size:14px;font-weight:400}.hero,.section{border:1px solid var(--border);background:var(--bg-card);border-radius:var(--radius);padding:18px;box-shadow:var(--shadow);margin-bottom:18px}.hero h1{font-family:var(--font-head);font-size:clamp(1.28rem,2.4vw,1.55rem);font-weight:600;line-height:1.22;margin:0 0 8px;letter-spacing:-0.02em;color:var(--brand-pink-deep)}main h1{color:var(--h1-color)}main h2{color:var(--h2-color)}main h3{color:var(--h3-color)}main h4{color:var(--h4-color)}main h5{color:var(--h5-color)}main h6{color:var(--text)}main h3{font-size:15px}main h4{font-size:14px}main h5{font-size:13px}.hl{color:var(--hl-color)}.mdi{width:1.1em;height:1.1em;vertical-align:-0.2em;display:inline-block}.note-bubble{margin:14px 0;padding:10px 14px;border:1.5px dashed var(--border);border-radius:var(--radius);background:color-mix(in srgb,var(--muted) 8%,var(--bg-card))}.note-bubble-label{font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);margin-bottom:4px}.note-bubble p{margin:0 0 6px;font-style:italic;color:var(--muted)}.note-bubble p:last-child{margin-bottom:0}.accordion{margin:14px 0;display:flex;flex-direction:column;gap:8px}.acc-item{border:1px solid var(--border);border-radius:10px;overflow:hidden;background:var(--bg-card)}.acc-item>summary{list-style:none;cursor:pointer;padding:12px 14px;font-weight:600;color:var(--brand-pink-deep);display:flex;align-items:center;justify-content:space-between;gap:10px}.acc-item>summary::-webkit-details-marker{display:none}.acc-item>summary::after{content:"";width:8px;height:8px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(45deg);margin-top:-4px;flex-shrink:0;transition:transform .18s ease,margin .18s ease}.acc-item[open]>summary::after{transform:rotate(225deg);margin-top:2px}.acc-item>summary:hover{background:var(--accent-soft)}.acc-body{padding:0 14px 14px;font-size:15px}.acc-body p:first-child{margin-top:0}.acc-body p:last-child{margin-bottom:0}main ul li::marker,main ol li::marker{color:var(--brand-pink-deep)}.shot{margin:0 0 16px;border:1px solid var(--border);border-radius:12px;overflow:hidden;background:var(--bg-card);box-shadow:0 8px 28px oklch(20.8% 0.042 265.755 / 0.08)}.shot img{display:block;width:auto;height:auto;max-width:100%;margin:0 auto}.shot figcaption{padding:8px 14px;font-size:13px;color:var(--muted);background:color-mix(in srgb,var(--neutral-100) 60%,transparent);border-top:1px solid var(--border)}.shot.shot-stack img+img{border-top:1px solid var(--border)}.callout{margin:14px 0;padding:12px 14px;background:var(--callout-bg);color:var(--callout-text);border:none;border-left:4px solid var(--callout-border);border-radius:14px}.steps{padding-left:18px}code{font-family:var(--mono);font-size:.92em;background:var(--neutral-100);padding:.12em .35em;border-radius:6px;border:1px solid var(--border)}
 .doc-searchbar{margin-top:12px;display:flex;flex-direction:column;gap:0;padding:0;border:1px solid #e2e4e9;background:#fff;border-radius:14px;box-shadow:0 2px 12px rgba(0,0,0,0.07);overflow:hidden}
 .doc-searchbar input[type=search]{width:100%;height:42px;padding:0 14px;border:none;border-bottom:1px solid #e2e4e9;background:#fff;color:#1a1a2e;outline:none;font-size:14px;box-sizing:border-box;-webkit-appearance:none}
 .doc-searchbar input[type=search]::placeholder{color:#aaa;font-size:14px}
@@ -5648,6 +5691,104 @@ Ide jön a második elem szövege.
   ta.dispatchEvent(new Event('input'));
   updateLineNums();
   toast('✓ Harmonika beszúrva — a "+++ " sorok a lenyíló elemek címei');
+}
+
+// Szerkesztői jegyzet beszúrása. A <!-- jegyzet --> ... <!-- /jegyzet --> közötti szöveg
+// (vagy az egysoros <!-- jegyzet: ... --> forma) az élő előnézetben egy elkülönülő
+// buborékban látszik, de a végleges buildelt/exportált oldalra sosem kerül bele — lásd mdToHtml.
+function fmtNote() {
+  const ta = getEditor();
+  const pos = ta.selectionStart;
+  const before = ta.value.slice(0, pos);
+  const after = ta.value.slice(ta.selectionEnd);
+  const insertAt = before.endsWith('\n') || before === '' ? before : before + '\n';
+  const block =
+`<!-- jegyzet -->
+Ide írhatsz szerkesztői jegyzetet — ez nem kerül bele a végleges oldalba.
+<!-- /jegyzet -->
+`;
+  ta.value = insertAt + block + after;
+  ta.selectionStart = ta.selectionEnd = insertAt.length + block.length;
+  ta.focus();
+  ta.dispatchEvent(new Event('input'));
+  updateLineNums();
+  toast('✓ Jegyzet beszúrva — az előnézetben látszik, a végleges oldalon nem');
+}
+
+// ── Lucide ikon beszúró ──────────────────────────────────────────────────────
+// A https://lucide.dev ikonkészletét használjuk. Az ikonnevek + kereső címkék listáját
+// (tags.json) egyszer töltjük be a unpkg CDN-ről és a böngésző memóriájában (state.lucideIcons)
+// gyorsítótárazzuk, utána a keresés kliens oldalon, hálózat nélkül fut. A kiválasztott ikon
+// a markdownban egy :ikon-nev: jelöléssel kerül be, amit a mdToHtml inline() függvénye alakít
+// egy, a Lucide CDN-jéről betöltött <img>-re — ez az előnézetben ÉS a végleges buildelt
+// oldalon is megjelenik, ezért a végleges oldal megnyitásához is kell majd internet.
+const LUCIDE_TAGS_URL = 'https://unpkg.com/lucide-static@latest/tags.json';
+const LUCIDE_ICON_URL = name => `https://unpkg.com/lucide-static@latest/icons/${name}.svg`;
+
+async function openIconPicker() {
+  document.getElementById('icon-picker-modal-backdrop').classList.add('open');
+  const search = document.getElementById('icon-picker-search');
+  search.value = '';
+  search.focus();
+  const hint = document.getElementById('icon-picker-hint');
+  if (!state.lucideIcons) {
+    hint.textContent = 'Ikonlista betöltése...';
+    document.getElementById('icon-picker-grid').innerHTML = '';
+    try {
+      const res = await fetch(LUCIDE_TAGS_URL);
+      const data = await res.json();
+      state.lucideIcons = Object.keys(data).map(name => ({ name, tags: data[name] || [] }));
+    } catch (e) {
+      hint.textContent = 'Nem sikerült betölteni az ikonlistát — ellenőrizd az internetkapcsolatot.';
+      state.lucideIcons = null;
+      return;
+    }
+  }
+  renderIconPickerGrid('');
+}
+
+function closeIconPicker() {
+  document.getElementById('icon-picker-modal-backdrop').classList.remove('open');
+}
+
+function filterIconPicker() {
+  renderIconPickerGrid(document.getElementById('icon-picker-search').value.trim().toLowerCase());
+}
+
+function renderIconPickerGrid(query) {
+  const grid = document.getElementById('icon-picker-grid');
+  const hint = document.getElementById('icon-picker-hint');
+  const icons = state.lucideIcons || [];
+  const matches = (query
+    ? icons.filter(ic => ic.name.includes(query) || ic.tags.some(t => t.includes(query)))
+    : icons
+  ).slice(0, 90);
+  grid.innerHTML = '';
+  matches.forEach(ic => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'icon-opt';
+    btn.style.cssText = 'width:100%;height:56px;flex-direction:column;gap:3px;font-size:9px;padding:4px;line-height:1.1';
+    btn.title = ic.name;
+    btn.innerHTML = `<img src="${LUCIDE_ICON_URL(ic.name)}" alt="" style="width:20px;height:20px" loading="lazy"/><span style="max-width:52px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${ic.name}</span>`;
+    btn.onclick = () => insertIcon(ic.name);
+    grid.appendChild(btn);
+  });
+  if (!icons.length) { hint.textContent = ''; }
+  else if (!matches.length) { hint.textContent = 'Nincs találat.'; }
+  else { hint.textContent = query ? `${matches.length}${matches.length === 90 ? '+' : ''} találat` : `${icons.length} ikon — kezdj el gépelni a kereséshez`; }
+}
+
+function insertIcon(name) {
+  const ta = getEditor();
+  const start = ta.selectionStart, end = ta.selectionEnd;
+  const token = `:${name}:`;
+  ta.value = ta.value.slice(0, start) + token + ta.value.slice(end);
+  ta.selectionStart = ta.selectionEnd = start + token.length;
+  ta.focus();
+  ta.dispatchEvent(new Event('input'));
+  closeIconPicker();
+  toast(`✓ Ikon beszúrva: ${name}`);
 }
 
 // Keyboard shortcuts
