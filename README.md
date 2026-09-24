@@ -65,6 +65,8 @@ A szerkesztő egy leegyszerűsített markdown-változatot ért. Az eszköztár g
 | Kód blokk | ` ```kód``` ` | |
 | Táblázat | markdown táblázat (`\|` és `---`) | |
 | Lenyíló elem (harmonika) | lásd lent | |
+| Ikon | `:ikon-nev:` | lásd lent |
+| Szerkesztői jegyzet | `<!-- jegyzet -->` ... `<!-- /jegyzet -->` | lásd lent |
 
 ### Hivatkozás egy címsorra
 
@@ -95,6 +97,32 @@ Ide jön a második elem szövege.
 ```
 
 A `+++ ` sorok lesznek a kattintható, lenyíló fejlécek; az alattuk lévő szöveg a kinyíló tartalom. Tetszőleges számú `+++` blokk követheti egymást, a bennük lévő szöveg ugyanúgy támogatja a formázást (félkövér, lista, kép stb.), mint bárhol máshol.
+
+### Ikonok beszúrása (Lucide)
+
+Az eszköztár **🧩 Ikon** gombja egy kereshető ikonválasztót nyit meg (a [lucide.dev](https://lucide.dev/icons/) ikonkészletéből, kb. 1600 ikon). Gépelj a keresőbe (pl. `house`, `mail`, `check`), majd kattints a kívánt ikonra — ez egy
+
+```
+:ikon-nev:
+```
+
+jelölést szúr be a szövegbe (pl. `:house:`), ami a környező szöveg méretéhez igazodó, beágyazott ikonná alakul mind az előnézetben, mind a végleges buildelt oldalon.
+
+**Fontos:** az ikonok (és az ikonlista is) egy külső CDN-ről (unpkg.com) töltődnek be futásidőben — ehhez internetkapcsolat kell, ugyanúgy, mint a Google Fonts betűtípusokhoz. Ha valaki teljesen internet nélkül nyitja meg a végleges oldalt, az ikonok helyén üres hely marad.
+
+### Szerkesztői jegyzet
+
+Az eszköztár **📝 Jegyzet** gombja egy rejtett, csak a szerkesztőnek szóló jegyzetet szúr be:
+
+```
+<!-- jegyzet -->
+Ide írhatsz szerkesztői jegyzetet.
+<!-- /jegyzet -->
+```
+
+Rövidebb megjegyzéshez egysoros forma is használható: `<!-- jegyzet: rövid szöveg -->`.
+
+A jegyzet az **élő előnézetben** egy szaggatott keretű, elkülönülő buborékban jelenik meg ("📝 Jegyzet" felirattal) — de a **⚡ Build**-bel legenerált, végleges/exportált oldalra soha nem kerül bele. Ez pl. saját emlékeztetőkhöz, TODO-khoz, vagy a szerkesztőtársaknak szánt megjegyzésekhez hasznos.
 
 ---
 
