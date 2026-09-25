@@ -1,8 +1,8 @@
 # Kézikönyv Szerkesztő
 
-Böngészőben futó, egyetlen `index.html` fájlból álló szerkesztő kézikönyvek / belső dokumentációk összeállításához. Markdown fejezetekből épít fel egy stílusos, kereshető, navigálható HTML oldalt, amit közvetlenül fel lehet tölteni pl. GitHub Pages-re.
+Böngészőben futó (build lépés nélküli) szerkesztő kézikönyvek / belső dokumentációk összeállításához. Markdown fejezetekből épít fel egy stílusos, kereshető, navigálható HTML oldalt, amit közvetlenül fel lehet tölteni pl. GitHub Pages-re.
 
-Nincs build lépés, nincs szerver — csak nyisd meg az `index.html`-t egy böngészőben (Chrome/Edge ajánlott a teljes funkcionalitáshoz).
+Nincs build lépés, nincs szerver — csak nyisd meg az `index.html`-t egy böngészőben (Chrome/Edge ajánlott a teljes funkcionalitáshoz). Az `index.html` mellett a `css/` és `js/` mappának is ott kell lennie (GitHub Pages-re is mindhármat töltsd fel).
 
 ## Tartalom
 
@@ -14,6 +14,8 @@ Nincs build lépés, nincs szerver — csak nyisd meg az `index.html`-t egy bön
 - [Build / exportálás](#build--exportálás)
 - [Projekt mappa szerkezete](#projekt-mappa-szerkezete)
 - [Ismert korlátok](#ismert-korlátok)
+- [Kód szerkezete](#kód-szerkezete)
+- [Változásnapló](#változásnapló)
 
 ---
 
@@ -22,7 +24,7 @@ Nincs build lépés, nincs szerver — csak nyisd meg az `index.html`-t egy bön
 A **📂 Projekt mappa megnyitása** gombra kattintva válaszd ki a projekt mappáját.
 
 - **Chrome / Edge (asztali gép):** a mappa-választó rögtön **írási jogot** is kér. Ettől kezdve minden mentés — gépelés közbeni automatikus mentés, fejezet létrehozás, sorrend átrendezés, menü- és megjelenés-mentés — közvetlenül **ebbe a mappába** kerül, külön le- vagy feltöltés nélkül.
-- **Más böngésző / nem támogatott környezet:** a szerkesztő automatikusan visszaesik a régi, csak-olvasható betöltésre — ott a **💾 Mentés** gombbal (vagy Ctrl+S-sel) fájlonként kell menteni, és a végén a **⚡ Build**-del előállított HTML-t manuálisan kell feltölteni.
+- **Más böngésző / nem támogatott környezet:** a szerkesztő automatikusan visszaesik a régi, csak-olvasható betöltésre (ha a böngésző mégis tud írási jogot adni, a topbaron megjelenik a **🔓 Írási jog** gomb) — ott a **💾 Mentés** gombbal (vagy Ctrl+S-sel) fájlonként kell menteni, és a végén a **⚡ Build**-del előállított HTML-t manuálisan kell feltölteni.
 
 ### Automatikus mentés
 
@@ -147,7 +149,7 @@ A projekt-beállítások **CSS** fülén két nézet van:
   - Címsor színek külön-külön: Címsor 1–5 mindegyike saját színt kaphat (alapból a Kiemelő színt / a Címsor 4–5 a szöveg színét örökli, amíg felül nem írod)
 - **&lt;/&gt; Kód (haladó)**: a nyers CSS közvetlen szerkesztése azoknak, akik szeretnék teljesen kézben tartani a stílust. Az Egyszerű nézet módosításai nem írják felül a kézzel írt egyedi CSS-t — egy külön, jól elkülöníthető blokként kerülnek a végére.
 
-A módosítások élőben látszanak az előnézeten; a **✓ Mentés** gombbal kerülnek csak ténylegesen elmentésre (böngészőbe és — ha van írási jog — a mappába is).
+A módosítások élőben látszanak az előnézeten, de csak a **✓ Mentés** gombbal kerülnek ténylegesen elmentésre — mindkét nézetben ugyanoda: a böngészőbe, felhő Dokumentumnál a felhőbe (`style.css`), helyi projektnél — ha van írási jog — a mappa `style.css` fájljába. Amíg van nem mentett módosítás, a gombok mellett "● Nem mentett módosítás" felirat látszik, és a panel bezárásakor a szerkesztő rákérdez, mented-e.
 
 ---
 
@@ -177,7 +179,7 @@ Ha nincs írási jogod a mappához (pl. nem Chrome/Edge-et használsz), a legfri
 ```
 projekt-mappa/
 ├── config.json     # cím, leírás, navigációs menü, fejezetsorrend
-├── style.css       # projekt CSS (opcionális, hiányzik → alapértelmezett stílus)
+├── style.css       # projekt CSS (hiányzik → alapértelmezett stílus; írható mappánál első megnyitáskor létrejön)
 ├── logo.txt        # logó (base64 kép vagy elérési út), opcionális
 ├── sections/
 │   ├── 01_bevezetes.md
@@ -204,3 +206,70 @@ title: Telepítés
 
 - A mappába való közvetlen, automatikus mentés (`showDirectoryPicker` API) jelenleg Chrome és Edge asztali böngészőkben működik. Más böngészőknél a szerkesztő működik, de a fájlokat kézzel kell menteni / feltölteni.
 - A "Címsor 1" mező jelenleg csak a borító (első fejezet) fejlécére vonatkozó helyet foglal — a markdown `#` szintje ténylegesen `Címsor 2`-nek megfelelő HTML-elemet hoz létre (lásd a fenti táblázatot); ez a jövőben tisztázásra kerülhet.
+
+---
+
+## Kód szerkezete
+
+```
+index.html              # csak a felület HTML váza
+css/editor.css          # a szerkesztő saját stílusa
+js/
+  runtime-scripts.js    # a legenerált kézikönyvbe ágyazott kereső- és ikon-szkript
+  state.js              # globális állapot, projekt-modell segédfüggvények
+  ui.js                 # toast, státusz, letöltés/fájlírás segédek, topbar menük
+  default-css.js        # alapértelmezett kézikönyv-CSS + kereső CSS
+  markdown.js           # frontmatter + markdown → HTML
+  cloud.js              # Supabase kliens és Storage műveletek
+  idb.js                # IndexedDB (böngészőn belüli másolat)
+  persistence.js        # MINDEN mentés innen indul: böngésző + felhő + mappa
+  design.js             # Megjelenés fül (egyszerű + kód nézet, piszkozat/mentés)
+  preview.js            # élő előnézet, HTML összeállítás, navigáció
+  build.js              # ⬇ Letöltés (build), kép-optimalizálás
+  editor.js             # szövegszerkesztő, sorszámok, kép beillesztés
+  toolbar.js            # formázó eszköztár, ikonválasztó
+  chapters.js           # fejezetlista, új/átnevezés/törlés, húzás
+  nav-groups.js         # navigációs csoportok szerkesztője
+  project-modal.js      # ⚙ Beállítások ablak (projektek, másolás, logó, CSS fül)
+  loaders.js            # projekt betöltése felhőből / mappából
+  views.js              # Kezdőlap, Projekt nézet, projekt/dokumentum kezelő ablakok
+  auth.js               # bejelentkezés, megosztott link
+  ai.js                 # AI fejezet generálás
+  app.js                # indítás, panel-átméretezés
+```
+
+A fájlok sima (nem ES-modul) szkriptek, hogy `file://` protokollon, szerver nélkül is működjenek. A betöltési sorrend az `index.html` alján van; az `app.js` indítja az alkalmazást.
+
+**Szabály új funkcióhoz:** ha valami a projekt adatát módosítja (CSS, config, logó, fejezet), a mentést a `persistence.js` `save*` függvényeivel végezd (`saveProjectCss`, `saveProjectConfig`, `saveProjectLogo`, `saveChapterSilently`) — ezek döntik el, hogy a böngésző mellett a felhőbe vagy a mappába is ki kell-e írni.
+
+---
+
+## Változásnapló
+
+### Refaktor + hibajavítások
+
+**A CSS visszaállt alapértelmezettre — okai és javításuk:**
+
+1. A Megjelenés fül **Egyszerű** nézetének *✓ Mentés* gombja csak a böngésző IndexedDB-jébe mentett, a felhőbe és a mappába nem. A felhőben így a dokumentum létrehozásakor feltöltött alapértelmezett `style.css` maradt, és újranyitáskor az töltődött be. → Most mindkét nézet ugyanazt a mentést hívja (böngésző + felhő / mappa).
+2. Helyi mappás projektnél a `style.css` **soha nem íródott ki** a mappába. → Most kiíródik (és a logó is `logo.txt`-be).
+3. A Supabase a fájlokat 1 órás böngésző-gyorsítótárazással szolgálta ki, így egy mentés után is a régi `style.css` jöhetett vissza. → A letöltések gyorsítótár nélkül mennek, a feltöltések `max-age=0`-val.
+4. Az élő előnézet közben a módosított CSS azonnal a projektbe került, és a gépelés közbeni automentés kiírta a böngészőbe — így a böngészőben „megvolt", máshol nem. → A Megjelenés fül piszkozattal dolgozik; mentésig csak az előnézet látja.
+5. A kiemelt doboz színe újranyitás után feketére (#000000) állt, mert a színválasztóba a teljes `linear-gradient(...)` szöveg került. → Az alapszín külön (`--callout-tint`) is mentődik, a régi blokkokból pedig a gradient első színét olvassuk ki.
+6. Induláskor a legutóbb nyitott felhő Dokumentum a (esetleg elavult) böngészős másolatból töltődött vissza. → Most frissen a felhőből töltődik.
+
+**Egyéb javítások:**
+
+- Build közben a szerkesztő „átugrott" egy másik fejezetre, és a gépelés rossz fejezetbe mehetett.
+- Felhő Dokumentumban törölt fejezet a következő megnyitáskor visszajött.
+- Új helyi projekt létrehozásakor a *régi* aktív projekt mentődött, az új nem.
+- Fejezet / projekt átnevezése helyi mappánál nem íródott ki a fájlba / `config.json`-ba.
+- Dokumentum áthelyezésekor sikertelen feltöltés esetén is törlődött a forrás.
+- Törölt / áthelyezett dokumentum a projekt-választóban maradt, ha nem az volt megnyitva.
+- A `config.json` mentése eldobta a kézzel felvett, ismeretlen kulcsokat.
+- A Tab billentyűvel beszúrt szóköz nem számított módosításnak.
+- Az új fejezet ablakban egy kézi id-szerkesztés után az automatikus id-kitöltés örökre kikapcsolt.
+- Induláskor az ábécében utolsó (nem a legutóbb használt) projekt töltődött vissza.
+- A projekt-választó váltáskor a morzsamenü nem frissült.
+- A kereső CSS-e kétszer került a legenerált HTML-be.
+- Felhő dokumentumnál a kimeneti HTML neve perjelet tartalmazhatott (`projekt/dok.html`).
+
