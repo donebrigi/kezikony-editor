@@ -34,7 +34,7 @@ Minden automatikusan a felhőbe mentődik:
 - **Fejezetek:** gépelés után kb. 1,5 másodperccel. A még nem mentett fejezet mellett a bal oldali listában ● jel látszik. Ha a mentés nem sikerül (pl. megszakadt a net), a szerkesztő újrapróbálja.
 - **Szerkezet** (sorrend, csoportok, menü): húzás után azonnal.
 - **Képek:** beillesztéskor azonnal.
-- **Megjelenés:** a Megjelenés panel **✓ Mentés** gombjával (addig csak az előnézetben látszik).
+- **Megjelenés:** a projekt Megjelenés oldalának **✓ Mentés** gombjával (addig csak a minta oldalon látszik).
 
 A **💾 Mentés** gomb (Ctrl+S) mindent azonnal elment. Ha még van mentetlen módosítás, a böngésző bezárás előtt figyelmeztet.
 
@@ -61,7 +61,7 @@ Bal oldalt a fejezetek fája, középen a szerkesztő, jobbra az élő előnéze
 - **„/” menü:** a sor elején (vagy szóköz után) írj egy `/` jelet — megjelenik a beszúrható elemek listája (címsor, lista, kiemelt doboz, harmonika, kép, képsor, ikon, táblázat, link, jegyzet, kódblokk). Gépeléssel szűrhető (pl. `/harm`), Enterrel beszúrható.
 - **Ikon-javaslat:** kettősponttal kezdve (pl. `:hou`) felajánlja a Lucide ikonokat.
 - **Billentyűk:** Ctrl+B félkövér, Ctrl+I dőlt, Ctrl+K link, Ctrl+S mentés, Ctrl+Z / Ctrl+Y visszavonás (fejezetenként külön), Ctrl+F keresés.
-- **🔄 Frissítés** az előnézet fejlécében: csak az előnézetet tölti újra. **Fejezet / Teljes dok** váltó: az aktuális fejezet, vagy az egész kézikönyv a menüvel és a keresővel együtt.
+- **Gyors dokumentumváltó:** a felső sávban, a 🏠 Kezdőlap gomb mellett egy lenyíló lista mutatja az összes dokumentumot projektenként csoportosítva — innen egy kattintással átválthatsz egy másikra (a mentetlen módosítások előtte felmennek a felhőbe).
 
 ## Képek
 
@@ -88,7 +88,8 @@ A szerkesztőben a kép-címkére (**✏ kép**) kattintva, vagy az előnézetbe
 
 ## Előnézet
 
-- **🔗 Szinkron** (alapból bekapcsolva): az előnézet követi a szerkesztő görgetését.
+- Az előnézet **mindig a teljes dokumentumot** mutatja (menüvel, keresővel), gépelés közben magától frissül.
+- Az előnézet mindig **követi a szerkesztő görgetését**: az éppen szerkesztett fejezet / bekezdés látszik benne.
 - Az előnézetben egy bekezdésre **kattintva** a szerkesztő oda ugrik (teljes dokumentum nézetben a másik fejezetet is megnyitja); egy képre **duplán kattintva** a képszerkesztő nyílik meg.
 
 ## Markdown szintaxis
@@ -130,7 +131,7 @@ Minden címsor (Címsor 1–4) automatikusan kap egy azonosítót a szövegébő
 [ugrás a telepítéshez](#telepítés-lépései)
 ```
 
-Ez ugyanabban a fejezetben mindig működik; másik fejezetben lévő címsorra csak a "Teljes dokumentum" nézetben / a végleges buildelt oldalon mutat (ott van csak egyben az összes fejezet). Egy másik fejezet **tetejére** a fejezet saját azonosítójával (a cím melletti `#azonosito`) tudsz ugrani.
+Az előnézetben és a kész oldalon is működik, másik fejezet címsorára is. Egy másik fejezet **tetejére** a fejezet saját azonosítójával (a cím melletti `#azonosito`) tudsz ugrani.
 
 ### Lenyíló elemek (harmonika / accordion)
 
@@ -156,7 +157,7 @@ Az eszköztár **🧩 Ikon** gombja egy kereshető ikonválasztót nyit meg (a [
 :ikon-nev:
 ```
 
-jelölést szúr be a szövegbe (pl. `:house:`), ami egy valódi, az oldalba ágyazott SVG-vé alakul mind az előnézetben, mind a végleges buildelt oldalon (nem egy külső képfájl — ezért lehet a megjelenését CSS-ből, azaz a Megjelenés panelről is szabályozni).
+jelölést szúr be a szövegbe (pl. `:house:`), ami egy valódi, az oldalba ágyazott SVG-vé alakul mind az előnézetben, mind a végleges buildelt oldalon (nem egy külső képfájl — ezért lehet a megjelenését CSS-ből, azaz a projekt Megjelenés oldaláról is szabályozni).
 
 Az ikonok kinézete a projekt Megjelenés oldalán, az "Ikonok" mezőknél állítható: szín, méret és vonalvastagság. Alapból a szöveg színét, 20px méretet és 2px vonalvastagságot kapnak.
 
@@ -217,7 +218,7 @@ Ha egy projektnek még nincs közös megjelenése, a dokumentumai a korábbi, sa
 
 A Kezdőlap tetején a nézetválasztóval lehet váltani:
 
-- **▦ Projektek:** a projektek kártyái (megnyitás, szerkesztés, megjelenés, törlés).
+- **▦ Projektek:** a projektek kompakt kártyái — ikon és név egy sorban, jobb felső sarokban a dokumentumok száma; gombok: ✏ szerkesztés, 🎨 megjelenés, 🗑 törlés, Megnyitás.
 - **☰ Dokumentumok:** az összes dokumentum egy táblázatban — **Cím**, **Projekt** és a funkciógombok (megnyitás, átnevezés, áthelyezés, HTML letöltés, link másolása, törlés). A kereső mindkét nézetben szűr; a választott nézetet a böngésző megjegyzi.
 
 ## Fejezetek, csoportok, menü (bal oldali fa)
@@ -324,6 +325,12 @@ js/
 A fájlok sima (nem ES-modul) szkriptek; a betöltési sorrend az `index.html` alján van.
 
 ## Változásnapló
+
+### 4.1 — Finomítások
+
+- Visszakerült a **gyors dokumentumváltó** (lenyíló lista) a szerkesztő felső sávjába.
+- Az előnézet fejléce megszűnt: az előnézet mindig a **teljes dokumentumot** mutatja, és mindig követi a szerkesztőt.
+- Kisebb projektkártyák a Kezdőlapon: ikon + név egy sorban, a dokumentumok száma kiemelve a jobb felső sarokban.
 
 ### 4.0 — Projekt-szintű megjelenés, dokumentumlista
 

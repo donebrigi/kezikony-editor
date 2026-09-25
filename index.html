@@ -11,7 +11,10 @@
 <!-- Top bar -->
 <div id="topbar">
   <button class="btn" onclick="showHomeView()" title="Kezdőlap — projektek" style="padding:5px 10px;font-size:13px">🏠 Kezdőlap</button>
-  <div id="topbar-editor-tools-left" style="display:none"></div>
+  <div id="topbar-editor-tools-left" style="display:none">
+    <div class="sep"></div>
+    <select id="doc-switcher" onchange="onDocSwitcherChange(this)" title="Váltás másik dokumentumra"></select>
+  </div>
   <div class="spacer"></div>
   <span id="status"></span>
   <!-- Jobb oldal: Beállítások / Mentés / AI / Letöltés / Előnézet, ebben a sorrendben. -->
@@ -119,16 +122,6 @@
   <div id="resize-handle" title="Húzd az átméretezéshez"></div>
 
   <div id="preview-pane" style="display:none">
-    <div id="preview-header">
-      <div id="preview-mode-btns">
-        <button class="mode-btn active" onclick="setPreviewMode('section')" id="mode-section">Fejezet</button>
-        <button class="mode-btn" onclick="setPreviewMode('full')" id="mode-full">Teljes dok</button>
-      </div>
-      <div class="spacer"></div>
-      <span style="font-size:11px;color:var(--text3)" id="preview-info"></span>
-      <button class="mode-btn" id="btn-preview-sync" onclick="togglePreviewSync()" title="Görgetés-szinkron: az előnézet követi a szerkesztőt. Az előnézetben egy bekezdésre kattintva a szerkesztő oda ugrik.">🔗 Szinkron</button>
-      <button class="mode-btn" onclick="renderPreview()" title="Csak az előnézet frissítése (az oldal nem töltődik újra)">🔄 Frissítés</button>
-    </div>
     <iframe id="preview-frame"></iframe>
   </div>
 
