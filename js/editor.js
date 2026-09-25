@@ -27,7 +27,7 @@ function buildMarkerDecorations(view) {
       if (/^<!--\s*\/?(accordion|shot-stack)\s*-->$/.test(t)) decos.push(D.line({ class: 'cm-kk-block' }).range(line.from));
       else if (/^<!--\s*\/?jegyzet/.test(t)) decos.push(D.line({ class: 'cm-kk-note' }).range(line.from));
       else if (t.startsWith('+++ ')) decos.push(D.line({ class: 'cm-kk-acc' }).range(line.from));
-      else if (/^#{1,4}\s/.test(t)) decos.push(D.line({ class: 'cm-kk-h cm-kk-h' + t.match(/^#+/)[0].length }).range(line.from));
+      else if (/^#{1,5}\s/.test(t)) decos.push(D.line({ class: 'cm-kk-h cm-kk-h' + t.match(/^#+/)[0].length }).range(line.from));
       else if (t.startsWith('> ')) decos.push(D.line({ class: 'cm-kk-callout' }).range(line.from));
       if (line.length < 5000) {
         for (const m of line.text.matchAll(/==(.+?)==/g)) decos.push(D.mark({ class: 'cm-kk-hl' }).range(line.from + m.index, line.from + m.index + m[0].length));
@@ -111,6 +111,8 @@ const SLASH_ITEMS = [
   { label: 'Címsor 1', detail: '#', keys: 'cimsor h1 heading fejlec', run: () => fmtLine('# ') },
   { label: 'Címsor 2', detail: '##', keys: 'cimsor h2 heading alcim', run: () => fmtLine('## ') },
   { label: 'Címsor 3', detail: '###', keys: 'cimsor h3 heading', run: () => fmtLine('### ') },
+  { label: 'Címsor 4', detail: '####', keys: 'cimsor h4 heading', run: () => fmtLine('#### ') },
+  { label: 'Címsor 5', detail: '#####', keys: 'cimsor h5 heading', run: () => fmtLine('##### ') },
   { label: 'Felsorolás', detail: '- elem', keys: 'lista felsorolas bullet', run: () => fmtList('- ') },
   { label: 'Számozott lista', detail: '1. elem', keys: 'lista szamozott lepesek', run: () => fmtList('1. ') },
   { label: 'Kiemelt doboz', detail: '> szöveg', keys: 'callout kiemelt doboz figyelem', run: () => fmtLine('> ') },

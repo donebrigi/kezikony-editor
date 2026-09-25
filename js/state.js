@@ -29,7 +29,6 @@ const state = {
   isAuthed: false,
   booting: true,               // amíg igaz, az auth-változás nem navigál (az initApp dönt)
   pendingCloudResume: null,    // bejelentkezés után visszanyitandó Dokumentum
-  cssDraft: null,              // a Megjelenés fül nem mentett piszkozata
   collapsedGroups: {},         // a fában összecsukott csoportok (kulcs: csoport neve)
 };
 

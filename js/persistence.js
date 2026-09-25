@@ -3,7 +3,6 @@
 // Minden módosítás a Supabase Storage-ba kerül, a Dokumentum mappájába:
 //   sections/*.md  – fejezetek (gépelés után ~1,5 mp-cel automatikusan)
 //   config.json    – cím, menü/fa, fejezetsorrend
-//   style.css      – megjelenés (a Megjelenés fül Mentés gombjával)
 //   logo.txt       – logó
 //   images/*       – képek (beillesztéskor azonnal, lásd images.js)
 //
@@ -54,11 +53,6 @@ function scheduleConfigSave() {
   }, 800);
 }
 
-// ── style.css ──
-async function saveProjectCss(proj) {
-  if (!proj) return { ok: false };
-  return { ok: await cloudSaveCss(proj) };
-}
 
 // ── logo.txt ──
 async function saveProjectLogo(proj) {
@@ -155,7 +149,7 @@ function scheduleAutosave() {
 function hasUnsavedWork() {
   const proj = currentProj();
   if (!proj) return false;
-  return state._configDirty || proj.fileOrder.some(fn => proj.files[fn] && proj.files[fn].dirty) || hasUnsavedCss();
+  return state._configDirty || proj.fileOrder.some(fn => proj.files[fn] && proj.files[fn].dirty);
 }
 
 window.addEventListener('beforeunload', e => {

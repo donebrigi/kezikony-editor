@@ -18,7 +18,7 @@ function fmtLine(prefix) {
     const line = st.doc.line(n);
     if (line.text.startsWith(prefix)) changes.push({ from: line.from, to: line.from + prefix.length, insert: '' });
     else {
-      const m = line.text.match(/^(#{1,4}\s|>\s)/); // más címsor/doboz előtag cseréje
+      const m = line.text.match(/^(#{1,5}\s|>\s)/); // más címsor/doboz előtag cseréje
       changes.push({ from: line.from, to: line.from + (m ? m[0].length : 0), insert: prefix });
     }
   }

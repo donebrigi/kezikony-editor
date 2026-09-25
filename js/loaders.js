@@ -22,7 +22,8 @@ async function cloudLoadProject(folderId, topProjectId, docId) {
 
   const data = await cloudFetchDocument(folderId);
   project.config = data.config;
-  project.css = data.css || getDefaultCSS();
+  // Megjelenés: a PROJEKT témája (ha még nincs, a dokumentum régi színei).
+  project.themeVars = await resolveDocTheme(topProjectId, data.css);
   project.logo = data.logo;
   project.remoteConfig = data.configText != null ? data.configText : null;
   for (const [fn, raw] of Object.entries(data.files)) {
@@ -45,7 +46,6 @@ async function cloudLoadProject(folderId, topProjectId, docId) {
 
   // Egyszerre egy Dokumentum van nyitva — a korábbit kivesszük a memóriából.
   Object.keys(state.projects).forEach(k => { if (k !== folderId) delete state.projects[k]; });
-  discardCssDraft();
   resetEditorStates();
   state.projects[folderId] = project;
   state.currentProject = folderId;
@@ -104,7 +104,7 @@ async function importAsCloudDocument(projectId, docId, title, source) {
   }
   normalizeStructure(target);
   if (!await cloudUpload(folder + '/config.json', serializeConfig(target), 'application/json')) return false;
-  await cloudUpload(folder + '/style.css', source.css || getDefaultCSS(), 'text/css');
+  if (source.css) await cloudUpload(folder + '/style.css', source.css, 'text/css'); // régi színek (a projekt téma átveheti)
   if (source.logo) await cloudUpload(folder + '/logo.txt', source.logo, 'text/plain');
   return true;
 }

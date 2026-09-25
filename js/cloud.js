@@ -81,10 +81,6 @@ async function cloudSaveConfig(proj) {
   if (!proj.cloudFolder) return true;
   return cloudUpload(proj.cloudFolder + '/config.json', serializeConfig(proj), 'application/json');
 }
-async function cloudSaveCss(proj) {
-  if (!proj.cloudFolder) return true;
-  return cloudUpload(proj.cloudFolder + '/style.css', proj.css || getDefaultCSS(), 'text/css');
-}
 async function cloudSaveLogo(proj) {
   if (!proj.cloudFolder) return true;
   return cloudUpload(proj.cloudFolder + '/logo.txt', proj.logo || '', 'text/plain');
@@ -135,7 +131,8 @@ async function cloudListTopProjects() {
     const meta = (await cloudGetProjectMeta(id)) || defaultProjectMeta(id);
     // A dokumentumszám ugyanabból a cloudListDocuments()-ből jön, amit a Projekt nézet
     // mutat — így csak a valódi (config.json-nal rendelkező) Dokumentum-mappák számítanak.
-    meta.docCount = (await cloudListDocuments(id)).length;
+    meta.docs = await cloudListDocuments(id);
+    meta.docCount = meta.docs.length;
     projects.push(meta);
   }
   return projects;

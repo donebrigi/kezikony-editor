@@ -51,7 +51,7 @@ function extractHeadings(content) {
     const s = line.trim();
     if (s.startsWith('```')) { inCode = !inCode; return; }
     if (inCode) return;
-    const m = s.match(/^(#{1,4})\s+(.+)$/);
+    const m = s.match(/^(#{1,5})\s+(.+)$/);
     if (m) out.push({ level: m[1].length, text: m[2], line: i, id: mdHeadingId(m[2]) });
   });
   return out;
@@ -141,6 +141,7 @@ function mdToHtml(md, opts) {
     if (s.startsWith('## ')) { closeLists(); const t=inline(s.slice(3)); html.push(`<h3 id="${slug(t)}"${L()} style="margin:18px 0 10px">${t}</h3>`); i++; continue; }
     if (s.startsWith('### ')) { closeLists(); const t=inline(s.slice(4)); html.push(`<h4 id="${slug(t)}"${L()} style="margin:14px 0 8px">${t}</h4>`); i++; continue; }
     if (s.startsWith('#### ')) { closeLists(); const t=inline(s.slice(5)); html.push(`<h5 id="${slug(t)}"${L()} style="margin:12px 0 6px">${t}</h5>`); i++; continue; }
+    if (s.startsWith('##### ')) { closeLists(); const t=inline(s.slice(6)); html.push(`<h6 id="${slug(t)}"${L()}>${t}</h6>`); i++; continue; }
 
     const ol = s.match(/^(\d+)\. (.+)/);
     if (ol) { if(inUl)closeLists(); if(!inOl){html.push('<ol class="steps">');inOl=true;} html.push(`<li${L()}>${inline(ol[2])}</li>`); i++; continue; }

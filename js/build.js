@@ -4,7 +4,6 @@ async function buildAndDownload(optimize = false) {
   if (!proj) { toast('Nincs megnyitott dokumentum!', 'err'); return; }
 
   await saveAllDirty({ quiet: true });
-  if (hasUnsavedCss()) toast('ℹ A Megjelenés fül nem mentett módosításai nem kerülnek bele.', '', 4000);
 
   toast('⚙ HTML összeállítása...', 'ok', 3000);
   let html = buildPreviewHtml(proj, buildAllSectionsHtml(proj), true);
@@ -68,7 +67,7 @@ async function downloadMarkdownZip() {
     if (blob) root.file(p, blob);
   }
   root.file('config.json', serializeConfig(proj));
-  root.file('style.css', proj.css || getDefaultCSS());
+  root.file('style.css', getWorkingCss(proj)); // tájékoztató: a projekt témájából összeállított CSS
   if (proj.logo) root.file('logo.txt', proj.logo);
   const blob = await zip.generateAsync({ type: 'blob' });
   const url = URL.createObjectURL(blob);

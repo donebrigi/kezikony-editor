@@ -158,10 +158,9 @@ function buildAllSectionsHtml(proj, mdOpts) {
   }).join('\n\n');
 }
 
-// cssOverride: az előnézet a Megjelenés fül (még nem mentett) piszkozatát mutatja,
-// a build viszont mindig a mentett proj.css-t használja.
+// cssOverride: egyedi CSS (pl. a Megjelenés oldal mintája); alapból a projekt témája.
 function buildPreviewHtml(proj, mainContent, full, cssOverride) {
-  const projectCss = cssOverride || proj.css || getDefaultCSS();
+  const projectCss = cssOverride || getWorkingCss(proj);
   const css = projectCss + getSearchbarCSS() + getPrintCSS();
   const title = proj.config.title || 'Előnézet';
   const subtitle = proj.config.subtitle || title;
@@ -186,11 +185,7 @@ function buildPreviewHtml(proj, mainContent, full, cssOverride) {
 
   // A betűtípus-link a projekt design-blokkjában kiválasztott betűtípus-párhoz igazodik
   // (lásd az Egyszerű megjelenés-szerkesztőt); rendszer-betűtípusnál nincs szükség Google Fonts-ra.
-  const designInfo = parseDesignBlock(projectCss);
-  const fontPairForLink = FONT_PAIRS[(designInfo && designInfo.fontPair) || 'modern'] || FONT_PAIRS.modern;
-  const fontLinkTag = fontPairForLink.google
-    ? `<link href="https://fonts.googleapis.com/css2?${fontPairForLink.google}&display=swap" rel="stylesheet"/>`
-    : '';
+  const fontLinkTag = themeFontLinkTag(); // egységes betűtípus (Inter + Lexend)
 
   return `<!DOCTYPE html>
 <html lang="${proj.config.lang||'hu'}">
