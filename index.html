@@ -10,33 +10,29 @@
 
 <!-- Top bar -->
 <div id="topbar">
-  <!-- Bal oldal: egyetlen Kezdőlap-gomb (korábban a "📖 Kézikönyv" felirat és a
-       külön 🏠 gomb is ugyanoda vitt — most egy gomb, egy célponttal), mellette a
-       Projekt-választó legördülő (a tartalma/logikája változatlan). -->
   <button class="btn" onclick="showHomeView()" title="Kezdőlap — projektek" style="padding:5px 10px;font-size:13px">🏠 Kezdőlap</button>
-  <div id="topbar-editor-tools-left" style="display:none">
-    <div class="sep"></div>
-    <select id="project-select" title="Projekt">
-      <option value="">— válassz projektet —</option>
-    </select>
-  </div>
+  <div id="topbar-editor-tools-left" style="display:none"></div>
   <div class="spacer"></div>
-  <span id="status" title="Nyisd meg Chrome-ban, file:// protokollon is működik">Nincs betöltve projekt</span>
+  <span id="status"></span>
   <!-- Jobb oldal: Beállítások / Mentés / AI / Letöltés / Előnézet, ebben a sorrendben. -->
   <div id="topbar-editor-tools-right" style="display:none">
     <div class="sep"></div>
-    <button class="btn" onclick="openProjModal()" title="Projektek kezelése (gyors váltás, átnevezés, törlés)" style="padding:5px 10px;font-size:13px">⚙ Beállítások</button>
-    <button class="btn" onclick="saveCurrentFile()" title="Ctrl+S">💾 Mentés</button>
-    <button class="btn" id="folder-access-btn" onclick="requestFolderAccess()" style="display:none" title="Csak olvasható módon betöltött helyi projekt — kattints, és válaszd ki újra a mappát, hogy a mentések (fejezetek, config.json, style.css) közvetlenül oda kerüljenek">🔓 Írási jog</button>
+    <button class="btn" onclick="openProjModal('doc')" title="A dokumentum címe, logója, megjelenése, fejezetek másolása" style="padding:5px 10px;font-size:13px">⚙ Beállítások</button>
+    <button class="btn" onclick="saveCurrentFile()" title="Minden módosítás mentése most (Ctrl+S) — egyébként gépelés után automatikusan ment">💾 Mentés</button>
     <button class="btn" onclick="openAiPanel()" title="AI fejezet generálás screenshotból" style="background:linear-gradient(135deg,#6366f1,#8b5cf6);border-color:#6366f1;color:#fff">✨ AI</button>
     <div class="dl-menu-wrap">
       <button class="btn primary" onclick="toggleDownloadMenu(event)" id="btn-download" title="A kész HTML letöltése — felhő Dokumentumnál emellett a publikált oldal is frissül">⬇ Letöltés</button>
       <div id="download-menu" class="dl-menu">
+        <div class="dl-menu-title">Kész kézikönyv (HTML)</div>
         <label class="dl-menu-option">
           <input type="checkbox" id="dl-optimize-images"/>
           <span>🖼 Képek optimalizálása<br><small>WebP, max 1440px — kisebb fájl, de a képek minősége kicsit romlik</small></span>
         </label>
-        <button class="btn primary" onclick="confirmDownload()" style="width:100%">⬇ Letöltés indítása</button>
+        <button class="btn primary" onclick="confirmDownload()" style="width:100%">⬇ HTML letöltése</button>
+        <div class="dl-menu-sep"></div>
+        <div class="dl-menu-title">Forrásfájlok</div>
+        <button class="btn" onclick="confirmDownloadZip()" style="width:100%">📦 Markdown + képek (ZIP)</button>
+        <div class="dl-menu-hint">Egy-egy fejezet .md fájlja a bal oldali lista ⬇ gombjával is letölthető.</div>
       </div>
     </div>
     <button class="btn" onclick="togglePreviewPopout()" id="btn-preview-popout" title="Az előnézetet külön böngészőlapon nyitja meg, élőben frissülve — így a szerkesztő nagyobb helyet kap">↗ Előnézet</button>
@@ -68,45 +64,29 @@
   <!-- Sidebar -->
   <div id="sidebar">
     <div id="sidebar-header">
-      📁 Fejezetek
-      <button onclick="openNewChapterModal()" title="Új fejezet" style="margin-left:auto;background:none;border:none;color:var(--accent2);font-size:18px;cursor:pointer;padding:0 2px;line-height:1">+</button>
+      <span>Fejezetek</span>
+      <span style="margin-left:auto;display:flex;gap:4px">
+        <button class="sidebar-add-btn" onclick="addGroupFromSidebar()" title="Új csoport (lenyíló menüpont)">+ Csoport</button>
+        <button class="sidebar-add-btn primary" onclick="openNewChapterModal()" title="Új fejezet az aktív fejezet után">+ Fejezet</button>
+      </span>
     </div>
-    <div id="file-list">
-      <div style="padding:20px 14px;font-size:12px;color:var(--text3);text-align:center">
-        Tölts be egy projektet
-      </div>
-    </div>
-    <div id="drop-zone" onclick="openProjectFolder()" title="Ha a böngésződ támogatja, innentől minden mentés automatikusan ebbe a mappába kerül">
-      <div class="icon">📂</div>
-      <div>Kattints a projekt<br>mappa betöltéséhez</div>
-      <input id="folder-input" type="file" webkitdirectory mozdirectory multiple
-        style="display:none" onchange="loadFromInput(this)"/>
-    </div>
+    <div id="file-list"></div>
+    <div id="sidebar-footer">Húzd a fejezeteket a sorrendhez és a csoportokba — ez egyben a kézikönyv menüje.</div>
   </div>
 
-  <!-- Empty / Editor+Preview -->
+  <!-- Üres dokumentum / Szerkesztő + előnézet -->
   <div id="empty-state">
-    <div class="big">📂</div>
-    <h2>Nincs betöltve projekt</h2>
-    <p>Kattints a bal alsó sarokban a <strong>📂 ikonra</strong>, és válaszd ki a projekt mappáját.</p>
-    <div class="steps">
-      <div><span>1.</span> Kattints a 📂 ikonra lent balra</div>
-      <div><span>2.</span> Válaszd ki a <code>projektek/minicopy</code> mappát</div>
-      <div><span>3.</span> A fejezetek megjelennek a bal oldalsávban</div>
-    </div>
-    <button class="btn primary" style="margin-top:8px" onclick="openProjectFolder()">📂 Projekt mappa megnyitása</button>
+    <div class="big">📄</div>
+    <h2>Ebben a dokumentumban még nincs fejezet</h2>
+    <p>Hozz létre egyet a bal oldali <strong>+ Fejezet</strong> gombbal.</p>
+    <button class="btn primary" style="margin-top:8px" onclick="openNewChapterModal()">+ Új fejezet</button>
   </div>
 
   <div id="editor-pane" style="display:none">
     <div id="editor-header">
-      <span id="editor-filename">—</span>
-      <div class="spacer"></div>
-      <button class="btn" onclick="document.getElementById('img-file-input').click()"
-        title="Kép beillesztése fájlból (drag&drop és Ctrl+V is működik)"
-        style="padding:3px 10px;font-size:12px">🖼 Kép</button>
-      <input id="img-file-input" type="file" accept="image/*" style="display:none"
-        onchange="handleImgFileInput(this)"/>
-      <span id="editor-info" style="font-size:11px;color:var(--text3)"></span>
+      <input id="chapter-title" type="text" placeholder="Fejezet címe" oninput="onChapterTitleInput(this.value)" title="A fejezet címe — ez jelenik meg a menüben is"/>
+      <button id="chapter-id" class="chapter-id" onclick="editChapterId()" title="A fejezet azonosítója (horgony a linkekhez) — kattints a módosításhoz"></button>
+      <input id="img-file-input" type="file" accept="image/*" multiple style="display:none" onchange="handleImgFileInput(this)"/>
     </div>
     <div id="format-toolbar">
       <button class="fmt-btn" onclick="fmtWrap('**','**')" title="Félkövér (Ctrl+B)"><b>B</b></button>
@@ -114,7 +94,7 @@
       <button class="fmt-btn" onclick="fmtWrap('`','`')" title="Kód"><code style="font-size:11px">code</code></button>
       <button class="fmt-btn" onclick="fmtWrap('==','==')" title="Kiemelt szöveg (színe a Megjelenés fülön állítható)">🖍 Kiemelés</button>
       <div class="fmt-sep"></div>
-      <button class="fmt-btn" onclick="fmtLine('# ')" title="H1 — Főcím">H1</button>
+      <button class="fmt-btn" onclick="fmtLine('# ')" title="Címsor 1">H1</button>
       <button class="fmt-btn" onclick="fmtLine('## ')" title="H2 — Alcím">H2</button>
       <button class="fmt-btn" onclick="fmtLine('### ')" title="H3 — Al-alcím">H3</button>
       <div class="fmt-sep"></div>
@@ -125,16 +105,13 @@
       <button class="fmt-btn" onclick="openIconPicker()" title="Ikon beszúrása (Lucide ikonkészlet)">🧩 Ikon</button>
       <button class="fmt-btn" onclick="fmtNote()" title="Szerkesztői jegyzet — az előnézetben buborékban látszik, a végleges buildelt oldalon nem jelenik meg">📝 Jegyzet</button>
       <div class="fmt-sep"></div>
-      <button class="fmt-btn" onclick="fmtLink()" title="Link beszúrása">🔗 Link</button>
-      <button class="fmt-btn" onclick="fmtCodeBlock()" title="Kód blokk">```kód```</button>
+      <button class="fmt-btn" onclick="pickImageFile()" title="Kép beillesztése fájlból (Ctrl+V és húzás is működik)">🖼 Kép</button>
+      <button class="fmt-btn" onclick="fmtLink()" title="Link beszúrása (Ctrl+K)">🔗 Link</button>
+      <button class="fmt-btn" onclick="fmtTable()" title="Táblázat">▦ Táblázat</button>
+      <span class="fmt-tip">Tipp: írj „/”-t a sor elején</span>
     </div>
     <div id="editor-wrap">
-      <div id="line-nums" class="visible"></div>
-      <div id="line-nums-mirror" aria-hidden="true"></div>
-      <textarea id="editor" spellcheck="false" placeholder="Nyiss meg egy fejezetet..."></textarea>
-      <div id="img-drop-overlay">
-        <div id="img-drop-msg">🖼 Engedd el a képet</div>
-      </div>
+      <div id="editor-host"></div>
     </div>
   </div>
 
@@ -231,85 +208,59 @@
 <!-- Projekt kezelő modal -->
 <div id="proj-modal-backdrop">
   <div id="proj-modal" onclick="event.stopPropagation()">
-    <h3>⚙ Projektek kezelése</h3>
+    <h3>⚙ Dokumentum beállításai</h3>
     <div class="tab-bar">
-      <button class="tab active" onclick="switchModalTab('projects')">📁 Projektek</button>
-      <button class="tab" onclick="switchModalTab('new')">➕ Új projekt</button>
-      <button class="tab" onclick="switchModalTab('copy')">📋 Másolás</button>
-      <button class="tab" onclick="switchModalTab('settings')">⚙ Beállítások</button>
-      <button class="tab" onclick="switchModalTab('css')">🎨 CSS</button>
+      <button class="tab active" onclick="switchModalTab('doc')">📄 Dokumentum</button>
+      <button class="tab" onclick="switchModalTab('css')">🎨 Megjelenés</button>
+      <button class="tab" onclick="switchModalTab('copy')">📋 Fejezetek másolása</button>
     </div>
 
-    <!-- TAB: Projektek -->
-    <div class="tab-panel active" id="tab-projects">
-      <div id="proj-modal-list"></div>
-    </div>
-
-    <!-- TAB: Új projekt -->
-    <div class="tab-panel" id="tab-new">
-      <div id="new-proj-form">
-        <label>Projekt neve (belső azonosító, szóköz nélkül)</label>
-        <input type="text" id="new-proj-id" placeholder="pl. ugyfel-neve" />
-        <label>Megjelenített cím</label>
-        <input type="text" id="new-proj-title" placeholder="pl. ÜgyfélNév — kézikönyv" />
-        <label>Leírás (opcionális)</label>
-        <input type="text" id="new-proj-desc" placeholder="pl. Admin felület dokumentáció" />
-        <div style="margin-top:16px;display:flex;justify-content:flex-end">
-          <button class="btn primary" onclick="createNewProject()" style="padding:7px 20px">➕ Létrehozás</button>
-        </div>
+    <!-- TAB: Dokumentum -->
+    <div class="tab-panel active" id="tab-doc">
+      <div class="form-grid">
+        <label>Cím <span class="hint">(a dokumentumlistában és a böngészőfülön)</span></label>
+        <input type="text" id="doc-title"/>
+        <label>Alcím <span class="hint">(a kész oldal bal felső sarkában)</span></label>
+        <input type="text" id="doc-subtitle"/>
+        <label>Rövid leírás <span class="hint">(az alcím alatt)</span></label>
+        <input type="text" id="doc-description"/>
       </div>
+      <div style="display:flex;justify-content:flex-end;margin:10px 0 18px">
+        <button class="btn primary" onclick="saveDocSettings()">✓ Mentés</button>
+      </div>
+      <div class="ai-section-label">🖼 Logó</div>
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">
+        <div id="logo-preview-wrap" style="width:80px;height:40px;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0">
+          <img id="logo-preview-img" style="max-width:100%;max-height:100%;display:none" alt="logó"/>
+          <span id="logo-preview-empty" style="font-size:11px;color:var(--text3)">nincs</span>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <button class="btn" onclick="document.getElementById('logo-file-input').click()" style="font-size:12px;padding:5px 12px">📂 Logó feltöltése</button>
+          <button class="btn" onclick="removeLogo()" style="font-size:12px;padding:5px 12px;color:var(--red)">🗑 Eltávolítás</button>
+        </div>
+        <input id="logo-file-input" type="file" accept="image/*" style="display:none" onchange="handleLogoUpload(this)"/>
+      </div>
+      <div style="font-size:11px;color:var(--text3)">PNG, SVG, JPG — ajánlott: max 200×60px. A logó azonnal mentődik.</div>
     </div>
 
-    <!-- TAB: Másolás projektek között -->
+    <!-- TAB: Fejezetek másolása -->
     <div class="tab-panel" id="tab-copy">
       <div style="font-size:12px;color:var(--text3);margin-bottom:10px">
-        Válassz forrás projektet, jelöld be a másolandó fejezeteket, majd add meg a célt.
+        Fejezetek átmásolása egy másik dokumentumból ebbe (a képeikkel együtt). A másolatok a lista végére kerülnek.
       </div>
-      <label style="font-size:12px;color:var(--text3);display:block;margin-bottom:6px">Forrás projekt:</label>
-      <select id="copy-source-select" onchange="loadCopyChapters()">
-        <option value="">— válassz projektet —</option>
-      </select>
+      <div class="form-grid">
+        <label>Projekt</label>
+        <select id="copy-project-select" onchange="loadCopyDocs()"></select>
+        <label>Dokumentum</label>
+        <select id="copy-doc-select" onchange="loadCopyChapters()"></select>
+      </div>
       <div id="copy-chapters-list"></div>
       <div class="copy-dest" id="copy-dest-row" style="display:none">
-        <label>Cél projekt:</label>
-        <select id="copy-dest-select"></select>
-        <button class="btn primary" onclick="copySelectedChapters()" style="font-size:12px;padding:6px 16px">📋 Másolás</button>
+        <button class="btn primary" onclick="copySelectedChapters()" style="font-size:12px;padding:6px 16px">📋 Kijelöltek másolása ide</button>
       </div>
     </div>
 
-    <!-- TAB: Beállítások (logó + nav csoportok) -->
-    <div class="tab-panel" id="tab-settings">
-
-      <!-- Logó -->
-      <div style="margin-bottom:18px">
-        <div class="ai-section-label">🖼 Logó</div>
-        <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">
-          <div id="logo-preview-wrap" style="width:80px;height:40px;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0">
-            <img id="logo-preview-img" style="max-width:100%;max-height:100%;display:none" alt="logó"/>
-            <span id="logo-preview-empty" style="font-size:11px;color:var(--text3)">nincs</span>
-          </div>
-          <div style="display:flex;flex-direction:column;gap:6px">
-            <button class="btn" onclick="document.getElementById('logo-file-input').click()" style="font-size:12px;padding:5px 12px">📂 Logó feltöltése</button>
-            <button class="btn" onclick="removeLogo()" style="font-size:12px;padding:5px 12px;color:var(--red)">🗑 Eltávolítás</button>
-          </div>
-          <input id="logo-file-input" type="file" accept="image/*" style="display:none" onchange="handleLogoUpload(this)"/>
-        </div>
-        <div style="font-size:11px;color:var(--text3)">PNG, SVG, JPG — ajánlott: max 200×60px</div>
-      </div>
-
-      <!-- Nav csoportok -->
-      <div>
-        <div class="ai-section-label" style="margin-bottom:8px">📑 Navigáció csoportok</div>
-        <div style="font-size:12px;color:var(--text3);margin-bottom:10px">
-          Húzd át a fejezeteket a csoportok között, vagy hozz létre új csoportot.
-        </div>
-        <div id="nav-groups-editor"></div>
-        <button class="btn" onclick="addNavGroup()" style="font-size:12px;margin-top:8px;width:100%">+ Új csoport</button>
-        <button class="btn primary" onclick="saveNavGroups()" style="font-size:12px;margin-top:8px;width:100%">✓ Mentés</button>
-      </div>
-    </div>
-
-    <!-- TAB: CSS -->
+    <!-- TAB: Megjelenés -->
     <div class="tab-panel" id="tab-css">
       <div style="font-size:12px;color:var(--text3);margin-bottom:8px">
         Aktív projekt megjelenése: <strong id="css-proj-name" style="color:var(--accent2)"></strong>
@@ -516,21 +467,14 @@
   <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:12px;padding:22px;width:400px;max-width:95vw;box-shadow:0 24px 64px rgba(0,0,0,0.55)" onclick="event.stopPropagation()">
     <h3 style="font-size:14px;color:var(--text2);margin-bottom:16px;font-weight:600">📄 Új fejezet</h3>
 
-    <label style="display:block;font-size:12px;color:var(--text3);margin-bottom:4px">Fejezet azonosítója (id)</label>
-    <input id="nc-id" type="text" placeholder="pl. uj-fejezet"
-      style="width:100%;padding:7px 10px;background:var(--bg);border:1px solid var(--border2);color:var(--text);border-radius:var(--radius);font-size:13px;box-sizing:border-box;font-family:var(--mono);margin-bottom:12px"/>
-
-    <label style="display:block;font-size:12px;color:var(--text3);margin-bottom:4px">Magyar cím</label>
+    <label style="display:block;font-size:12px;color:var(--text3);margin-bottom:4px">Cím</label>
     <input id="nc-title" type="text" placeholder="pl. Új fejezet neve"
       style="width:100%;padding:7px 10px;background:var(--bg);border:1px solid var(--border2);color:var(--text);border-radius:var(--radius);font-size:13px;box-sizing:border-box;margin-bottom:12px"/>
 
-    <label style="display:block;font-size:12px;color:var(--text3);margin-bottom:4px">Pozíció</label>
-    <select id="nc-position"
-      style="width:100%;padding:7px 10px;background:var(--bg);border:1px solid var(--border2);color:var(--text);border-radius:var(--radius);font-size:13px;box-sizing:border-box;margin-bottom:20px">
-      <option value="end">Lista végére</option>
-      <option value="after">Aktív fejezet után</option>
-      <option value="start">Lista elejére</option>
-    </select>
+    <label style="display:block;font-size:12px;color:var(--text3);margin-bottom:4px">Azonosító <span style="opacity:.7">(automatikus — a linkekben #azonosito)</span></label>
+    <input id="nc-id" type="text" placeholder="uj-fejezet"
+      style="width:100%;padding:7px 10px;background:var(--bg);border:1px solid var(--border2);color:var(--text);border-radius:var(--radius);font-size:13px;box-sizing:border-box;font-family:var(--mono);margin-bottom:8px"/>
+    <div style="font-size:11px;color:var(--text3);margin-bottom:18px">Az aktív fejezet után, ugyanabba a csoportba kerül.</div>
 
     <div style="display:flex;gap:8px;justify-content:flex-end">
       <button onclick="closeNewChapterModal()" style="padding:7px 16px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--bg3);color:var(--text2);cursor:pointer;font-size:13px">Mégse</button>
@@ -561,7 +505,7 @@
         <h1 id="project-page-title">—</h1>
         <div class="sub" id="project-page-desc"></div>
       </div>
-      <button class="btn" onclick="openMigrateModal()" title="Meglévő, csak nálad meglévő helyi projekt hozzáadása ehhez a projekthez, dokumentumként">📤 Helyi projekt importálása</button>
+      <button class="btn" onclick="openImportModal()" title="Egy projektmappa, egy korábban letöltött ZIP kicsomagolt mappája, vagy egy régi, böngészőben tárolt projekt felvétele ide, dokumentumként">📤 Importálás</button>
     </div>
     <div class="hp-grid" id="project-doc-grid"></div>
   </div>
@@ -627,17 +571,30 @@
   </div>
 </div>
 
-<!-- Helyi projekt importálása (dokumentumként egy felhő projektbe) modal -->
-<div class="hp-modal-backdrop" id="migrate-modal-backdrop" onclick="closeMigrateModal()">
+<!-- Importálás modal -->
+<div class="hp-modal-backdrop" id="import-modal-backdrop" onclick="closeImportModal()">
   <div class="hp-modal" onclick="event.stopPropagation()">
-    <h3>📤 Helyi projekt importálása dokumentumként</h3>
-    <label>Helyi projekt</label>
-    <select id="migrate-source-select"></select>
-    <label>Dokumentum azonosító (szóköz nélkül)</label>
-    <input type="text" id="migrate-doc-id" placeholder="pl. felhasznaloi-kezikonyv" />
+    <h3>📤 Importálás dokumentumként</h3>
+    <label class="radio-row"><input type="radio" name="import-source" value="folder" onchange="setImportSource('folder')" checked/> Mappa a gépről <span class="hint">(projektmappa vagy kicsomagolt ZIP)</span></label>
+    <div id="import-folder-box" style="margin:6px 0 10px 24px">
+      <button class="btn" onclick="document.getElementById('import-folder-input').click()">📂 Mappa kiválasztása</button>
+      <span id="import-folder-info" class="hint" style="margin-left:8px">Nincs kiválasztva mappa</span>
+      <input id="import-folder-input" type="file" webkitdirectory multiple style="display:none" onchange="onImportFolderPicked(this)"/>
+    </div>
+    <div id="import-legacy-option" style="display:none">
+      <label class="radio-row"><input type="radio" name="import-source" value="legacy" onchange="setImportSource('legacy')"/> Korábbi helyi projekt ebből a böngészőből</label>
+      <div id="import-legacy-box" style="margin:6px 0 10px 24px;display:none">
+        <select id="import-legacy-select" onchange="onLegacySelected()"></select>
+      </div>
+    </div>
+    <label>Dokumentum címe</label>
+    <input type="text" id="import-doc-title" placeholder="pl. Felhasználói kézikönyv" />
+    <label>Azonosító (szóköz nélkül — ez lesz a mappa neve)</label>
+    <input type="text" id="import-doc-id" placeholder="pl. felhasznaloi-kezikonyv" />
+    <div class="hint" style="margin-top:8px">A fejezetekbe ágyazott képek automatikusan külön fájlba kerülnek.</div>
     <div style="display:flex;gap:8px;margin-top:20px">
-      <button class="btn" onclick="closeMigrateModal()" style="flex:1">Mégse</button>
-      <button class="btn primary" onclick="runMigrateToProject()" style="flex:1">☁️ Feltöltés</button>
+      <button class="btn" onclick="closeImportModal()" style="flex:1">Mégse</button>
+      <button class="btn primary" onclick="runImport()" style="flex:1">☁️ Importálás</button>
     </div>
   </div>
 </div>
@@ -671,26 +628,26 @@
   </div>
 </div>
 
-<!-- Külső függőség -->
+<!-- Külső függőségek: Supabase kliens (CDN) + CodeMirror/JSZip (helyi csomag, lásd vendor/README.md) -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<!-- Az alkalmazás szkriptjei — sima (nem modul) szkriptek, hogy file:// protokollon
-     is működjenek. A sorrend számít: az alsóbbak a felsőkben definiált függvényekre épülnek,
-     az app.js indítja el az alkalmazást. Részletek: README.md → Kód szerkezete. -->
+<script src="vendor/codemirror.bundle.js"></script>
+<!-- Az alkalmazás szkriptjei — sima (nem modul) szkriptek, a sorrend számít; az app.js indít. -->
 <script src="js/runtime-scripts.js"></script>
 <script src="js/state.js"></script>
 <script src="js/ui.js"></script>
 <script src="js/default-css.js"></script>
 <script src="js/markdown.js"></script>
 <script src="js/cloud.js"></script>
-<script src="js/idb.js"></script>
+<script src="js/structure.js"></script>
+<script src="js/images.js"></script>
 <script src="js/persistence.js"></script>
+<script src="js/legacy-import.js"></script>
 <script src="js/design.js"></script>
 <script src="js/preview.js"></script>
 <script src="js/build.js"></script>
 <script src="js/editor.js"></script>
 <script src="js/toolbar.js"></script>
-<script src="js/chapters.js"></script>
-<script src="js/nav-groups.js"></script>
+<script src="js/tree.js"></script>
 <script src="js/project-modal.js"></script>
 <script src="js/loaders.js"></script>
 <script src="js/views.js"></script>

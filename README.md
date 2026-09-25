@@ -1,48 +1,58 @@
 # Kézikönyv Szerkesztő
 
-Böngészőben futó (build lépés nélküli) szerkesztő kézikönyvek / belső dokumentációk összeállításához. Markdown fejezetekből épít fel egy stílusos, kereshető, navigálható HTML oldalt, amit közvetlenül fel lehet tölteni pl. GitHub Pages-re.
+Böngészőben futó szerkesztő kézikönyvek / belső dokumentációk összeállításához. Markdown fejezetekből épít fel egy stílusos, kereshető, navigálható HTML oldalt. Minden adat a felhőben (Supabase) van, így minden bejelentkezett kolléga ugyanazt látja és szerkeszti.
 
-Nincs build lépés, nincs szerver — csak nyisd meg az `index.html`-t egy böngészőben (Chrome/Edge ajánlott a teljes funkcionalitáshoz). Az `index.html` mellett a `css/` és `js/` mappának is ott kell lennie (GitHub Pages-re is mindhármat töltsd fel).
+Nincs build lépés és nincs saját szerver: az `index.html` mellé a `css/`, `js/` és `vendor/` mappát kell feltölteni (pl. GitHub Pages-re), és böngészőben megnyitni.
 
 ## Tartalom
 
-- [Projekt betöltése és mentése](#projekt-betöltése-és-mentése)
+- [Mentés](#mentés)
 - [Fejezetek szerkesztése](#fejezetek-szerkesztése)
+- [Képek](#képek)
 - [Markdown szintaxis](#markdown-szintaxis)
+- [Fejezetek, csoportok, menü (bal oldali fa)](#fejezetek-csoportok-menü-bal-oldali-fa)
+- [Dokumentum beállításai](#dokumentum-beállításai)
 - [Megjelenés testreszabása](#megjelenés-testreszabása)
-- [Navigáció (menü) szerkesztése](#navigáció-menü-szerkesztése)
-- [Build / exportálás](#build--exportálás)
-- [Projekt mappa szerkezete](#projekt-mappa-szerkezete)
+- [Letöltés](#letöltés)
+- [Importálás](#importálás)
+- [Felhőbeli szerkezet](#felhőbeli-szerkezet)
 - [Ismert korlátok](#ismert-korlátok)
 - [Kód szerkezete](#kód-szerkezete)
 - [Változásnapló](#változásnapló)
 
 ---
 
-## Projekt betöltése és mentése
+## Mentés
 
-A **📂 Projekt mappa megnyitása** gombra kattintva válaszd ki a projekt mappáját.
+Minden automatikusan a felhőbe mentődik:
 
-- **Chrome / Edge (asztali gép):** a mappa-választó rögtön **írási jogot** is kér. Ettől kezdve minden mentés — gépelés közbeni automatikus mentés, fejezet létrehozás, sorrend átrendezés, menü- és megjelenés-mentés — közvetlenül **ebbe a mappába** kerül, külön le- vagy feltöltés nélkül.
-- **Más böngésző / nem támogatott környezet:** a szerkesztő automatikusan visszaesik a régi, csak-olvasható betöltésre (ha a böngésző mégis tud írási jogot adni, a topbaron megjelenik a **🔓 Írási jog** gomb) — ott a **💾 Mentés** gombbal (vagy Ctrl+S-sel) fájlonként kell menteni, és a végén a **⚡ Build**-del előállított HTML-t manuálisan kell feltölteni.
+- **Fejezetek:** gépelés után kb. 1,5 másodperccel. A még nem mentett fejezet mellett a bal oldali listában ● jel látszik. Ha a mentés nem sikerül (pl. megszakadt a net), a szerkesztő újrapróbálja.
+- **Szerkezet** (sorrend, csoportok, menü): húzás után azonnal.
+- **Képek:** beillesztéskor azonnal.
+- **Megjelenés:** a Megjelenés fül **✓ Mentés** gombjával (addig csak az előnézetben látszik).
 
-### Automatikus mentés
+A **💾 Mentés** gomb (Ctrl+S) mindent azonnal elment. Ha még van mentetlen módosítás, a böngésző bezárás előtt figyelmeztet.
 
-- Gépelés közben kb. 2 másodperccel a szünet után a fejezet tartalma automatikusan elmentődik: a böngésző saját tárolójába (IndexedDB) mindig, a projekt mappájába pedig akkor, ha van hozzá írási jog.
-- Új fejezet létrehozásakor a fájl azonnal létrejön a mappában is (ha van írási jog).
-- A fejezetek sorrendjének átrendezése (húzd-és-ejtsd a bal oldali listában) és a navigációs menü összeállítása is a `config.json`-ba íródik ki, nem csak a generált HTML-be — így egy másik gépen / böngészőben megnyitva a projektet, a sorrend és a menü is megmarad.
-
----
+Induláskor az utoljára megnyitott dokumentum nyílik meg újra, mindig a felhőben lévő legfrissebb változattal.
 
 ## Fejezetek szerkesztése
 
-A bal oldali sávban látod a fejezeteket, középen a markdown szerkesztő, jobb oldalt az élő előnézet.
+Bal oldalt a fejezetek fája, középen a szerkesztő, jobbra az élő előnézet.
 
-- **🔄 Frissítés** gomb az előnézet fejlécében: csak az előnézetet tölti újra, az egész oldal nem frissül.
-- **Fejezet / Teljes dokumentum** váltó: az előnézet mutathatja csak az aktuális fejezetet, vagy az egész kézikönyvet egyben (ez utóbbi a navigációval és kereséssel együtt — ez felel meg a végleges, buildelt oldalnak).
-- Képek beillesztése: **beillesztéssel (Ctrl+V)** vagy **húzd-és-ejtsd**-del a szerkesztőbe. A képek automatikusan tömörödnek (WebP, max. 1440px szélesség), hogy a fejezet fájlja és a mentés ne híz­zon el feleslegesen sok kép esetén sem.
+- **Cím mező** a szerkesztő fölött: a fejezet címe, egyben a menüpont neve. Ha a fejezet első sora `# <cím>`, azt is együtt frissíti.
+- **#azonosító** a cím mellett: a fejezet horgonya (`#azonosito` linkekhez). Automatikusan készül, kattintással módosítható.
+- **„/” menü:** a sor elején (vagy szóköz után) írj egy `/` jelet — megjelenik a beszúrható elemek listája (címsor, lista, kiemelt doboz, harmonika, kép, képsor, ikon, táblázat, link, jegyzet, kódblokk). Gépeléssel szűrhető (pl. `/harm`), Enterrel beszúrható.
+- **Ikon-javaslat:** kettősponttal kezdve (pl. `:hou`) felajánlja a Lucide ikonokat.
+- **Billentyűk:** Ctrl+B félkövér, Ctrl+I dőlt, Ctrl+K link, Ctrl+S mentés, Ctrl+Z / Ctrl+Y visszavonás (fejezetenként külön), Ctrl+F keresés.
+- **🔄 Frissítés** az előnézet fejlécében: csak az előnézetet tölti újra. **Fejezet / Teljes dok** váltó: az aktuális fejezet, vagy az egész kézikönyv a menüvel és a keresővel együtt.
 
----
+## Képek
+
+- Beillesztés **Ctrl+V**-vel, **húzással** a szerkesztőbe, a **🖼 Kép** gombbal vagy a `/kép` paranccsal. Egyszerre több kép is mehet.
+- A képek külön fájlként kerülnek a felhőbe (a dokumentum `images/` mappájába), automatikusan tömörítve (WebP, max. 1440 px széles). A szövegben csak egy rövid hivatkozás áll: `![alt](images/3f9a….webp)`; a szerkesztőben ennek helyén egy kis bélyegkép látszik.
+- A kép alatti `*dőlt sor*` a képaláírás.
+- A **régi dokumentumokban** beágyazott (base64) képeket a szerkesztő az első megnyitáskor magától átalakítja külön fájllá. Ez egyszeri, és ha bármelyik kép feltöltése nem sikerül, az a kép változatlanul a szövegben marad.
+- A letöltött HTML-be és az egyedi `.md` letöltésbe a képek beágyazva kerülnek, így azok önállóan is teljesek.
 
 ## Markdown szintaxis
 
@@ -62,7 +72,7 @@ A szerkesztő egy leegyszerűsített markdown-változatot ért. Az eszköztár g
 | Számozott lista | `1. elem` | |
 | Kiemelt doboz | `> szöveg` | színe a Megjelenés fülön állítható |
 | Link | `[szöveg](url)` | |
-| Kép | `![alt szöveg](kép)` | a szöveg alatti `*dőlt sor*` a képaláírás |
+| Kép | `![alt szöveg](images/…)` | beillesztéssel jön létre, lásd [Képek](#képek) |
 | Képek egymás alatt, közös keretben | `<!-- shot-stack -->` ... képek ... `<!-- /shot-stack -->` | |
 | Kód blokk | ` ```kód``` ` | |
 | Táblázat | markdown táblázat (`\|` és `---`) | |
@@ -82,11 +92,11 @@ Minden címsor (Címsor 1–4) automatikusan kap egy azonosítót a szövegébő
 [ugrás a telepítéshez](#telepítés-lépései)
 ```
 
-Ez ugyanabban a fejezetben mindig működik; másik fejezetben lévő címsorra csak a "Teljes dokumentum" nézetben / a végleges buildelt oldalon mutat (ott van csak egyben az összes fejezet). Egy másik fejezet **tetejére** a fejezet saját azonosítójával (`id:` a fejlécben) tudsz ugrani.
+Ez ugyanabban a fejezetben mindig működik; másik fejezetben lévő címsorra csak a "Teljes dokumentum" nézetben / a végleges buildelt oldalon mutat (ott van csak egyben az összes fejezet). Egy másik fejezet **tetejére** a fejezet saját azonosítójával (a cím melletti `#azonosito`) tudsz ugrani.
 
 ### Lenyíló elemek (harmonika / accordion)
 
-Az eszköztár **⬇ Harmonika** gombja beszúr egy induló sablont:
+Az eszköztár **⬇ Harmonika** gombja (vagy a `/harmonika` parancs) beszúr egy induló sablont:
 
 ```
 <!-- accordion -->
@@ -126,13 +136,21 @@ Ide írhatsz szerkesztői jegyzetet.
 
 Rövidebb megjegyzéshez egysoros forma is használható: `<!-- jegyzet: rövid szöveg -->`.
 
-A jegyzet az **élő előnézetben** egy szaggatott keretű, elkülönülő buborékban jelenik meg ("📝 Jegyzet" felirattal) — de a **⚡ Build**-bel legenerált, végleges/exportált oldalra soha nem kerül bele. Ez pl. saját emlékeztetőkhöz, TODO-khoz, vagy a szerkesztőtársaknak szánt megjegyzésekhez hasznos.
+A jegyzet az **élő előnézetben** egy szaggatott keretű, elkülönülő buborékban jelenik meg ("📝 Jegyzet" felirattal) — de a letöltött, végleges oldalra soha nem kerül bele. Ez pl. saját emlékeztetőkhöz, TODO-khoz, vagy a szerkesztőtársaknak szánt megjegyzésekhez hasznos.
 
 ---
 
+## Dokumentum beállításai
+
+A **⚙ Beállítások** ablak fülei:
+
+- **📄 Dokumentum:** cím, alcím, rövid leírás, logó.
+- **🎨 Megjelenés:** lásd lent.
+- **📋 Fejezetek másolása:** fejezetek átmásolása egy másik dokumentumból (a képeikkel együtt).
+
 ## Megjelenés testreszabása
 
-A projekt-beállítások **CSS** fülén két nézet van:
+A **⚙ Beállítások** ablak **🎨 Megjelenés** fülén két nézet van:
 
 - **🎨 Egyszerű** (alapértelmezett): magyar nyelvű, egyenként állítható mezők — nincs szükség CSS-tudásra.
   - Kiemelő szín (linkek, címek, gombok)
@@ -149,46 +167,57 @@ A projekt-beállítások **CSS** fülén két nézet van:
   - Címsor színek külön-külön: Címsor 1–5 mindegyike saját színt kaphat (alapból a Kiemelő színt / a Címsor 4–5 a szöveg színét örökli, amíg felül nem írod)
 - **&lt;/&gt; Kód (haladó)**: a nyers CSS közvetlen szerkesztése azoknak, akik szeretnék teljesen kézben tartani a stílust. Az Egyszerű nézet módosításai nem írják felül a kézzel írt egyedi CSS-t — egy külön, jól elkülöníthető blokként kerülnek a végére.
 
-A módosítások élőben látszanak az előnézeten, de csak a **✓ Mentés** gombbal kerülnek ténylegesen elmentésre — mindkét nézetben ugyanoda: a böngészőbe, felhő Dokumentumnál a felhőbe (`style.css`), helyi projektnél — ha van írási jog — a mappa `style.css` fájljába. Amíg van nem mentett módosítás, a gombok mellett "● Nem mentett módosítás" felirat látszik, és a panel bezárásakor a szerkesztő rákérdez, mented-e.
+A módosítások élőben látszanak az előnézeten, de csak a **✓ Mentés** gombbal kerülnek a felhőbe (`style.css`). Amíg van nem mentett módosítás, a gombok mellett "● Nem mentett módosítás" felirat látszik, és a panel bezárásakor a szerkesztő rákérdez, mented-e.
 
 ---
 
-## Navigáció (menü) szerkesztése
+## Fejezetek, csoportok, menü (bal oldali fa)
 
-A projekt-beállítások **Beállítások** fülén, a "Navigáció csoportok" alatt húzd-és-ejtsd módszerrel rendezheted a fejezeteket csoportokba / alcsoportokba — ez adja a végleges oldal bal oldali menüjének szerkezetét. A **✓ Mentés** gomb a menüt a `config.json`-ba is kiírja, nem csak a generált HTML-be.
+A bal oldali fa egyszerre a fejezetek listája, a sorrendjük és a kész oldal menüje — ami itt látszik, az lesz a menüben is, ugyanebben a sorrendben.
 
----
+- **Húzd** a fejezeteket a sorrend változtatásához, vagy egy csoport fejlécére / csoporton belülre a csoportba tételhez.
+- **+ Csoport:** új lenyíló menüpont. A csoport fejlécén: **＋** alcsoport, **✏** átnevezés (vagy dupla kattintás), **🗑** törlés (a fejezetei nem törlődnek, a lista tetejére kerülnek). A csoportok és alcsoportok is húzhatók, a **▾** nyíllal összecsukhatók.
+- A csoport nélküli fejezetek a menü tetején, sima linkként jelennek meg (pl. Bevezetés).
+- **+ Fejezet:** új fejezet az aktív fejezet után, ugyanabba a csoportba.
+- Az aktív fejezet alatt a **címsorai** látszanak — kattintásra oda ugrik a szerkesztő és az előnézet.
+- Fejezeten: **⬇** letöltés `.md` fájlként, **🗑** törlés.
 
-## Build / exportálás
+## Letöltés
 
-- **⚡ Build**: legenerálja a végleges, önálló HTML fájlt (a projekt `config.json`-jában megadott `output` néven, alapból `<projektnév>.html`).
-- **⚡ Build + Optimalizál**: ugyanez, de a beágyazott képeket PNG-ről WebP-re konvertálja és max. 1440px szélességre kicsinyíti buildeléskor — ez tud számottevően kisebb fájlt eredményezni, ha sok, tömörítetlen képet tartalmaz a projekt.
-- Ha van írási jog a mappához, a build automatikusan a mappába íródik; egyébként letöltésre kerül.
+A **⬇ Letöltés** menüben:
 
-### GitHub Pages-re feltöltés
+- **⬇ HTML letöltése:** a végleges, önálló HTML fájl (képekkel együtt). Egyúttal a felhőben is frissül a publikált változat — erre épül a megosztható link és a Projekt nézet **⬇ HTML** gombja. A *Képek optimalizálása* opció kisebb fájlt ad.
+- **📦 Markdown + képek (ZIP):** a dokumentum összes forrásfájlja (fejezetek, képek, `config.json`, `style.css`) — archiváláshoz, vagy máshová importáláshoz.
 
-Ha nincs írási jogod a mappához (pl. nem Chrome/Edge-et használsz), a legfrissebb `index.html`-t és a generált HTML-t a GitHub webes felületén keresztül tudod feltölteni:
+Egy-egy fejezet `.md` fájlja a bal oldali fában a fejezet **⬇** gombjával tölthető le (a képek beágyazva).
 
-1. Nyisd meg a fájlt a repóban → ceruza (✏) ikon jobb fent → a teljes tartalmat cseréld le → **Commit changes**.
-2. **Ne** az "Upload files" / húzd-ide feltöltést használd meglévő fájl cseréjére — Windows alatt ez néha egy `NÉV~1.HTM` nevű, felesleges új fájlt hoz létre a felülírás helyett.
+## Importálás
 
----
+A Projekt nézet **📤 Importálás** gombjával új dokumentum hozható létre:
 
-## Projekt mappa szerkezete
+- **egy mappából** a gépről: régi projektmappa (`config.json`, `style.css`, `sections/*.md`) vagy a ZIP letöltés kicsomagolt mappája (`images/` mappával);
+- **korábbi, böngészőben tárolt helyi projektből** (ha a régi szerkesztőben dolgoztál helyi mappával ebben a böngészőben).
+
+A fejezetekbe ágyazott képek importáláskor automatikusan külön fájlba kerülnek.
+
+## Felhőbeli szerkezet
 
 ```
-projekt-mappa/
-├── config.json     # cím, leírás, navigációs menü, fejezetsorrend
-├── style.css       # projekt CSS (hiányzik → alapértelmezett stílus; írható mappánál első megnyitáskor létrejön)
-├── logo.txt        # logó (base64 kép vagy elérési út), opcionális
-├── sections/
-│   ├── 01_bevezetes.md
-│   ├── 02_telepites.md
-│   └── ...
-└── <projektnév>.html   # a Build gombbal legenerált, végleges oldal
+kezikonyv (Supabase Storage bucket)
+└── <projekt-azonosító>/
+    ├── _project.json          # projekt neve, leírása, színe, ikonja
+    └── <dokumentum-azonosító>/
+        ├── config.json        # cím, leírás, menü (nav_groups), fejezetsorrend (fileOrder)
+        ├── style.css          # megjelenés
+        ├── logo.txt           # logó (base64 kép), opcionális
+        ├── published.html     # a legutóbb letöltött (publikált) HTML
+        ├── images/            # képek (tartalom-hash névvel)
+        └── sections/
+            ├── 01_bevezetes.md
+            └── ...
 ```
 
-Minden `.md` fájl elején egy frontmatter blokk (`---` közé zárva) adja meg a fejezet `id`-jét és `title`-jét:
+Minden `.md` fájl elején egy frontmatter blokk adja meg a fejezet azonosítóját és címét (a szerkesztőben ez nem látszik, a cím mezőből jön):
 
 ```
 ---
@@ -200,53 +229,61 @@ title: Telepítés
 ...
 ```
 
----
-
 ## Ismert korlátok
 
-- A mappába való közvetlen, automatikus mentés (`showDirectoryPicker` API) jelenleg Chrome és Edge asztali böngészőkben működik. Más böngészőknél a szerkesztő működik, de a fájlokat kézzel kell menteni / feltölteni.
-- A "Címsor 1" mező jelenleg csak a borító (első fejezet) fejlécére vonatkozó helyet foglal — a markdown `#` szintje ténylegesen `Címsor 2`-nek megfelelő HTML-elemet hoz létre (lásd a fenti táblázatot); ez a jövőben tisztázásra kerülhet.
-
----
+- Ha ketten egyszerre ugyanazt a fejezetet szerkesztik, az utolsó mentés nyer (nincs ütközésjelzés).
+- A fejezetből kitörölt képek fájljai a felhőben maradnak (nem zavarnak, csak helyet foglalnak).
+- Az ikonok és a betűtípusok külső CDN-ről töltődnek, ezekhez internet kell a kész oldalon is.
+- A "Címsor 1" mező a Megjelenés fülön a borító (első fejezet) fejlécére vonatkozik — a markdown `#` szintje `Címsor 2`-nek megfelelő HTML-elemet hoz létre.
 
 ## Kód szerkezete
 
 ```
-index.html              # csak a felület HTML váza
-css/editor.css          # a szerkesztő saját stílusa
+index.html              # a felület HTML váza
+css/editor.css          # a szerkesztő stílusa
+vendor/
+  codemirror.bundle.js  # CodeMirror 6 + JSZip egy fájlban (lásd vendor/README.md)
 js/
-  runtime-scripts.js    # a legenerált kézikönyvbe ágyazott kereső- és ikon-szkript
-  state.js              # globális állapot, projekt-modell segédfüggvények
-  ui.js                 # toast, státusz, letöltés/fájlírás segédek, topbar menük
-  default-css.js        # alapértelmezett kézikönyv-CSS + kereső CSS
-  markdown.js           # frontmatter + markdown → HTML
+  runtime-scripts.js    # a kész kézikönyvbe ágyazott kereső- és ikon-szkript
+  state.js              # globális állapot, dokumentum-modell segédek
+  ui.js                 # toast, státusz, letöltés, topbar menük
+  default-css.js        # alapértelmezett kézikönyv-CSS
+  markdown.js           # frontmatter, markdown → HTML, címsorok
   cloud.js              # Supabase kliens és Storage műveletek
-  idb.js                # IndexedDB (böngészőn belüli másolat)
-  persistence.js        # MINDEN mentés innen indul: böngésző + felhő + mappa
-  design.js             # Megjelenés fül (egyszerű + kód nézet, piszkozat/mentés)
-  preview.js            # élő előnézet, HTML összeállítás, navigáció
-  build.js              # ⬇ Letöltés (build), kép-optimalizálás
-  editor.js             # szövegszerkesztő, sorszámok, kép beillesztés
-  toolbar.js            # formázó eszköztár, ikonválasztó
-  chapters.js           # fejezetlista, új/átnevezés/törlés, húzás
-  nav-groups.js         # navigációs csoportok szerkesztője
-  project-modal.js      # ⚙ Beállítások ablak (projektek, másolás, logó, CSS fül)
-  loaders.js            # projekt betöltése felhőből / mappából
-  views.js              # Kezdőlap, Projekt nézet, projekt/dokumentum kezelő ablakok
+  structure.js          # fa = menü = sorrend (csoportok, áthelyezés)
+  images.js             # képek feltöltése, gyorsítótár, beágyazás, régi képek átalakítása
+  persistence.js        # mentések (automatikus és kézi)
+  legacy-import.js      # régi, böngészőben tárolt helyi projektek olvasása (importhoz)
+  design.js             # Megjelenés fül
+  preview.js            # élő előnézet, HTML összeállítás, menü
+  build.js              # HTML letöltés, ZIP letöltés
+  editor.js             # CodeMirror szerkesztő, "/" menü, kép-beillesztés
+  toolbar.js            # formázó műveletek, ikonválasztó
+  tree.js               # bal oldali fa, húzás, fejezet létrehozás/törlés/letöltés
+  project-modal.js      # ⚙ Beállítások ablak
+  loaders.js            # dokumentum betöltése, importálás
+  views.js              # Kezdőlap, Projekt nézet, projekt/dokumentum kezelés
   auth.js               # bejelentkezés, megosztott link
   ai.js                 # AI fejezet generálás
-  app.js                # indítás, panel-átméretezés
+  app.js                # indítás
 ```
 
-A fájlok sima (nem ES-modul) szkriptek, hogy `file://` protokollon, szerver nélkül is működjenek. A betöltési sorrend az `index.html` alján van; az `app.js` indítja az alkalmazást.
-
-**Szabály új funkcióhoz:** ha valami a projekt adatát módosítja (CSS, config, logó, fejezet), a mentést a `persistence.js` `save*` függvényeivel végezd (`saveProjectCss`, `saveProjectConfig`, `saveProjectLogo`, `saveChapterSilently`) — ezek döntik el, hogy a böngésző mellett a felhőbe vagy a mappába is ki kell-e írni.
-
----
+A fájlok sima (nem ES-modul) szkriptek; a betöltési sorrend az `index.html` alján van.
 
 ## Változásnapló
 
-### Refaktor + hibajavítások
+### 2. verzió — kényelmesebb szerkesztés, csak felhő
+
+- **Új szerkesztő (CodeMirror):** színezett szöveg, sorszámok, „/” beszúró menü, ikon-javaslatok, fejezetenkénti visszavonás, keresés.
+- **Rejtett frontmatter:** a cím a szerkesztő fölötti mezőben, az azonosító automatikus.
+- **Képek külön fájlban** a felhőben — a szöveg rövid és gyors marad; a régi beágyazott képek automatikusan átalakulnak.
+- **Egyesített bal oldali fa:** fejezetek + csoportok + menü + sorrend egy helyen, húzással; címsorok az aktív fejezet alatt.
+- **Letöltés:** egyedi fejezet `.md` (képekkel), vagy minden forrás ZIP-ben.
+- **Csak felhő:** a helyi mappás mód megszűnt. A régi helyi projektek az **📤 Importálás** ablakban hozhatók át.
+- A ⚙ Beállítások ablak egyszerűsödött: Dokumentum / Megjelenés / Fejezetek másolása.
+
+
+### 1. verzió — refaktor + hibajavítások
 
 **A CSS visszaállt alapértelmezettre — okai és javításuk:**
 
