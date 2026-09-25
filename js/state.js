@@ -15,9 +15,8 @@ const state = {
   projects: {},
   currentProject: null,
   currentFile: null,
-  previewMode: 'section',
   previewTimer: null,
-  previewRenderKey: null, // az utolsó előnézet-render "kulcsa" (fájl+mód) — ha nem változik, megmarad a görgetési pozíció
+  previewRenderKey: null, // az utolsó előnézet-render "kulcsa" (dokumentum) — ha nem változik, megmarad a görgetési pozíció
   // Kezdőlap / Projekt-Dokumentum hierarchia
   uiView: 'home',              // 'home' | 'project' | 'editor'
   currentTopProject: null,     // Projekt azonosító (mappa neve)

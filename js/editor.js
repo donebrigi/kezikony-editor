@@ -291,7 +291,6 @@ function initEditor() {
     state: CM.EditorState.create({ doc: '', extensions: editorExtensions() }),
   });
   editorView.scrollDOM.addEventListener('scroll', onEditorScroll, { passive: true });
-  updateSyncButton();
 }
 
 function stateForChapter(fn) {

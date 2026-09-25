@@ -4,18 +4,10 @@ function schedulePreview() {
   state.previewTimer = setTimeout(renderPreview, 400);
 }
 
-function setPreviewMode(mode) {
-  state.previewMode = mode;
-  document.getElementById('mode-section').className = 'mode-btn' + (mode==='section' ? ' active' : '');
-  document.getElementById('mode-full').className = 'mode-btn' + (mode==='full' ? ' active' : '');
-  renderPreview();
-}
-
 function renderPreview() {
   if (!state.currentProject) return;
   const proj = state.projects[state.currentProject];
   const frame = document.getElementById('preview-frame');
-  const info = document.getElementById('preview-info');
 
   // Gépelés közben ez a függvény ~400ms-enként újratölti az előnézetet (srcdoc/
   // document.write), ami egy vadonatúj dokumentumot hoz létre — ez alapból mindig a
@@ -23,8 +15,9 @@ function renderPreview() {
   // tartalom betöltése után oda állunk vissza, hogy a felhasználó a begépelt szöveget
   // ott lássa, ahol éppen dolgozik. Fájlváltáskor (vagy nézetmód-váltáskor) viszont a
   // régi görgetési pozíció más tartalomra nem lenne értelmes, ezért ilyenkor a tetejéről
-  // indulunk — ezt a renderKey (fájl + nézetmód) változása jelzi.
-  const renderKey = state.previewMode + ':' + (state.previewMode === 'section' ? state.currentFile : state.currentProject);
+  // indulunk — ezt a renderKey (a dokumentum) változása jelzi.
+  // Az előnézet MINDIG a teljes dokumentumot mutatja; a szerkesztőhöz a görgetés-szinkron igazítja.
+  const renderKey = state.currentProject;
   const sameAsLastRender = state.previewRenderKey === renderKey;
   state.previewRenderKey = renderKey;
 
@@ -40,18 +33,7 @@ function renderPreview() {
     try { popScrollX = popWin.scrollX || 0; popScrollY = popWin.scrollY || 0; } catch(e) {}
   }
 
-  let html;
-  if (state.previewMode === 'section') {
-    const f = state.currentFile ? proj.files[state.currentFile] : null;
-    if (!f) return;
-    const sectionHtml = mdToHtml(f.content, { showNotes: true, lines: true });
-    const secId = escapeHtml(f.meta.id || 'section');
-    html = buildPreviewHtml(proj, `<section class="section" id="${secId}" data-fn="${escapeHtml(state.currentFile)}">${sectionHtml}</section>`, false, getWorkingCss(proj));
-    info.textContent = f.meta.title || state.currentFile;
-  } else {
-    html = buildPreviewHtml(proj, buildAllSectionsHtml(proj, { showNotes: true, lines: true }), true, getWorkingCss(proj));
-    info.textContent = 'Teljes dokumentum';
-  }
+  let html = buildPreviewHtml(proj, buildAllSectionsHtml(proj, { showNotes: true, lines: true }), true, getWorkingCss(proj));
   // images/… hivatkozások → a gyorsítótárazott képek (ha még töltődnek, betöltés után újrarajzol)
   html = resolveImagesPreview(html, proj, schedulePreview);
 
@@ -61,11 +43,11 @@ function renderPreview() {
   // beleértve, ami gépelés közben, minden újrarenderelésnél zökkenős csúszást
   // okozna. Ezért a visszaállításhoz ideiglenesen "auto"-ra kapcsoljuk, hogy azonnali
   // (nem animált) legyen — a felhasználó így nem is érzékeli, hogy újratöltődött.
-  const syncOn = isPreviewSyncOn();
   frame.onload = () => {
     frame.onload = null;
     attachPreviewInteractions(frame.contentDocument);
-    if (syncOn) { syncPreviewToEditor(true); return; }
+    // Az előnézet mindig a szerkesztőben látható részhez igazodik (görgetés-szinkron).
+    if (editorView && state.currentFile) { syncPreviewToEditor(true); return; }
     if (scrollX || scrollY) {
       try {
         const d = frame.contentDocument;

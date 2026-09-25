@@ -4,22 +4,7 @@
 //    igazodik (a blokkok data-line attribútuma alapján, lásd mdToHtml lines opció).
 //  • Kattintás az előnézetben: a szerkesztő a kattintott bekezdés sorára ugrik
 //    (teljes dokumentum nézetben szükség esetén a másik fejezetet is megnyitja).
-//  A szinkron az előnézet fejlécében a 🔗 gombbal kapcsolható ki/be.
-
-const SYNC_KEY = 'kk:previewSync';
-function isPreviewSyncOn() {
-  try { return localStorage.getItem(SYNC_KEY) !== 'off'; } catch(e) { return true; }
-}
-function togglePreviewSync() {
-  const on = !isPreviewSyncOn();
-  try { localStorage.setItem(SYNC_KEY, on ? 'on' : 'off'); } catch(e) {}
-  updateSyncButton();
-  if (on) syncPreviewToEditor(true);
-}
-function updateSyncButton() {
-  const btn = document.getElementById('btn-preview-sync');
-  if (btn) btn.classList.toggle('active', isPreviewSyncOn());
-}
+//  A szinkron mindig be van kapcsolva.
 
 function previewDocuments() {
   const docs = [];
@@ -31,7 +16,7 @@ function previewDocuments() {
 
 // Az előnézet görgetése a szerkesztő tetején látható sorhoz.
 function syncPreviewToEditor(instant) {
-  if (!isPreviewSyncOn() || !editorView || !state.currentFile) return;
+  if (!editorView || !state.currentFile) return;
   const view = editorView;
   const scroller = view.scrollDOM;
   const topBlock = view.lineBlockAtHeight(scroller.scrollTop);

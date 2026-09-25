@@ -17,6 +17,7 @@ function updateBreadcrumb() {
     bar.innerHTML = `<span class="crumb" onclick="showHomeView()">Kezdőlap</span><span class="crumb-sep">/</span><span class="crumb-current">${escapeHtml(name)}</span>`;
   } else if (state.uiView === 'editor') {
     if (row) row.classList.add('visible');
+    renderDocSwitcher();
     const proj = state.projects[state.currentProject];
     const docTitle = (proj && (proj.config?.title || proj.docId || proj.name)) || state.currentProject || '';
     if (proj && proj.topProjectId) {
@@ -54,6 +55,7 @@ function enterEditorView() {
   if (main) main.style.display = 'flex';
   updateTopbarToolsVisibility();
   updateBreadcrumb();
+  refreshDocSwitcher();
 }
 
 async function showHomeView() {
@@ -162,14 +164,16 @@ function renderHomeCards() {
       card.onclick = openProj;
       card.innerHTML = `
         <div class="accent-bar" style="background:${p.color}"></div>
-        <div class="hp-card-icon" style="background:${p.color}22;color:${p.color}">${escapeHtml(p.icon)}</div>
-        <div class="hp-card-title" title="${escapeHtml(p.name)}">${escapeHtml(p.name)}</div>
+        <div class="hp-count" style="background:${p.color}22;color:${p.color}" title="${p.docCount || 0} dokumentum">${p.docCount || 0}</div>
+        <div class="hp-card-head">
+          <div class="hp-card-icon" style="background:${p.color}22;color:${p.color}">${escapeHtml(p.icon)}</div>
+          <div class="hp-card-title" title="${escapeHtml(p.name)}">${escapeHtml(p.name)}</div>
+        </div>
         <div class="hp-card-desc">${escapeHtml(p.description || '')}</div>
-        <div class="hp-card-meta"><span class="hp-badge">${p.docCount || 0} dokumentum</span></div>
         <div class="hp-actions-row">
-          <button class="btn-sm hp-proj-edit-btn" title="Projekt szerkesztése">✏ Szerkesztés</button>
-          <button class="btn-sm hp-proj-theme-btn" title="A projekt összes dokumentumának megjelenése">🎨 Megjelenés</button>
-          <button class="btn-sm del hp-proj-del-btn" title="Projekt törlése">🗑 Törlés</button>
+          <button class="btn-sm hp-proj-edit-btn" title="Projekt szerkesztése (név, leírás, ikon, szín)">✏</button>
+          <button class="btn-sm hp-proj-theme-btn" title="Megjelenés — a projekt összes dokumentumára érvényes">🎨</button>
+          <button class="btn-sm del hp-proj-del-btn" title="Projekt törlése">🗑</button>
           <button class="btn primary hp-proj-open-btn">Megnyitás</button>
         </div>
       `;
@@ -584,4 +588,58 @@ async function runImport() {
   closeImportModal();
   toast('✓ Importálva — megnyitás...', 'ok', 2500);
   await cloudLoadProject(projectId + '/' + docId, projectId, docId);
+}
+
+// ── Gyors dokumentumváltó (szerkesztő felső sávja) ──
+// Egy lenyíló lista az összes projekt összes dokumentumával (projektenként csoportosítva).
+// A listát a szerkesztőbe lépéskor a háttérben frissítjük a felhőből.
+let _switcherLoading = null;
+function renderDocSwitcher() {
+  const sel = document.getElementById('doc-switcher');
+  if (!sel) return;
+  const proj = currentProj();
+  const current = proj ? proj.cloudFolder : '';
+  const projects = state.homeProjects || [];
+  let html = '';
+  let found = false;
+  projects.forEach(p => {
+    const docs = (p.docs || []).slice().sort((a, b) => (a.title || a.id).localeCompare(b.title || b.id, 'hu'));
+    if (!docs.length) return;
+    html += `<optgroup label="${escapeHtml((p.icon ? p.icon + ' ' : '') + p.name)}">`;
+    docs.forEach(d => {
+      const val = p.id + '/' + d.id;
+      const isCur = val === current;
+      if (isCur) found = true;
+      const title = isCur && proj ? projectDisplayTitle(proj) : (d.title || d.id);
+      html += `<option value="${escapeHtml(val)}"${isCur ? ' selected' : ''}>${escapeHtml(title)}</option>`;
+    });
+    html += '</optgroup>';
+  });
+  if (proj && !found) html = `<option value="${escapeHtml(current)}" selected>${escapeHtml(projectDisplayTitle(proj))}</option>` + html;
+  if (!html) html = '<option value="">Betöltés...</option>';
+  sel.innerHTML = html;
+  sel.title = 'Váltás másik dokumentumra' + (proj ? ' — most: ' + projectDisplayTitle(proj) : '');
+}
+
+async function refreshDocSwitcher() {
+  renderDocSwitcher();
+  if (_switcherLoading) return _switcherLoading;
+  _switcherLoading = (async () => {
+    try {
+      const list = await cloudListTopProjects();
+      if (list) state.homeProjects = list;
+    } catch(e) {}
+    _switcherLoading = null;
+    renderDocSwitcher();
+  })();
+  return _switcherLoading;
+}
+
+async function onDocSwitcherChange(sel) {
+  const val = sel.value;
+  const proj = currentProj();
+  if (!val || (proj && proj.cloudFolder === val)) return;
+  const [projectId, docId] = val.split('/');
+  sel.blur();
+  await cloudLoadProject(val, projectId, docId);
 }
