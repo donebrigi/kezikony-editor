@@ -12,7 +12,6 @@ Nincs build lépés és nincs saját szerver: az `index.html` mellé a `css/`, `
 - [Képszerkesztő](#képszerkesztő)
 - [Linkek](#linkek)
 - [Előnézet](#előnézet)
-- [AI](#ai)
 - [Ütközések (ha ketten szerkesztik)](#ütközések-ha-ketten-szerkesztik)
 - [Markdown szintaxis](#markdown-szintaxis)
 - [Fejezetek, csoportok, menü (bal oldali fa)](#fejezetek-csoportok-menü-bal-oldali-fa)
@@ -88,23 +87,6 @@ A szerkesztőben a kép-címkére (**✏ kép**) kattintva, vagy az előnézetbe
 
 - **🔗 Szinkron** (alapból bekapcsolva): az előnézet követi a szerkesztő görgetését.
 - Az előnézetben egy bekezdésre **kattintva** a szerkesztő oda ugrik (teljes dokumentum nézetben a másik fejezetet is megnyitja); egy képre **duplán kattintva** a képszerkesztő nyílik meg.
-
-## AI
-
-- **✨ AI** (topbar): fejezet generálása képernyőképből.
-- **✨ Szöveg ▾** (eszköztár): a kijelölt szövegre — vagy kijelölés nélkül a kurzor alatti bekezdésre — helyesírás-javítás, érthetőbbé tétel, tömörítés, bővítés, számozott lépésekké alakítás, egységes magázó/tegező hangnem, vagy egyéni utasítás. Az eredmény az eredeti mellett jelenik meg, szerkeszthető, és csak a **Csere** / **Beszúrás alá** gombbal kerül a szövegbe (Ctrl+Z visszavonja).
-
-### Szerveroldali AI kulcs (ajánlott)
-
-Alapból mindenkinek a saját böngészőjében kell megadnia egy Claude API kulcsot. Ehelyett egyszer, központilag is beállítható — ekkor a kulcs a Supabase-en marad titkosan, csak bejelentkezett felhasználó használhatja, és senkinek nem kell saját kulcs. A függvény kódja: `supabase/functions/ai-proxy/index.ts`. Telepítés a Supabase felületén (parancssor nélkül):
-
-1. Claude API kulcs: console.anthropic.com → API Keys → Create Key (`sk-ant-…`).
-2. Supabase → a projekt → **Edge Functions → Secrets**: Key = `ANTHROPIC_API_KEY`, Value = a kulcs → Save.
-3. **Edge Functions → Deploy a new function → Via Editor**: név `ai-proxy`, a szerkesztő tartalmát cseréld le az `index.ts` tartalmára → **Deploy function**.
-4. A függvény beállításainál a **Verify JWT with legacy secret** kapcsoló legyen **kikapcsolva** (a bejelentkezést a függvény maga ellenőrzi). Minden frissítés után nézd meg, mert visszakapcsolhat.
-5. Ellenőrzés: a szerkesztőben frissítés (Ctrl+Shift+R) után az ✨ AI panelen ez áll: „Szerveroldali AI kulcs használatban”.
-
-Ha a függvény telepítve van, a szerkesztő automatikusan azt használja (az ✨ AI panelen ez ki is van írva); ha nincs, visszaesik a saját kulcsra.
 
 ## Markdown szintaxis
 
@@ -321,17 +303,18 @@ js/
   loaders.js            # dokumentum betöltése, importálás
   views.js              # Kezdőlap, Projekt nézet, projekt/dokumentum kezelés
   auth.js               # bejelentkezés, megosztott link
-  ai.js                 # AI hívás (szerveroldali kulccsal vagy sajáttal), fejezet generálás
-  aitext.js             # AI a kijelölt szövegre
   app.js                # indítás
-supabase/functions/ai-proxy/index.ts   # opcionális szerveroldali AI (lásd AI fejezet)
 ```
 
-A fájlok sima (nem ES-modul) szkriptek; a betöltési sorrend az `index.html` alján van. A `supabase/` mappát nem kell a GitHub Pages-re feltölteni (de nem is árt).
+A fájlok sima (nem ES-modul) szkriptek; a betöltési sorrend az `index.html` alján van.
 
 ## Változásnapló
 
-### 3. verzió — együttműködés, képszerkesztő, AI
+### 3.1 — AI funkciók eltávolítva
+
+- A ✨ AI panel (fejezet képernyőképből) és a ✨ Szöveg menü kikerült, mert külön fizetős Claude API-t igényelnek. A `js/ai.js`, `js/aitext.js` és a `supabase/` mappa már nem része a szerkesztőnek.
+
+### 3. verzió — együttműködés, képszerkesztő
 
 - **Ütközésjelzés**, ha ketten szerkesztik ugyanazt a fejezetet (az övé / mindkettő / az enyém), és frissítés fejezetváltáskor.
 - **Képszerkesztő:** vágás, nyíl, keret, számozott jelölő, kitakarás; utólag is szerkeszthető jelölések.
@@ -339,7 +322,6 @@ A fájlok sima (nem ES-modul) szkriptek; a betöltési sorrend az `index.html` a
 - **Nem használt képek takarítása.**
 - **Link-javaslatok** és **hibás hivatkozások jelzése** (szerkesztőben és a fában).
 - **Görgetés-szinkron** és kattintás az előnézetben → ugrás a szerkesztőben.
-- **AI a kijelölt szövegre**, és opcionális **szerveroldali API kulcs** (Supabase Edge Function).
 - **Nyomtatás / PDF** tartalomjegyzékkel, fejezetenként új oldallal.
 
 ### 2. verzió — kényelmesebb szerkesztés, csak felhő

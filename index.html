@@ -19,7 +19,6 @@
     <div class="sep"></div>
     <button class="btn" onclick="openProjModal('doc')" title="A dokumentum címe, logója, megjelenése, fejezetek másolása" style="padding:5px 10px;font-size:13px">⚙ Beállítások</button>
     <button class="btn" onclick="saveCurrentFile()" title="Minden módosítás mentése most (Ctrl+S) — egyébként gépelés után automatikusan ment">💾 Mentés</button>
-    <button class="btn" onclick="openAiPanel()" title="AI fejezet generálás screenshotból" style="background:linear-gradient(135deg,#6366f1,#8b5cf6);border-color:#6366f1;color:#fff">✨ AI</button>
     <div class="dl-menu-wrap">
       <button class="btn primary" onclick="toggleDownloadMenu(event)" id="btn-download" title="A kész HTML letöltése — felhő Dokumentumnál emellett a publikált oldal is frissül">⬇ Letöltés</button>
       <div id="download-menu" class="dl-menu">
@@ -109,8 +108,6 @@
       <button class="fmt-btn" onclick="pickImageFile()" title="Kép beillesztése fájlból (Ctrl+V és húzás is működik)">🖼 Kép</button>
       <button class="fmt-btn" onclick="fmtLink()" title="Link beszúrása (Ctrl+K)">🔗 Link</button>
       <button class="fmt-btn" onclick="fmtTable()" title="Táblázat">▦ Táblázat</button>
-      <div class="fmt-sep"></div>
-      <button class="fmt-btn ai-fmt" id="btn-ai-text" onclick="toggleAiTextMenu(event)" title="AI a kijelölt szövegre (kijelölés nélkül: a kurzor alatti bekezdésre)">✨ Szöveg ▾</button>
       <span class="fmt-tip">Tipp: írj „/”-t a sor elején</span>
     </div>
     <div id="editor-wrap">
@@ -138,79 +135,6 @@
 
 <div id="toast"></div>
 
-<!-- AI Panel -->
-<div id="ai-panel">
-  <div id="ai-panel-header">
-    <h3>✨ AI Fejezet generálás</h3>
-    <button class="btn" onclick="closeAiPanel()" style="padding:3px 10px;font-size:13px">✕</button>
-  </div>
-  <div id="ai-panel-body">
-
-    <!-- API Key (csak ha nincs szerveroldali kulcs) -->
-    <div id="ai-proxy-status" class="ai-key-status ok" style="display:none">✓ Szerveroldali AI kulcs használatban — nem kell saját kulcs</div>
-    <div id="ai-key-section">
-      <div class="ai-section-label">🔑 API kulcs</div>
-      <div class="hint" style="font-size:11px;margin-bottom:6px">A szerveroldali AI nincs beállítva (lásd README → AI), ezért most a saját kulcsod kell. Ez csak ebben a böngészőben tárolódik.</div>
-      <div id="ai-key-row">
-        <input id="ai-api-key" type="password" placeholder="sk-ant-..." autocomplete="off"/>
-        <button id="ai-key-save" onclick="saveApiKey()">Mentés</button>
-      </div>
-      <div id="ai-key-status" class="ai-key-status missing">Nincs API kulcs megadva</div>
-    </div>
-
-    <!-- Screenshot -->
-    <div>
-      <div class="ai-section-label">🖼 Screenshot</div>
-      <div id="ai-img-zone"
-        ondragover="event.preventDefault();this.classList.add('drag-over')"
-        ondragleave="this.classList.remove('drag-over')"
-        ondrop="handleAiImgDrop(event)">
-        <img id="ai-img-preview" alt="screenshot előnézet"/>
-        <span class="zone-icon">📸</span>
-        <span class="zone-text">Kattints vagy húzd ide a screenshotot<br><small>Ctrl+V is működik</small></span>
-        <input type="file" accept="image/*" onchange="handleAiImgFile(this)"/>
-      </div>
-    </div>
-
-    <!-- Context -->
-    <div>
-      <div class="ai-section-label">💬 Mit mutat a screenshot?</div>
-      <textarea id="ai-context" placeholder="pl. Az adminok listája oldal, ahol látható az összes admin neve, e-mail címe és szerepköre. Van egy + Új admin gomb is."></textarea>
-    </div>
-
-    <!-- Target chapter -->
-    <div>
-      <div class="ai-section-label">📄 Fejezet azonosítója (id)</div>
-      <div id="ai-target-row">
-        <input id="ai-chapter-id" type="text" placeholder="pl. adminok"/>
-        <button id="ai-use-current" onclick="useCurrentChapterId()">← Aktuális</button>
-      </div>
-    </div>
-
-    <!-- Spinner -->
-    <div id="ai-spinner">
-      <div class="spinner-icon"></div>
-      <span id="ai-spinner-text">Generálás folyamatban...</span>
-    </div>
-
-    <!-- Result -->
-    <div id="ai-result-wrap">
-      <div class="ai-section-label">✅ Generált tartalom</div>
-      <div id="ai-result-preview"></div>
-      <div class="ai-result-actions">
-        <button class="btn primary" onclick="insertAiResult()">⬅ Beillesztés a szerkesztőbe</button>
-        <button class="btn" onclick="resetAiResult()">↺ Újra</button>
-      </div>
-    </div>
-
-  </div>
-  <div id="ai-panel-footer">
-    <button id="ai-generate-btn" onclick="generateWithAI()">
-      <span>✨ Fejezet generálása</span>
-    </button>
-  </div>
-</div>
-
 <!-- Projekt kezelő modal -->
 <div id="proj-modal-backdrop">
   <div id="proj-modal" onclick="event.stopPropagation()">
@@ -234,7 +158,7 @@
       <div style="display:flex;justify-content:flex-end;margin:10px 0 18px">
         <button class="btn primary" onclick="saveDocSettings()">✓ Mentés</button>
       </div>
-      <div class="ai-section-label">🖼 Logó</div>
+      <div class="section-label">🖼 Logó</div>
       <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">
         <div id="logo-preview-wrap" style="width:80px;height:40px;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0">
           <img id="logo-preview-img" style="max-width:100%;max-height:100%;display:none" alt="logó"/>
@@ -247,7 +171,7 @@
         <input id="logo-file-input" type="file" accept="image/*" style="display:none" onchange="handleLogoUpload(this)"/>
       </div>
       <div style="font-size:11px;color:var(--text3)">PNG, SVG, JPG — ajánlott: max 200×60px. A logó azonnal mentődik.</div>
-      <div class="ai-section-label" style="margin-top:20px">🧹 Képek</div>
+      <div class="section-label" style="margin-top:20px">🧹 Képek</div>
       <div style="display:flex;align-items:center;gap:12px">
         <button class="btn" onclick="cleanupUnusedImages()" style="font-size:12px">🧹 Nem használt képek törlése</button>
         <span style="font-size:11px;color:var(--text3)">Törli a felhőből azokat a képfájlokat, amelyekre már egyik fejezet sem hivatkozik (pl. kicserélt vagy kitörölt képek).</span>
@@ -511,35 +435,6 @@
   </div>
 </div>
 
-<!-- AI szöveg-műveletek menü -->
-<div id="ai-text-menu" class="dl-menu ai-text-menu">
-  <button onclick="runAiTextAction('fix')">✔ Helyesírás és nyelvtan javítása</button>
-  <button onclick="runAiTextAction('clarify')">💡 Érthetőbbé tétel</button>
-  <button onclick="runAiTextAction('shorten')">✂ Tömörítés</button>
-  <button onclick="runAiTextAction('expand')">➕ Bővítés, részletesebb leírás</button>
-  <button onclick="runAiTextAction('steps')">1. Számozott lépésekké alakítás</button>
-  <button onclick="runAiTextAction('formal')">🎩 Egységes, magázó hangnem</button>
-  <button onclick="runAiTextAction('informal')">🙂 Egységes, tegező hangnem</button>
-  <div class="dl-menu-sep"></div>
-  <button onclick="runAiTextAction('custom')">✍ Egyéni utasítás…</button>
-</div>
-
-<!-- AI szöveg-javaslat -->
-<div class="hp-modal-backdrop" id="ai-text-backdrop">
-  <div class="hp-modal conflict-modal" onclick="event.stopPropagation()">
-    <h3>✨ <span id="ai-text-title"></span></h3>
-    <div class="conflict-cols">
-      <div><label>Eredeti</label><textarea id="ai-text-original" readonly></textarea></div>
-      <div><label>Javaslat <span class="hint">(szerkeszthető)</span></label><textarea id="ai-text-result"></textarea></div>
-    </div>
-    <div style="display:flex;gap:8px;margin-top:14px">
-      <button class="btn" onclick="closeAiTextModal()" style="flex:1">Mégse</button>
-      <button class="btn" id="ai-text-insert" onclick="applyAiText('below')" style="flex:1">Beszúrás az eredeti alá</button>
-      <button class="btn primary" id="ai-text-accept" onclick="applyAiText('replace')" style="flex:1">✓ Csere</button>
-    </div>
-  </div>
-</div>
-
 <!-- Képszerkesztő -->
 <div class="hp-modal-backdrop" id="imged-backdrop">
   <div class="hp-modal imged-modal" onclick="event.stopPropagation()">
@@ -747,8 +642,6 @@
 <script src="js/loaders.js"></script>
 <script src="js/views.js"></script>
 <script src="js/auth.js"></script>
-<script src="js/ai.js"></script>
-<script src="js/aitext.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>
