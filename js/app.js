@@ -39,6 +39,9 @@
 //  • megosztott #view/… link → a publikált kézikönyv
 //  • az utoljára megnyitott Dokumentum → újra megnyílik (frissen a felhőből)
 //  • egyébként a Kezdőlap
+// Az állapotfeliratra kattintva ütközésnél újra megnyílik a döntési ablak.
+document.getElementById('status').addEventListener('click', () => { reopenPendingConflicts(); });
+
 async function initApp() {
   if (!window.CM) {
     document.body.innerHTML = '<p style="padding:40px;color:#fff;font-family:sans-serif">A szerkesztő komponens (vendor/codemirror.bundle.js) nem töltődött be — ellenőrizd, hogy a vendor mappa is fel van-e töltve.</p>';

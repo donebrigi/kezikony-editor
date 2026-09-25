@@ -11,9 +11,20 @@ const CLOUD_BUCKET = 'kezikonyv';
 // a RÉGI (pl. a dokumentum létrehozásakor feltöltött alapértelmezett) style.css-t adta
 // vissza a HTTP gyorsítótárából, hiába volt már felülírva. Minden GET kérést
 // gyorsítótár nélkül küldünk, és a feltöltésnél is max-age=0-t kérünk.
+//
+// HIBAJAVÍTÁS (hamis "ütközés"): a Supabase a fájlokat CDN-ről is kiszolgálhatja, és egy
+// felülírás után még akár ~60 másodpercig a RÉGI változatot adhatja vissza. Emiatt a
+// mentés előtti ellenőrzés a saját, pár másodperccel korábbi változatunkat "másik
+// változatnak" láthatta. Minden letöltés URL-jéhez egyedi paramétert fűzünk, így a CDN
+// sosem ad régi, gyorsítótárazott példányt.
 function noStoreFetch(input, init) {
   const method = ((init && init.method) || (input && input.method) || 'GET').toUpperCase();
-  if (method === 'GET') init = Object.assign({}, init, { cache: 'no-store' });
+  if (method === 'GET') {
+    init = Object.assign({}, init, { cache: 'no-store' });
+    if (typeof input === 'string' && input.includes('/storage/v1/object/')) {
+      input += (input.includes('?') ? '&' : '?') + 'cacheNonce=' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+    }
+  }
   return fetch(input, init);
 }
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {

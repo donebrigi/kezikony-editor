@@ -42,6 +42,7 @@ function enterEditorView() {
 }
 
 async function showHomeView() {
+  if (typeof isDesignPanelOpen === 'function' && isDesignPanelOpen()) await closeDesignPanel();
   if (state.uiView === 'editor' && hasUnsavedWork()) saveAllDirty({ quiet: true }); // kilépés előtt minden felmegy
   state.uiView = 'home';
   state.currentTopProject = null;
@@ -100,6 +101,7 @@ function renderHomeGrid() {
 }
 
 async function showProjectView(projectId) {
+  if (typeof isDesignPanelOpen === 'function' && isDesignPanelOpen()) await closeDesignPanel();
   if (state.uiView === 'editor' && hasUnsavedWork()) saveAllDirty({ quiet: true }); // kilépés előtt minden felmegy
   state.uiView = 'project';
   state.currentTopProject = projectId;

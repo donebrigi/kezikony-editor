@@ -1,4 +1,4 @@
-// ── ⚙ Beállítások ablak: Dokumentum / Megjelenés / Fejezetek másolása ────────
+// ── ⚙ Beállítások ablak: Dokumentum / Fejezetek másolása (a Megjelenés: designpanel.js) ────────
 
 // A szerkesztőn kívülre ejtett fájl ne nyissa meg a böngészőben (elhagyva az oldalt).
 document.addEventListener('dragover', e => { if (e.dataTransfer && [...e.dataTransfer.types].includes('Files')) e.preventDefault(); });
@@ -11,7 +11,6 @@ function openProjModal(tab = 'doc') {
 }
 
 async function closeProjModal() {
-  await resolveUnsavedCssOnClose();
   document.getElementById('proj-modal-backdrop').classList.remove('open');
 }
 
@@ -19,14 +18,13 @@ document.getElementById('proj-modal-backdrop').addEventListener('click', functio
   if (e.target === this) closeProjModal();
 });
 
-const MODAL_TABS = ['doc', 'css', 'copy'];
+const MODAL_TABS = ['doc', 'copy'];
 function switchModalTab(tab) {
   const idx = MODAL_TABS.indexOf(tab);
   if (idx === -1) return;
   document.querySelectorAll('#proj-modal .tab').forEach((t, i) => t.classList.toggle('active', i === idx));
   document.querySelectorAll('#proj-modal .tab-panel').forEach(p => p.classList.toggle('active', p.id === 'tab-' + tab));
   if (tab === 'doc') loadDocTab();
-  if (tab === 'css') loadCssEditor();
   if (tab === 'copy') loadCopyTab();
 }
 

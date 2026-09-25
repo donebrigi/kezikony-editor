@@ -16,7 +16,12 @@ let _conflictActive = null;
 function hasPendingConflicts() { return !!_conflictActive || _conflictQueue.length > 0; }
 
 function queueChapterConflict(proj, fn, remoteRaw) {
-  if (_conflictActive && _conflictActive.fn === fn) { _conflictActive.remoteRaw = remoteRaw; return; }
+  if (_conflictActive && _conflictActive.fn === fn) {
+    // Már erről a fejezetről kérdezünk — friss tartalommal (újra) megmutatjuk.
+    _conflictActive.remoteRaw = remoteRaw;
+    renderConflictDialog();
+    return;
+  }
   const existing = _conflictQueue.find(c => c.fn === fn);
   if (existing) existing.remoteRaw = remoteRaw;
   else _conflictQueue.push({ proj, fn, remoteRaw });
@@ -25,6 +30,10 @@ function queueChapterConflict(proj, fn, remoteRaw) {
 
 function showNextConflict() {
   _conflictActive = _conflictQueue.shift() || null;
+  renderConflictDialog();
+}
+
+function renderConflictDialog() {
   const backdrop = document.getElementById('conflict-modal-backdrop');
   if (!_conflictActive) { backdrop.classList.remove('open'); return; }
   const { proj, fn, remoteRaw } = _conflictActive;
@@ -56,15 +65,20 @@ function applyRemoteChapter(proj, fn, remoteRaw) {
 async function resolveConflict(choice) {
   const c = _conflictActive;
   if (!c) return;
+  // HIBAJAVÍTÁS: a döntés alatt már nincs "aktív" ütközés — ha közben újabb érkezik
+  // (pl. a kolléga tovább gépel), az rendesen, új ablakként jelenik meg.
+  _conflictActive = null;
   const { proj, fn, remoteRaw } = c;
   const f = proj.files[fn];
   document.getElementById('conflict-modal-backdrop').classList.remove('open');
 
   if (choice === 'mine') {
-    f.remoteRaw = remoteRaw; // "láttuk" a másikat — felülírjuk
+    f.remoteRaw = remoteRaw;
     f.conflict = false;
-    await saveChapter(proj, fn);
-    toast('✓ A te változatod mentve');
+    // Kifejezetten felülírást kértél: nincs újabb ellenőrzés (különben a kolléga
+    // közbeni automatikus mentése miatt a kérdés végtelenül ismétlődhetne).
+    const ok = await saveChapter(proj, fn, { force: true });
+    toast(ok ? '✓ A te változatod mentve' : '⚠ A mentés nem sikerült — próbáld újra a 💾 Mentés gombbal', ok ? 'ok' : 'err', ok ? 2500 : 5000);
   } else if (choice === 'theirs') {
     f.conflict = false;
     applyRemoteChapter(proj, fn, remoteRaw);
@@ -86,8 +100,26 @@ async function resolveConflict(choice) {
   }
   renderTree();
   schedulePreview();
-  showNextConflict();
-  if (!hasPendingConflicts()) scheduleAutosave();
+  if (!_conflictActive) showNextConflict();
+  if (!hasPendingConflicts()) { setStatus(''); scheduleAutosave(); }
+}
+
+// Ha egy fejezet ütközésre vár, de az ablak valamiért nem látszik: újra megnyitjuk.
+// (A 💾 Mentés gomb és a "⚠ Ütközés" állapotfelirat is ezt hívja.)
+async function reopenPendingConflicts() {
+  const proj = currentProj();
+  if (!proj) return false;
+  const pending = proj.fileOrder.filter(fn => proj.files[fn] && proj.files[fn].conflict);
+  if (!pending.length) return false;
+  if (_conflictActive) { renderConflictDialog(); return true; }
+  for (const fn of pending) {
+    if (_conflictQueue.some(c => c.fn === fn)) continue;
+    const remote = await cloudDownloadText(proj.cloudFolder + '/sections/' + fn);
+    if (remote == null) { proj.files[fn].conflict = false; continue; } // közben törölték → a mienk mehet
+    _conflictQueue.push({ proj, fn, remoteRaw: remote });
+  }
+  if (!_conflictActive) showNextConflict();
+  return true;
 }
 
 // config.json ütközés (szerkezet / cím): egyszerű kérdés.
@@ -110,7 +142,7 @@ async function refreshChapterFromCloud(proj, fn) {
   const f = proj.files[fn];
   if (!f || f.dirty || f.conflict || f.remoteRaw == null) return;
   const remote = await cloudDownloadText(proj.cloudFolder + '/sections/' + fn);
-  if (remote == null || remote === f.remoteRaw) return;
+  if (remote == null || remote === f.remoteRaw || isOwnVersion(f, remote)) return; // saját (esetleg késleltetett) változat
   if (f.dirty || currentProj() !== proj) return; // közben elkezdtek gépelni / elnavigáltak
   applyRemoteChapter(proj, fn, remote);
   renderTree();
