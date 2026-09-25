@@ -15,6 +15,7 @@ Nincs build lépés és nincs saját szerver: az `index.html` mellé a `css/`, `
 - [Ütközések (ha ketten szerkesztik)](#ütközések-ha-ketten-szerkesztik)
 - [Markdown szintaxis](#markdown-szintaxis)
 - [Fejezetek, csoportok, menü (bal oldali fa)](#fejezetek-csoportok-menü-bal-oldali-fa)
+- [Kezdőlap](#kezdőlap)
 - [Dokumentum beállításai](#dokumentum-beállításai)
 - [Megjelenés testreszabása](#megjelenés-testreszabása)
 - [Letöltés](#letöltés)
@@ -98,15 +99,16 @@ A szerkesztő egy leegyszerűsített markdown-változatot ért. Az eszköztár g
 |---|---|---|
 | Félkövér | `**szöveg**` | |
 | Dőlt | `*szöveg*` | |
-| Kiemelt szöveg | `==szöveg==` | színe a Megjelenés panelen külön állítható |
+| Kiemelt szöveg | `==szöveg==` | színe a projekt Megjelenés oldalán állítható |
 | Kód (inline) | `` `kód` `` | |
 | Címsor 1 | `# Cím` | HTML-ben `<h2>`, automatikusan kap egy hivatkozható azonosítót |
 | Címsor 2 | `## Cím` | HTML-ben `<h3>` |
 | Címsor 3 | `### Cím` | HTML-ben `<h4>` |
-| Címsor 4 | `#### Cím` | HTML-ben `<h5>` (a legfrissebb szint) |
+| Címsor 4 | `#### Cím` | HTML-ben `<h5>` |
+| Címsor 5 | `##### Cím` | HTML-ben `<h6>` (a legkisebb szint) |
 | Felsorolás | `- elem` | |
 | Számozott lista | `1. elem` | |
-| Kiemelt doboz | `> szöveg` | színe a Megjelenés panelen állítható |
+| Kiemelt doboz | `> szöveg` | színe a projekt Megjelenés oldalán állítható |
 | Link | `[szöveg](url)` | |
 | Kép | `![alt szöveg](images/…)` | beillesztéssel jön létre, lásd [Képek](#képek) |
 | Képek egymás alatt, közös keretben | `<!-- shot-stack -->` ... képek ... `<!-- /shot-stack -->` | |
@@ -156,7 +158,7 @@ Az eszköztár **🧩 Ikon** gombja egy kereshető ikonválasztót nyit meg (a [
 
 jelölést szúr be a szövegbe (pl. `:house:`), ami egy valódi, az oldalba ágyazott SVG-vé alakul mind az előnézetben, mind a végleges buildelt oldalon (nem egy külső képfájl — ezért lehet a megjelenését CSS-ből, azaz a Megjelenés panelről is szabályozni).
 
-Az ikonok kinézete a Megjelenés panelen, az "Ikonok" mezőknél állítható: szín, vastagság (px), valamint szélesség és magasság (px) külön-külön. Alapból a szöveg színét és a Lucide gyári kb. 2px-es vonalvastagságát/20px-es méretét örökli, amíg felül nem írod.
+Az ikonok kinézete a projekt Megjelenés oldalán, az "Ikonok" mezőknél állítható: szín, méret és vonalvastagság. Alapból a szöveg színét, 20px méretet és 2px vonalvastagságot kapnak.
 
 **Fontos:** az ikonok (és az ikonlista is) egy külső CDN-ről (unpkg.com) töltődnek be futásidőben — ehhez internetkapcsolat kell, ugyanúgy, mint a Google Fonts betűtípusokhoz. Ha valaki teljesen internet nélkül nyitja meg a végleges oldalt, az ikonok helyén üres hely marad.
 
@@ -185,28 +187,38 @@ A **⚙ Beállítások** ablak fülei:
 
 ## Megjelenés testreszabása
 
-A topbar **🎨 Megjelenés** gombja egy oldalpanelt nyit: a panel a fa és a szerkesztő helyére kerül, az előnézet pedig közben a **teljes kézikönyvet** mutatja mellette (menüvel, borítóval), így minden módosítás hatása rögtön az egész oldalon látszik. A **✕ Bezárás** (vagy újra a 🎨 gomb) visszaállítja a szerkesztőt és a korábbi előnézeti módot; ha van nem mentett módosítás, előtte rákérdez.
+A megjelenés **projekt szinten** állítható: egy projekt minden dokumentuma ugyanazt a témát kapja. Megnyitás:
 
-A panelen két nézet van:
+- a Kezdőlapon a projekt kártyáján a **🎨 Megjelenés** gombbal,
+- a projekt oldalán a **🎨 Megjelenés** gombbal,
+- vagy a szerkesztőben a topbar **🎨 Megjelenés** gombjával (a megnyitott dokumentum projektjéé).
 
-- **🎨 Egyszerű** (alapértelmezett): magyar nyelvű, egyenként állítható mezők — nincs szükség CSS-tudásra.
-  - Kiemelő szín (linkek, címek, gombok)
-  - Oldal háttérszíne
-  - Kártya / panel háttere
-  - Szöveg színe
-  - Másodlagos szöveg színe
-  - Szegély színe
-  - Kiemelt doboz háttere és szövege (a `>` jellel kezdett rész)
-  - Kiemelt szöveg színe (a `==szöveg==` jelöléssel formázott résznek)
-  - Sarok lekerekítés
-  - Betűtípus stílus (5 előre elkészített páros: Modern, Barátságos, Klasszikus, Letisztult, Gépelt)
-  - Betűméretek külön-külön: Bekezdés, Címsor 1–5
-  - Címsor színek külön-külön: Címsor 1–5 mindegyike saját színt kaphat (alapból a Kiemelő színt / a Címsor 4–5 a szöveg színét örökli, amíg felül nem írod)
-- **&lt;/&gt; Kód (haladó)**: a nyers CSS közvetlen szerkesztése azoknak, akik szeretnék teljesen kézben tartani a stílust. Az Egyszerű nézet módosításai nem írják felül a kézzel írt egyedi CSS-t — egy külön, jól elkülöníthető blokként kerülnek a végére.
+Az oldalon balra a beállítások, jobbra egy **minta oldal** látszik, amin minden formázás megtalálható (címsorok, bekezdés, kiemelések, kiemelt doboz, listák, kép, táblázat, harmonika, kód, ikonok, menü, kereső) — minden módosítás rögtön látszik rajta. A **✓ Mentés** után a projekt összes dokumentuma az új megjelenést kapja.
 
-A módosítások élőben látszanak az előnézeten, de csak a **✓ Mentés** gombbal kerülnek a felhőbe (`style.css`). Amíg van nem mentett módosítás, a gombok mellett "● Nem mentett módosítás" felirat látszik, és a panel bezárásakor a szerkesztő rákérdez, mented-e.
+**Állítható:**
 
----
+- Alapszínek: kiemelő szín, oldal háttere, kártyák háttere, szöveg, másodlagos szöveg, szegélyek
+- Kiemelések: kiemelt doboz színe és szövege (`>`), kiemelt szöveg (`==…==`)
+- Címsorok színe (Címsor 1–5)
+- Ikonok: szín, méret, vonalvastagság
+- Bekezdés betűmérete
+
+Az **auto** jelölésű mezők nem kapnak külön színt, hanem igazodnak a kiemelő színhez (vagy a szöveg színéhez) — ha a kiemelő színt átállítod, ezek vele együtt változnak. Saját szín megadása után az **auto** gombbal lehet visszaállítani.
+
+**Egységes, nem állítható (kódból jön, minden projektben azonos):**
+
+- Betűtípus: Inter (szöveg) + Lexend (címsorok)
+- Címsorméretek: Címsor 1–5 (`#` … `#####`) = 32 / 28 / 24 / 20 / 18 px
+- Sarkok lekerekítése: 14 px
+
+Ha egy projektnek még nincs közös megjelenése, a dokumentumai a korábbi, saját színeikkel jelennek meg; a Megjelenés oldal megnyitásakor az első ilyen dokumentum színeiből indul a beállítás.
+
+## Kezdőlap
+
+A Kezdőlap tetején a nézetválasztóval lehet váltani:
+
+- **▦ Projektek:** a projektek kártyái (megnyitás, szerkesztés, megjelenés, törlés).
+- **☰ Dokumentumok:** az összes dokumentum egy táblázatban — **Cím**, **Projekt** és a funkciógombok (megnyitás, átnevezés, áthelyezés, HTML letöltés, link másolása, törlés). A kereső mindkét nézetben szűr; a választott nézetet a böngésző megjegyzi.
 
 ## Fejezetek, csoportok, menü (bal oldali fa)
 
@@ -244,9 +256,9 @@ A fejezetekbe ágyazott képek importáláskor automatikusan külön fájlba ker
 kezikonyv (Supabase Storage bucket)
 └── <projekt-azonosító>/
     ├── _project.json          # projekt neve, leírása, színe, ikonja
+    ├── _theme.json            # a projekt megjelenése (minden dokumentumára érvényes)
     └── <dokumentum-azonosító>/
         ├── config.json        # cím, leírás, menü (nav_groups), fejezetsorrend (fileOrder)
-        ├── style.css          # megjelenés
         ├── logo.txt           # logó (base64 kép), opcionális
         ├── published.html     # a legutóbb letöltött (publikált) HTML
         ├── images/            # képek (tartalom-hash névvel)
@@ -272,7 +284,6 @@ title: Telepítés
 - Az ütközésjelzés mentéskor lép működésbe; azt nem mutatja élőben, ha valaki épp ugyanazt a fejezetet szerkeszti.
 - Egy kolléga által közben létrehozott új fejezet a dokumentum újranyitásakor jelenik meg.
 - Az ikonok és a betűtípusok külső CDN-ről töltődnek, ezekhez internet kell a kész oldalon is.
-- A "Címsor 1" mező a Megjelenés panelen a borító (első fejezet) fejlécére vonatkozik — a markdown `#` szintje `Címsor 2`-nek megfelelő HTML-elemet hoz létre.
 
 ## Kód szerkezete
 
@@ -294,8 +305,8 @@ js/
   persistence.js        # mentések (automatikus és kézi)
   conflicts.js          # ütközésjelzés, ha ketten szerkesztik ugyanazt
   legacy-import.js      # régi, böngészőben tárolt helyi projektek olvasása (importhoz)
-  design.js             # Megjelenés beállítások (egyszerű + kód nézet, piszkozat/mentés)
-  designpanel.js        # a Megjelenés oldalpanel megnyitása/bezárása
+  theme.js              # projekt téma: rögzített tipográfia + színek → CSS, tárolás
+  themeview.js          # Megjelenés oldal (beállítások + minta oldal)
   preview.js            # élő előnézet, HTML összeállítás, menü
   previewsync.js        # görgetés-szinkron, kattintás az előnézetben
   build.js              # HTML letöltés, nyomtatás/PDF, ZIP letöltés
@@ -313,6 +324,14 @@ js/
 A fájlok sima (nem ES-modul) szkriptek; a betöltési sorrend az `index.html` alján van.
 
 ## Változásnapló
+
+### 4.0 — Projekt-szintű megjelenés, dokumentumlista
+
+- A megjelenés **projekt szinten** állítható (`_theme.json`), a projekt minden dokumentuma ezt kapja. Új, teljes oldalas **Megjelenés** nézet: balra a beállítások, jobbra egy minta oldal az összes formázással.
+- **Egységesítve, kódból:** betűtípus (Inter + Lexend), címsorméretek (32/28/24/20/18 px), sarkok (14 px). A haladó CSS-kód szerkesztő és a dokumentumonkénti `style.css` megszűnt.
+- A címsorok, a kiemelt doboz és a kiemelt szöveg színe alapból a kiemelő színt követi (**auto**), amíg külön meg nem adod.
+- Új **Címsor 5** szint (`#####`).
+- Kezdőlap: **nézetválasztó** (projektek / dokumentumok táblázata).
 
 ### 3.2.1 — Ütközés-javítás
 

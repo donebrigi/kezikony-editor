@@ -18,7 +18,7 @@
   <div id="topbar-editor-tools-right" style="display:none">
     <div class="sep"></div>
     <button class="btn" onclick="openProjModal('doc')" title="A dokumentum címe, logója, fejezetek másolása" style="padding:5px 10px;font-size:13px">⚙ Beállítások</button>
-    <button class="btn" id="btn-design" onclick="toggleDesignPanel()" title="Megjelenés: színek, betűk, méretek — oldalpanelben, a teljes előnézet mellett" style="padding:5px 10px;font-size:13px">🎨 Megjelenés</button>
+    <button class="btn" id="btn-design" onclick="openThemeForCurrentDoc()" title="A projekt megjelenése (színek) — a projekt minden dokumentumára érvényes" style="padding:5px 10px;font-size:13px">🎨 Megjelenés</button>
     <button class="btn" onclick="saveCurrentFile()" title="Minden módosítás mentése most (Ctrl+S) — egyébként gépelés után automatikusan ment">💾 Mentés</button>
     <div class="dl-menu-wrap">
       <button class="btn primary" onclick="toggleDownloadMenu(event)" id="btn-download" title="A kész HTML letöltése — felhő Dokumentumnál emellett a publikált oldal is frissül">⬇ Letöltés</button>
@@ -113,206 +113,6 @@
     </div>
     <div id="editor-wrap">
       <div id="editor-host"></div>
-    </div>
-  </div>
-
-  <!-- Megjelenés oldalpanel: megnyitva a fa és a szerkesztő helyére kerül, a teljes előnézet mellé -->
-  <div id="design-panel" style="display:none">
-    <div id="design-panel-header">
-      <span>🎨 Megjelenés — <strong id="css-proj-name"></strong></span>
-      <button class="btn" onclick="closeDesignPanel()" title="Vissza a szerkesztőhöz">✕ Bezárás</button>
-    </div>
-    <div id="design-panel-body">
-      <div class="css-mode-toggle">
-        <button class="css-mode-btn active" id="css-mode-simple-btn" type="button" onclick="setCssMode('simple')">🎨 Egyszerű</button>
-        <button class="css-mode-btn" id="css-mode-code-btn" type="button" onclick="setCssMode('code')">&lt;/&gt; Kód (haladó)</button>
-      </div>
-
-      <!-- Egyszerű, magyar nyelvű beállító felület -->
-      <div id="css-simple-panel">
-        <div class="design-field">
-          <label>Kiemelő szín <span class="hint">(linkek, címek, gombok)</span></label>
-          <div class="color-row">
-            <input type="color" id="df-accent" oninput="onDesignFieldChange()"/>
-            <input type="text" class="hex-input" id="df-accent-hex" oninput="onHexChange('accent', this.value)"/>
-          </div>
-        </div>
-        <div class="design-field">
-          <label>Oldal háttérszíne</label>
-          <div class="color-row">
-            <input type="color" id="df-bg" oninput="onDesignFieldChange()"/>
-            <input type="text" class="hex-input" id="df-bg-hex" oninput="onHexChange('bg', this.value)"/>
-          </div>
-        </div>
-        <div class="design-field">
-          <label>Kártya / panel háttere</label>
-          <div class="color-row">
-            <input type="color" id="df-card" oninput="onDesignFieldChange()"/>
-            <input type="text" class="hex-input" id="df-card-hex" oninput="onHexChange('card', this.value)"/>
-          </div>
-        </div>
-        <div class="design-field">
-          <label>Szöveg színe</label>
-          <div class="color-row">
-            <input type="color" id="df-text" oninput="onDesignFieldChange()"/>
-            <input type="text" class="hex-input" id="df-text-hex" oninput="onHexChange('text', this.value)"/>
-          </div>
-        </div>
-        <div class="design-field">
-          <label>Másodlagos szöveg színe <span class="hint">(leírások, meta infó)</span></label>
-          <div class="color-row">
-            <input type="color" id="df-muted" oninput="onDesignFieldChange()"/>
-            <input type="text" class="hex-input" id="df-muted-hex" oninput="onHexChange('muted', this.value)"/>
-          </div>
-        </div>
-        <div class="design-field">
-          <label>Szegély színe</label>
-          <div class="color-row">
-            <input type="color" id="df-border" oninput="onDesignFieldChange()"/>
-            <input type="text" class="hex-input" id="df-border-hex" oninput="onHexChange('border', this.value)"/>
-          </div>
-        </div>
-        <div class="design-field">
-          <label>Kiemelt doboz háttere <span class="hint">(a &gt; jellel kezdett megjegyzés)</span></label>
-          <div class="color-row">
-            <input type="color" id="df-callout-bg" oninput="onDesignFieldChange()"/>
-            <input type="text" class="hex-input" id="df-callout-bg-hex" oninput="onHexChange('callout-bg', this.value)"/>
-          </div>
-        </div>
-        <div class="design-field">
-          <label>Kiemelt doboz szövege</label>
-          <div class="color-row">
-            <input type="color" id="df-callout-text" oninput="onDesignFieldChange()"/>
-            <input type="text" class="hex-input" id="df-callout-text-hex" oninput="onHexChange('callout-text', this.value)"/>
-          </div>
-        </div>
-        <div class="design-field">
-          <label>Kiemelt szöveg színe <span class="hint">(== szöveg == jelöléssel a szövegben)</span></label>
-          <div class="color-row">
-            <input type="color" id="df-hl-color" oninput="onDesignFieldChange()"/>
-            <input type="text" class="hex-input" id="df-hl-color-hex" oninput="onHexChange('hl-color', this.value)"/>
-          </div>
-        </div>
-        <div class="design-field">
-          <label>Sarok lekerekítés <span class="hint" id="df-radius-val">14px</span></label>
-          <input type="range" id="df-radius" min="0" max="28" step="1" oninput="onDesignFieldChange()" style="width:100%"/>
-        </div>
-        <div class="design-field">
-          <label>Betűtípus stílus</label>
-          <select id="df-fontpair" onchange="onDesignFieldChange()">
-            <option value="modern">Modern (Inter + Lexend)</option>
-            <option value="friendly">Barátságos (Nunito + Poppins)</option>
-            <option value="classic">Klasszikus (Georgia)</option>
-            <option value="clean">Letisztult (rendszer betűtípus)</option>
-            <option value="mono">Gépelt (monospace)</option>
-          </select>
-        </div>
-        <div class="design-field">
-          <label>Betűméretek <span class="hint">(px)</span></label>
-          <div class="fontsize-grid">
-            <div class="fontsize-item">
-              <label for="df-fs-p">Bekezdés</label>
-              <input type="number" id="df-fs-p" min="10" max="28" step="1" oninput="onDesignFieldChange()"/>
-            </div>
-            <div class="fontsize-item">
-              <label for="df-fs-h1">Címsor 1 (H1)</label>
-              <input type="number" id="df-fs-h1" min="14" max="48" step="1" oninput="onDesignFieldChange()"/>
-            </div>
-            <div class="fontsize-item">
-              <label for="df-fs-h2">Címsor 2 (H2)</label>
-              <input type="number" id="df-fs-h2" min="12" max="40" step="1" oninput="onDesignFieldChange()"/>
-            </div>
-            <div class="fontsize-item">
-              <label for="df-fs-h3">Címsor 3 (H3)</label>
-              <input type="number" id="df-fs-h3" min="12" max="32" step="1" oninput="onDesignFieldChange()"/>
-            </div>
-            <div class="fontsize-item">
-              <label for="df-fs-h4">Címsor 4 (H4)</label>
-              <input type="number" id="df-fs-h4" min="10" max="28" step="1" oninput="onDesignFieldChange()"/>
-            </div>
-            <div class="fontsize-item">
-              <label for="df-fs-h5">Címsor 5 (H5)</label>
-              <input type="number" id="df-fs-h5" min="10" max="24" step="1" oninput="onDesignFieldChange()"/>
-            </div>
-          </div>
-        </div>
-        <div class="design-field">
-          <label>Címsor színek <span class="hint">(szintenként külön állítható)</span></label>
-          <div class="fontsize-grid">
-            <div class="fontsize-item">
-              <label for="df-h1-color">Címsor 1 (H1)</label>
-              <div class="color-row">
-                <input type="color" id="df-h1-color" oninput="onDesignFieldChange()"/>
-                <input type="text" class="hex-input" id="df-h1-color-hex" oninput="onHexChange('h1-color', this.value)"/>
-              </div>
-            </div>
-            <div class="fontsize-item">
-              <label for="df-h2-color">Címsor 2 (H2)</label>
-              <div class="color-row">
-                <input type="color" id="df-h2-color" oninput="onDesignFieldChange()"/>
-                <input type="text" class="hex-input" id="df-h2-color-hex" oninput="onHexChange('h2-color', this.value)"/>
-              </div>
-            </div>
-            <div class="fontsize-item">
-              <label for="df-h3-color">Címsor 3 (H3)</label>
-              <div class="color-row">
-                <input type="color" id="df-h3-color" oninput="onDesignFieldChange()"/>
-                <input type="text" class="hex-input" id="df-h3-color-hex" oninput="onHexChange('h3-color', this.value)"/>
-              </div>
-            </div>
-            <div class="fontsize-item">
-              <label for="df-h4-color">Címsor 4 (H4)</label>
-              <div class="color-row">
-                <input type="color" id="df-h4-color" oninput="onDesignFieldChange()"/>
-                <input type="text" class="hex-input" id="df-h4-color-hex" oninput="onHexChange('h4-color', this.value)"/>
-              </div>
-            </div>
-            <div class="fontsize-item">
-              <label for="df-h5-color">Címsor 5 (H5)</label>
-              <div class="color-row">
-                <input type="color" id="df-h5-color" oninput="onDesignFieldChange()"/>
-                <input type="text" class="hex-input" id="df-h5-color-hex" oninput="onHexChange('h5-color', this.value)"/>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="design-field">
-          <label>Ikonok <span class="hint">(a :ikon-nev: jelöléssel beszúrt Lucide ikonok)</span></label>
-          <div class="color-row">
-            <input type="color" id="df-icon-color" oninput="onDesignFieldChange()"/>
-            <input type="text" class="hex-input" id="df-icon-color-hex" oninput="onHexChange('icon-color', this.value)"/>
-          </div>
-          <div class="fontsize-grid" style="margin-top:8px">
-            <div class="fontsize-item">
-              <label for="df-icon-stroke-width">Vastagság (px)</label>
-              <input type="number" id="df-icon-stroke-width" min="0.5" max="4" step="0.25" oninput="onDesignFieldChange()"/>
-            </div>
-            <div class="fontsize-item">
-              <label for="df-icon-width">Szélesség (px)</label>
-              <input type="number" id="df-icon-width" min="8" max="96" step="1" oninput="onDesignFieldChange()"/>
-            </div>
-            <div class="fontsize-item">
-              <label for="df-icon-height">Magasság (px)</label>
-              <input type="number" id="df-icon-height" min="8" max="96" step="1" oninput="onDesignFieldChange()"/>
-            </div>
-          </div>
-        </div>
-        <div class="css-actions">
-          <span class="hint css-dirty-hint">A módosítások élőben frissítik az előnézetet.</span>
-          <button class="btn" onclick="resetToDefaultCss()" style="font-size:12px">↺ Alapértelmezett</button>
-          <button class="btn primary" onclick="applyDesignForm(true)" style="font-size:12px">✓ Mentés</button>
-        </div>
-      </div>
-
-      <!-- Haladó, nyers CSS kód szerkesztő -->
-      <div id="css-code-panel" style="display:none">
-        <textarea id="proj-css-editor" spellcheck="false" placeholder="/* Projekt CSS... */"></textarea>
-        <div class="css-actions">
-          <span class="hint css-dirty-hint">Gépelés közben az előnézet élőben frissül.</span>
-          <button class="btn" onclick="resetToDefaultCss()" style="font-size:12px">↺ Alapértelmezett</button>
-          <button class="btn primary" onclick="saveCss()" style="font-size:12px">✓ Mentés</button>
-        </div>
-      </div>
     </div>
   </div>
 
@@ -476,12 +276,39 @@
   <div id="home-page">
     <div class="hp-header-row">
       <div>
-        <h1>Projektek</h1>
+        <h1 id="home-title">Projektek</h1>
         <div class="sub">Egy projekthez több dokumentum (kézikönyv) is tartozhat — mindenki, aki be tud jelentkezni, mindent lát.</div>
       </div>
-      <input type="text" id="home-search" placeholder="🔍 Keresés projektek között..." oninput="renderHomeGrid()" />
+      <div class="hp-header-tools">
+        <div id="home-view-toggle" class="view-toggle" title="Nézet">
+          <button data-mode="cards" onclick="setHomeViewMode('cards')">▦ Projektek</button>
+          <button data-mode="list" onclick="setHomeViewMode('list')">☰ Dokumentumok</button>
+        </div>
+        <input type="text" id="home-search" placeholder="🔍 Keresés projektek között..." oninput="renderHomeGrid()" />
+      </div>
     </div>
     <div class="hp-grid" id="home-grid"></div>
+    <div id="home-list" style="display:none"></div>
+  </div>
+</div>
+
+<!-- Megjelenés (projekt téma): beállítások + minta oldal -->
+<div id="view-theme">
+  <div class="theme-head">
+    <div>
+      <h1>🎨 Megjelenés — <span id="theme-project-name"></span></h1>
+      <div class="sub">A projekt <b>minden dokumentumára</b> érvényes. Jobbra egy minta oldal mutatja az összes formázást.</div>
+    </div>
+    <div class="theme-head-actions">
+      <span id="theme-dirty" class="hint"></span>
+      <button class="btn" onclick="resetThemeView()">↺ Alapértelmezett</button>
+      <button class="btn" onclick="closeThemeView()">✕ Bezárás</button>
+      <button class="btn primary" onclick="saveThemeView()">✓ Mentés</button>
+    </div>
+  </div>
+  <div class="theme-body">
+    <div class="theme-form" id="theme-form-fields"></div>
+    <div class="theme-preview"><iframe id="theme-preview-frame" title="Minta oldal"></iframe></div>
   </div>
 </div>
 
@@ -493,6 +320,7 @@
         <h1 id="project-page-title">—</h1>
         <div class="sub" id="project-page-desc"></div>
       </div>
+      <button class="btn" onclick="openThemeView(state.currentTopProject, 'project')" title="A projekt összes dokumentumának megjelenése (színek)">🎨 Megjelenés</button>
       <button class="btn" onclick="openImportModal()" title="Egy projektmappa, egy korábban letöltött ZIP kicsomagolt mappája, vagy egy régi, böngészőben tárolt projekt felvétele ide, dokumentumként">📤 Importálás</button>
     </div>
     <div class="hp-grid" id="project-doc-grid"></div>
@@ -632,10 +460,10 @@
 <script src="js/persistence.js"></script>
 <script src="js/conflicts.js"></script>
 <script src="js/legacy-import.js"></script>
-<script src="js/design.js"></script>
-<script src="js/designpanel.js"></script>
+<script src="js/theme.js"></script>
 <script src="js/preview.js"></script>
 <script src="js/previewsync.js"></script>
+<script src="js/themeview.js"></script>
 <script src="js/build.js"></script>
 <script src="js/links.js"></script>
 <script src="js/editor.js"></script>
