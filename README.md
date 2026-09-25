@@ -106,7 +106,9 @@ Az eszköztár **🧩 Ikon** gombja egy kereshető ikonválasztót nyit meg (a [
 :ikon-nev:
 ```
 
-jelölést szúr be a szövegbe (pl. `:house:`), ami a környező szöveg méretéhez igazodó, beágyazott ikonná alakul mind az előnézetben, mind a végleges buildelt oldalon.
+jelölést szúr be a szövegbe (pl. `:house:`), ami egy valódi, az oldalba ágyazott SVG-vé alakul mind az előnézetben, mind a végleges buildelt oldalon (nem egy külső képfájl — ezért lehet a megjelenését CSS-ből, azaz a Megjelenés fülről is szabályozni).
+
+Az ikonok kinézete a Megjelenés fülön, az "Ikonok" mezőknél állítható: szín, vastagság (px), valamint szélesség és magasság (px) külön-külön. Alapból a szöveg színét és a Lucide gyári kb. 2px-es vonalvastagságát/20px-es méretét örökli, amíg felül nem írod.
 
 **Fontos:** az ikonok (és az ikonlista is) egy külső CDN-ről (unpkg.com) töltődnek be futásidőben — ehhez internetkapcsolat kell, ugyanúgy, mint a Google Fonts betűtípusokhoz. Ha valaki teljesen internet nélkül nyitja meg a végleges oldalt, az ikonok helyén üres hely marad.
 
