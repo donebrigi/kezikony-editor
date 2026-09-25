@@ -18,8 +18,8 @@
   --mono: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', ui-monospace, monospace;
   --sans: 'DM Sans', system-ui, sans-serif;
   --radius: 8px;
-  --sidebar-w: 220px;
-  --editor-w: 420px;
+  --sidebar-w: 270px;
+  --editor-w: 540px;
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html, body { height: 100%; overflow: hidden; }
@@ -115,31 +115,7 @@ body { font-family: var(--sans); background: var(--bg); color: var(--text); disp
   text-transform: uppercase; letter-spacing: .08em;
   display: flex; align-items: center; gap: 6px;
 }
-#file-list { flex: 1; overflow-y: auto; padding: 6px 0; }
-.file-item {
-  padding: 7px 14px 7px 28px; font-size: 13px; cursor: pointer;
-  color: var(--text2); position: relative;
-  border-left: 2px solid transparent;
-  transition: all .1s;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
-.file-item:hover { background: var(--bg3); color: var(--text); }
-.file-item.active {
-  background: var(--accent-soft); color: var(--accent2);
-  border-left-color: var(--accent);
-}
-.file-item .num {
-  position: absolute; left: 10px;
-  font-size: 10px; color: var(--text3); font-family: var(--mono);
-}
-.file-item.unsaved::after { content: '●'; position: absolute; right: 10px; color: var(--amber); font-size: 10px; }
-#drop-zone {
-  padding: 16px 12px; text-align: center; font-size: 12px; color: var(--text3);
-  border-top: 1px solid var(--border);
-  cursor: pointer; transition: all .2s;
-}
-#drop-zone:hover, #drop-zone.drag-over { color: var(--accent2); background: var(--accent-soft); }
-#drop-zone .icon { font-size: 20px; margin-bottom: 4px; }
+#file-list { flex: 1; overflow-y: auto; padding: 6px 0 20px; }
 
 /* ── Editor ── */
 #editor-pane {
@@ -155,45 +131,9 @@ body { font-family: var(--sans); background: var(--bg); color: var(--text); disp
   font-size: 12px; color: var(--text3); background: var(--bg2);
   display: flex; align-items: center; gap: 8px;
 }
-#editor-filename { font-family: var(--mono); color: var(--text2); font-size: 12px; }
-#editor-header .spacer { flex:1; }
-#editor-wrap { flex: 1; overflow: hidden; position: relative; }
-#editor {
-  width: 100%; height: 100%;
-  background: transparent; border: none; outline: none; resize: none;
-  color: var(--text); font-family: var(--mono); font-size: 13px; line-height: 1.65;
-  padding: 16px; tab-size: 2;
-  /* A szerkesztőben a hosszú sorok (pl. egy hosszú mondat vagy egy beágyazott base64
-     kép data-URL-je) az oldal szélességéhez törnek, nem kell miattuk oldalra
-     görgetni — ez KIZÁRÓLAG a szerkesztő nézetét érinti, a mentett .md fájlban és a
-     generált HTML-ben nem kerül be semmilyen új sortörés. */
-  white-space: pre-wrap;
-  overflow-wrap: break-word;
-  overflow-x: hidden;
-}
-/* Line numbers overlay */
-#line-nums {
-  position: absolute; top: 0; left: 0; bottom: 0;
-  width: 36px; padding: 16px 0;
-  font-family: var(--mono); font-size: 13px; line-height: 1.65;
-  color: var(--text3); text-align: right;
-  pointer-events: none; overflow: hidden;
-  background: var(--bg2); border-right: 1px solid var(--border);
-  user-select: none;
-}
-#line-nums.visible ~ #editor { padding-left: 52px; }
-#line-nums > div { box-sizing: border-box; padding-right: 8px; overflow: hidden; }
-/* Láthatatlan "tükör" a sorszám-magasságok kiszámításához: ugyanazzal a betűtípussal,
-   mérettel és sortöréssel jeleníti meg (off-screen) az egyes sorok szövegét, mint maga
-   a #editor — így minden sorszám pontosan annyi magas lesz, ahány vizuális sorra
-   ténylegesen törik a hozzá tartozó szövegsor (lásd updateLineNums()). */
-#line-nums-mirror {
-  position: absolute; visibility: hidden; height: auto; top: -9999px; left: -9999px;
-  box-sizing: content-box;
-  font-family: var(--mono); font-size: 13px; line-height: 1.65; tab-size: 2;
-  white-space: pre-wrap; overflow-wrap: break-word;
-}
-#line-nums-mirror > div { min-height: 1.65em; }
+#editor-wrap { flex: 1; overflow: hidden; position: relative; display: flex; }
+#editor-host { flex: 1; min-width: 0; display: flex; }
+#editor-host .cm-editor { flex: 1; height: 100%; }
 
 /* ── Preview ── */
 #preview-pane {
@@ -275,42 +215,7 @@ body { font-family: var(--sans); background: var(--bg); color: var(--text); disp
 }
 #resize-handle:hover, #resize-handle.dragging { background:var(--accent); }
 
-/* ── Image drop overlay ── */
-#img-drop-overlay {
-  display: none;
-  position: absolute; inset: 0;
-  background: rgba(124,106,247,0.18);
-  border: 2px dashed var(--accent);
-  border-radius: var(--radius);
-  z-index: 20;
-  align-items: center; justify-content: center;
-  pointer-events: none;
-}
-#img-drop-overlay.active { display: flex; }
-#img-drop-msg {
-  background: var(--bg3); border: 1px solid var(--accent);
-  color: var(--accent2); padding: 12px 24px; border-radius: var(--radius);
-  font-size: 15px; font-weight: 600;
-}
-#editor-wrap.drag-active { outline: 2px dashed var(--accent); outline-offset: -2px; }
-.file-item { position: relative; display: flex; align-items: center; gap: 0; }
-.file-title { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.file-actions { display: none; gap: 2px; flex-shrink: 0; margin-left: 4px; }
-.file-item:hover .file-actions { display: flex; }
-.file-item.active .file-actions { display: flex; }
-.file-act-btn {
-  background: none; border: none; cursor: pointer; padding: 2px 4px;
-  border-radius: 4px; font-size: 11px; color: var(--text3); line-height: 1;
-  transition: all .1s;
-}
-.file-act-btn:hover { background: var(--bg4); color: var(--text); }
-.file-act-btn.del:hover { color: var(--red); }
-/* Rename inline input */
-.file-rename-input {
-  flex: 1; background: var(--bg); border: 1px solid var(--accent);
-  color: var(--text); padding: 2px 6px; border-radius: 4px;
-  font-size: 12px; font-family: var(--sans); min-width: 0;
-}
+
 
 /* ── Projekt modal ── */
 #proj-modal-backdrop {
@@ -441,10 +346,6 @@ body { font-family: var(--sans); background: var(--bg); color: var(--text); disp
   color:var(--text); border-radius:var(--radius); font-size:13px; flex:1;
 }
 
-/* Drag handle in sidebar */
-.file-item { cursor:grab; }
-.file-item.dragging { opacity:0.4; }
-.file-item.drag-over-item { border-left-color:var(--accent) !important; background:var(--accent-soft) !important; }
 
 #proj-modal-close {
   margin-top:16px; width:100%; padding:8px;
@@ -725,6 +626,132 @@ body { font-family: var(--sans); background: var(--bg); color: var(--text); disp
   color:var(--text); font-size:13px; box-sizing:border-box;
 }
 #pw-error { color:var(--red); font-size:12px; min-height:14px; }
-
 /* Megjelenés fül: nem mentett módosítás jelzése */
 .css-dirty-hint.unsaved { color: var(--yellow, #fbbf24); font-weight: 600; }
+
+/* ══ Bal oldali fa ══════════════════════════════════════════════════════════ */
+#sidebar-header { text-transform: none; letter-spacing: 0; font-size: 12px; }
+#sidebar-header > span:first-child { text-transform: uppercase; letter-spacing: .08em; font-size: 11px; }
+.sidebar-add-btn {
+  background: var(--bg3); border: 1px solid var(--border2); color: var(--text2);
+  font-size: 11px; padding: 3px 7px; border-radius: 6px; cursor: pointer; white-space: nowrap;
+}
+.sidebar-add-btn:hover { color: var(--text); border-color: var(--accent); }
+.sidebar-add-btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+#sidebar-footer { padding: 8px 12px; font-size: 11px; color: var(--text3); border-top: 1px solid var(--border); line-height: 1.4; }
+.tree-empty { padding: 20px 14px; font-size: 12px; color: var(--text3); text-align: center; }
+.tree-container { padding: 1px 0; border-radius: 6px; min-height: 6px; }
+.tree-container.drop-into { background: var(--accent-soft); outline: 1px dashed var(--accent); }
+.tree-drop-hint { margin: 2px 12px 4px 22px; padding: 6px 8px; font-size: 11px; color: var(--text3); border: 1px dashed var(--border2); border-radius: 6px; }
+.tree-ch {
+  position: relative; display: flex; align-items: center; gap: 4px;
+  padding: 6px 8px 6px 14px; margin: 0 6px; font-size: 13px; color: var(--text2);
+  border-radius: 6px; cursor: pointer; user-select: none;
+}
+.tree-group-body .tree-ch { padding-left: 26px; }
+.tree-subgroup .tree-ch { padding-left: 38px; }
+.tree-ch:hover { background: var(--bg3); color: var(--text); }
+.tree-ch.active { background: var(--accent-soft); color: var(--accent2); font-weight: 600; }
+.tree-ch.unsaved .tree-ch-title::after { content: ' ●'; color: var(--amber); font-size: 10px; }
+.tree-ch.dragging, .tree-group-head.dragging { opacity: .4; }
+.tree-ch.drop-before { box-shadow: inset 0 2px 0 var(--accent); }
+.tree-ch.drop-after { box-shadow: inset 0 -2px 0 var(--accent); }
+.tree-ch-title { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tree-actions { display: none; gap: 1px; flex-shrink: 0; }
+.tree-ch:hover .tree-actions, .tree-group-head:hover .tree-actions { display: flex; }
+.tree-btn {
+  background: none; border: none; cursor: pointer; padding: 2px 4px; border-radius: 4px;
+  font-size: 11px; color: var(--text3); line-height: 1;
+}
+.tree-btn:hover { background: var(--bg4); color: var(--text); }
+.tree-btn.del:hover { color: var(--red); }
+.tree-group { margin-top: 6px; }
+.tree-group-head {
+  display: flex; align-items: center; gap: 4px; margin: 0 6px; padding: 5px 8px 5px 4px;
+  font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase;
+  color: var(--text3); border-radius: 6px; cursor: grab; user-select: none;
+}
+.tree-group-head:hover { background: var(--bg3); color: var(--text2); }
+.tree-group-head.drop-into { background: var(--accent-soft); color: var(--accent2); outline: 1px dashed var(--accent); }
+.tree-group-head.drop-before { box-shadow: inset 0 2px 0 var(--accent); }
+.tree-group-head.drop-after { box-shadow: inset 0 -2px 0 var(--accent); }
+.tree-sub-head { margin-left: 18px; text-transform: none; letter-spacing: 0; font-size: 12px; font-weight: 600; }
+.tree-caret { width: 14px; text-align: center; cursor: pointer; font-size: 10px; flex-shrink: 0; }
+.tree-group-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tree-headings { margin: 1px 6px 4px; padding-left: 20px; }
+.tree-group-body .tree-headings { padding-left: 32px; }
+.tree-subgroup .tree-headings { padding-left: 44px; }
+.tree-heading {
+  font-size: 12px; color: var(--text3); padding: 3px 8px; border-left: 1px solid var(--border2);
+  cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.tree-heading:hover { color: var(--accent2); border-left-color: var(--accent); }
+.tree-heading.lvl2 { padding-left: 8px; }
+.tree-heading.lvl3 { padding-left: 18px; font-size: 11.5px; }
+.tree-heading.lvl4 { padding-left: 28px; font-size: 11px; }
+
+/* ══ Szerkesztő fejléc: cím + azonosító ═════════════════════════════════════ */
+#chapter-title {
+  flex: 1; min-width: 0; background: transparent; border: 1px solid transparent; border-radius: 6px;
+  color: var(--text); font-size: 15px; font-weight: 600; padding: 4px 8px;
+}
+#chapter-title:hover { border-color: var(--border2); }
+#chapter-title:focus { outline: none; border-color: var(--accent); background: var(--bg); }
+.chapter-id {
+  background: none; border: 1px solid transparent; color: var(--text3); font-family: var(--mono);
+  font-size: 11px; cursor: pointer; padding: 3px 6px; border-radius: 6px; white-space: nowrap;
+  max-width: 40%; overflow: hidden; text-overflow: ellipsis;
+}
+.chapter-id:hover { border-color: var(--border2); color: var(--text2); }
+.fmt-tip { margin-left: auto; font-size: 11px; color: var(--text3); white-space: nowrap; padding-right: 4px; }
+
+/* ══ CodeMirror téma ════════════════════════════════════════════════════════ */
+#editor-host .cm-editor { background: var(--bg); color: var(--text); font-size: 13.5px; }
+#editor-host .cm-editor.cm-focused { outline: none; }
+#editor-host .cm-scroller { font-family: var(--mono); line-height: 1.65; }
+#editor-host .cm-content { padding: 14px 0 120px; caret-color: var(--accent2); }
+#editor-host .cm-line { padding: 0 16px 0 10px; }
+#editor-host .cm-gutters { background: var(--bg2); color: var(--text3); border-right: 1px solid var(--border); }
+#editor-host .cm-activeLine { background: rgba(255,255,255,0.025); }
+#editor-host .cm-activeLineGutter { background: rgba(255,255,255,0.05); color: var(--text2); }
+#editor-host .cm-selectionBackground, #editor-host .cm-focused .cm-selectionBackground { background: rgba(124,106,247,0.35) !important; }
+#editor-host .cm-cursor { border-left-color: var(--accent2); }
+#editor-host .cm-placeholder { color: var(--text3); font-style: italic; }
+#editor-host .cm-searchMatch { background: rgba(251,191,36,.25); }
+#editor-host .cm-panels { background: var(--bg2); color: var(--text); border-top: 1px solid var(--border); }
+#editor-host .cm-panels input, #editor-host .cm-panels button { background: var(--bg3); color: var(--text); border: 1px solid var(--border2); border-radius: 4px; }
+.cm-kk-h { font-weight: 700; }
+.cm-kk-h1 { font-size: 1.2em; }
+.cm-kk-h2 { font-size: 1.1em; }
+.cm-kk-block { background: rgba(124,106,247,0.10); color: var(--accent2) !important; }
+.cm-kk-note { background: rgba(251,191,36,0.08); }
+.cm-kk-acc { background: rgba(124,106,247,0.06); font-weight: 600; }
+.cm-kk-callout { border-left: 3px solid #fcd34d; }
+.cm-kk-hl { background: rgba(236,72,153,.18); border-radius: 3px; }
+.cm-kk-icon { color: #5eead4; }
+.cm-kk-img {
+  display: inline-flex; align-items: center; gap: 6px; vertical-align: middle;
+  background: var(--bg3); border: 1px solid var(--border2); border-radius: 6px;
+  padding: 2px 8px 2px 2px; margin: 1px 2px; font-size: 11px; color: var(--text2); font-family: var(--sans);
+}
+.cm-kk-img img { height: 34px; max-width: 80px; object-fit: cover; border-radius: 4px; background: var(--bg4); }
+.cm-kk-img img:not([src]) { display: none; }
+/* Autocomplete ("/" menü) */
+.cm-tooltip.cm-tooltip-autocomplete { background: var(--bg2); border: 1px solid var(--border2); border-radius: 8px; box-shadow: 0 12px 32px rgba(0,0,0,.45); overflow: hidden; }
+.cm-tooltip-autocomplete > ul { font-family: var(--sans) !important; max-height: 320px !important; }
+.cm-tooltip-autocomplete > ul > li { padding: 5px 12px !important; color: var(--text2); font-size: 13px; }
+.cm-tooltip-autocomplete > ul > li[aria-selected] { background: var(--accent) !important; color: #fff !important; }
+.cm-completionDetail { margin-left: 10px; font-style: normal !important; color: var(--text3); font-size: 11px; font-family: var(--mono); }
+.cm-tooltip-autocomplete > ul > li[aria-selected] .cm-completionDetail { color: rgba(255,255,255,.75); }
+
+/* ══ Letöltés menü, modális ablakok ═════════════════════════════════════════ */
+.dl-menu-title { font-size: 11px; font-weight: 700; color: var(--text3); text-transform: uppercase; letter-spacing: .06em; }
+.dl-menu-sep { height: 1px; background: var(--border); margin: 4px 0; }
+.dl-menu-hint { font-size: 11px; color: var(--text3); line-height: 1.4; }
+.form-grid { display: flex; flex-direction: column; gap: 4px; }
+.form-grid label { font-size: 12px; color: var(--text3); margin-top: 6px; }
+.form-grid input, .form-grid select, #proj-modal select {
+  width: 100%; padding: 7px 10px; background: var(--bg); border: 1px solid var(--border2);
+  color: var(--text); border-radius: var(--radius); font-size: 13px; box-sizing: border-box;
+}
+.radio-row { display: flex !important; align-items: center; gap: 8px; font-size: 13px !important; color: var(--text2) !important; cursor: pointer; margin-top: 8px; }
