@@ -43,8 +43,14 @@ async function cloudDownloadText(path) {
   if (error || !data) return null;
   return await data.text();
 }
+async function cloudDownloadBlob(path) {
+  const { data, error } = await cloudBucket().download(path);
+  if (error || !data) return null;
+  return data;
+}
+// content: szöveg vagy Blob (képekhez).
 async function cloudUpload(path, content, contentType) {
-  const blob = new Blob([content], { type: contentType });
+  const blob = content instanceof Blob ? content : new Blob([content], { type: contentType });
   const { error } = await cloudBucket().upload(path, blob, { upsert: true, contentType, cacheControl: '0' });
   if (error) {
     console.warn('Cloud upload failed:', path, error);
@@ -195,6 +201,11 @@ function guessContentType(filename) {
   if (filename.endsWith('.css')) return 'text/css';
   if (filename.endsWith('.html')) return 'text/html';
   if (filename.endsWith('.md')) return 'text/markdown';
+  if (filename.endsWith('.webp')) return 'image/webp';
+  if (filename.endsWith('.png')) return 'image/png';
+  if (/\.jpe?g$/.test(filename)) return 'image/jpeg';
+  if (filename.endsWith('.gif')) return 'image/gif';
+  if (filename.endsWith('.svg')) return 'image/svg+xml';
   return 'text/plain';
 }
 async function cloudMoveDocument(fromProjectId, docId, toProjectId) {
@@ -205,6 +216,7 @@ async function cloudMoveDocument(fromProjectId, docId, toProjectId) {
 
   const rootFiles = ((await cloudList(fromFolder, 200)) || []).filter(isCloudFile).map(e => e.name);
   const sectionFiles = ((await cloudList(fromFolder + '/sections', 500)) || []).filter(isCloudFile).map(e => e.name);
+  const imageFiles = ((await cloudList(fromFolder + '/images', 1000)) || []).filter(isCloudFile).map(e => e.name);
 
   // Minden fájl szöveges (config.json, style.css, logo.txt, HTML, fejezetek).
   for (const name of rootFiles) {
@@ -216,6 +228,12 @@ async function cloudMoveDocument(fromProjectId, docId, toProjectId) {
     const text = await cloudDownloadText(fromFolder + '/sections/' + name);
     if (text === null) continue;
     if (!await cloudUpload(toFolder + '/sections/' + name, text, 'text/markdown')) return { ok: false, reason: 'upload' };
+  }
+
+  for (const name of imageFiles) { // képek: bináris másolás
+    const blob = await cloudDownloadBlob(fromFolder + '/images/' + name);
+    if (!blob) continue;
+    if (!await cloudUpload(toFolder + '/images/' + name, blob, blob.type || guessContentType(name))) return { ok: false, reason: 'upload' };
   }
 
   // Csak sikeres másolás után töröljük a forrást — korábban egy félbeszakadt

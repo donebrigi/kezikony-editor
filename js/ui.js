@@ -41,37 +41,6 @@ function downloadText(text, filename, type) {
   setTimeout(() => URL.revokeObjectURL(url), 2000);
 }
 
-// Írás egy File System Access API fájl-handle-be. true, ha sikerült.
-async function writeFileHandle(handle, text) {
-  if (!handle) return false;
-  try {
-    const writable = await handle.createWritable();
-    await writable.write(text);
-    await writable.close();
-    return true;
-  } catch(e) {
-    console.warn('Fájl írása sikertelen:', handle.name, e);
-    return false;
-  }
-}
-
-// "Mentés másként" dialógus. Visszatérés: a handle, null ha a felhasználó megszakította,
-// vagy undefined, ha a böngésző nem támogatja / hiba történt (→ jöhet a letöltés fallback).
-async function saveAsWithPicker(text, suggestedName, description, mime, ext) {
-  if (!window.showSaveFilePicker) return undefined;
-  try {
-    const fh = await window.showSaveFilePicker({
-      suggestedName, types: [{ description, accept: { [mime]: [ext] } }], startIn: 'documents'
-    });
-    if (!await writeFileHandle(fh, text)) return undefined;
-    return fh;
-  } catch(e) {
-    if (e.name === 'AbortError') return null;
-    console.warn('showSaveFilePicker hiba:', e);
-    return undefined;
-  }
-}
-
 function flashStatus(msg, cls = 'saved', ms = 2000) {
   setStatus(msg, cls);
   clearTimeout(flashStatus._t);
@@ -153,4 +122,8 @@ async function confirmDownload() {
   const optimize = document.getElementById('dl-optimize-images').checked;
   closeDownloadMenu();
   await buildAndDownload(optimize);
+}
+async function confirmDownloadZip() {
+  closeDownloadMenu();
+  await downloadMarkdownZip();
 }

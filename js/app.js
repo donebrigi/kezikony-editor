@@ -24,9 +24,6 @@
     editorPane.style.width = newW + 'px';
     editorPane.style.minWidth = newW + 'px';
     editorPane.style.maxWidth = newW + 'px';
-    // A panel szélessége változott, tehát a sortörés is máshol történhet a
-    // szerkesztőben — a sorszám-sávot (lásd updateLineNums()) újra kell méretezni.
-    scheduleLineNumsUpdate();
   });
 
   document.addEventListener('mouseup', () => {
@@ -36,48 +33,37 @@
     document.body.style.cursor = '';
     document.body.style.userSelect = '';
   });
-
-  // Böngészőablak átméretezésekor (nem csak a panel-húzáskor) is újratörhetnek a
-  // sorok, mert a #editor szélessége a flex-elrendezés miatt vele együtt változik.
-  window.addEventListener('resize', scheduleLineNumsUpdate);
 })();
 
-// ── Projekt-választó a topbaron ──────────────────────────────────────────────
-// (Korábban csak a sidebart frissítette — a morzsamenü és a szülő Projekt nem váltott.)
-document.getElementById('project-select').addEventListener('change', e => {
-  const name = e.target.value;
-  if (name && state.projects[name]) activateProject(name);
-});
-
 // ── Indítás ───────────────────────────────────────────────────────────────────
-// Sorrend: IndexedDB beolvasása → bejelentkezés ellenőrzése → navigáció.
 //  • megosztott #view/… link → a publikált kézikönyv
-//  • utoljára használt FELHŐ Dokumentum → frissen a felhőből töltjük újra (nem az
-//    esetleg elavult böngészős másolatból — egy kolléga közben módosíthatta, és a
-//    régi verzió a böngészős CSS-sel felülírhatta volna a felhőbelit)
-//  • utoljára használt helyi projekt → a böngészős másolatból
+//  • az utoljára megnyitott Dokumentum → újra megnyílik (frissen a felhőből)
 //  • egyébként a Kezdőlap
 async function initApp() {
-  updateLineNums();
-  const last = await loadPersistedProjects();
+  if (!window.CM) {
+    document.body.innerHTML = '<p style="padding:40px;color:#fff;font-family:sans-serif">A szerkesztő komponens (vendor/codemirror.bundle.js) nem töltődött be — ellenőrizd, hogy a vendor mappa is fel van-e töltve.</p>';
+    return;
+  }
+  initEditor();
   const session = await cloudCheckSession();
   state.booting = false;
 
   const shared = session ? parseSharedViewHash() : null;
   if (shared) { openSharedView(shared.projectId, shared.docId); return; }
 
+  const last = readLastDoc();
   if (last && last.cloudFolder) {
-    const resume = { cloudFolder: last.cloudFolder, topProjectId: last.topProjectId, docId: last.docId };
-    if (session) await cloudLoadProject(resume.cloudFolder, resume.topProjectId, resume.docId);
-    else state.pendingCloudResume = resume; // bejelentkezés után nyílik meg (lásd onLoggedIn)
-    return;
-  }
-  if (last && state.projects[last.name]) {
-    await activateProject(last.name);
-    const lastFile = last.currentFile;
-    if (lastFile && state.projects[last.name].files[lastFile]) openFile(lastFile);
-    flashStatus('Visszatöltve: ' + projectDisplayTitle(state.projects[last.name]), '', 2500);
-    return;
+    if (session) {
+      // Ha közben törölték / áthelyezték, a Kezdőlapra megyünk.
+      if (await cloudDownloadText(last.cloudFolder + '/config.json')) {
+        await cloudLoadProject(last.cloudFolder, last.topProjectId, last.docId);
+        return;
+      }
+      forgetLastDoc();
+    } else {
+      state.pendingCloudResume = last; // bejelentkezés után nyílik meg (lásd onLoggedIn)
+      return;
+    }
   }
   showHomeView();
 }

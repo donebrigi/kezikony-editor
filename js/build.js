@@ -1,48 +1,59 @@
-// ── Build & Download ──────────────────────────────────────────────────────────
+// ── Build: a végleges, önálló HTML ───────────────────────────────────────────
 async function buildAndDownload(optimize = false) {
   const proj = currentProj();
-  if (!proj) { toast('Nincs betöltve projekt!', 'err'); return; }
+  if (!proj) { toast('Nincs megnyitott dokumentum!', 'err'); return; }
 
-  // Mentetlen fejezetek mentése. HIBAJAVÍTÁS: korábban ehhez átállította a
-  // state.currentFile-t minden mentetlen fejezetre, így a build után a szerkesztő
-  // más fejezetet mutatott, mint amibe a gépelés ténylegesen íródott.
-  // A mentés helye itt is ugyanaz, mint máshol (felhő / mappa / csak böngésző).
-  const dirty = proj.fileOrder.filter(fn => proj.files[fn] && proj.files[fn].dirty);
-  for (const fn of dirty) await saveChapterSilently(proj, fn);
-  if (dirty.length) { await persistProject(proj); renderSidebar(); }
+  await saveAllDirty({ quiet: true });
+  if (hasUnsavedCss()) toast('ℹ A Megjelenés fül nem mentett módosításai nem kerülnek bele.', '', 4000);
 
-  // Ha a Megjelenés fülön van nem mentett piszkozat, a build a MENTETT CSS-t használja.
-  if (hasUnsavedCss()) toast('ℹ A Megjelenés fül nem mentett módosításai nem kerülnek bele a buildbe.', '', 4000);
-
+  toast('⚙ HTML összeállítása...', 'ok', 3000);
   let html = buildPreviewHtml(proj, buildAllSectionsHtml(proj), true);
-  const outputName = proj.config.output || (proj.docId || proj.name) + '.html';
+  // A képek beágyazása (data: URI), hogy a letöltött HTML önmagában is teljes legyen.
+  html = await resolveImagesBuild(html, proj);
+  const outputName = proj.config.output || (proj.docId + '.html');
 
   if (optimize) {
     toast('Képek optimalizálása...', 'ok', 4000);
     html = await optimizeHtmlImages(html);
-    toast(`✓ Optimalizálva — ${Math.round(html.length / 1024)} KB`, 'ok', 3000);
   }
 
-  // 0. Felhő Dokumentum: a legenerált HTML a Storage-ba is felkerül (ez frissíti a
-  // publikált oldalt, amire a megosztható link és a gyors ⬇ HTML gomb épül).
-  if (proj.cloudFolder) {
-    const ok1 = await cloudSaveOutput(proj, outputName, html);
-    const ok2 = await cloudSaveOutput(proj, PUBLISH_HTML_NAME, html);
-    if (ok1 && ok2) toast('✓ HTML elmentve a felhőbe: ' + outputName);
-  }
-
-  // 1–2. Közvetlen írás a projekt mappájába (ha van írási jog)
-  if (await writeRootFile(proj, outputName, 'outputHandle', html)) {
-    toast('✓ HTML elmentve: ' + outputName);
-    return;
-  }
-
-  // 3. Mentés másként dialóg, 4. végső esetben sima letöltés
-  const fh = await saveAsWithPicker(html, outputName, 'HTML dokumentum', 'text/html', '.html');
-  if (fh === null) return;
-  if (fh) { proj.outputHandle = fh; toast('✓ HTML mentve: ' + fh.name); return; }
+  // A felhőbe is felkerül: erre épül a megosztható link és a Projekt nézet ⬇ HTML gombja.
+  const ok = await cloudSaveOutput(proj, PUBLISH_HTML_NAME, html);
   downloadText(html, outputName, 'text/html');
-  toast('✓ HTML letöltve!');
+  toast(ok ? `✓ HTML letöltve és publikálva (${Math.round(html.length / 1024)} KB)` : '⚠ HTML letöltve, de a felhőbe publikálás nem sikerült', ok ? 'ok' : 'err', 3500);
+}
+
+// ── Markdown + képek egy ZIP-ben (mentés / archiválás / visszaimportálás) ──────
+// Szerkezete megegyezik a Dokumentum felhőbeli mappájával, így a kicsomagolt mappa
+// a Projekt nézet "📤 Importálás" gombjával újra betölthető.
+async function downloadMarkdownZip() {
+  const proj = currentProj();
+  if (!proj) return;
+  await saveAllDirty({ quiet: true });
+  toast('📦 ZIP összeállítása...', 'ok', 4000);
+  const zip = new CM.JSZip();
+  const root = zip.folder(slugify(projectDisplayTitle(proj)) || proj.docId);
+  const imagePaths = new Set();
+  for (const fn of proj.fileOrder) {
+    const f = proj.files[fn];
+    rebuildRaw(f);
+    root.file('sections/' + fn, f.raw);
+    (f.raw.match(IMAGE_REF_RE) || []).forEach(p => imagePaths.add(p));
+  }
+  for (const p of imagePaths) {
+    const blob = await getImageBlob(proj, p);
+    if (blob) root.file(p, blob);
+  }
+  root.file('config.json', serializeConfig(proj));
+  root.file('style.css', proj.css || getDefaultCSS());
+  if (proj.logo) root.file('logo.txt', proj.logo);
+  const blob = await zip.generateAsync({ type: 'blob' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = (slugify(projectDisplayTitle(proj)) || proj.docId) + '-markdown.zip';
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 3000);
+  toast(`✓ ZIP letöltve (${proj.fileOrder.length} fejezet, ${imagePaths.size} kép)`);
 }
 
 // ── HTML kép optimalizáló (Canvas API alapú, WebP konverzió) ─────────────────

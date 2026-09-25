@@ -1,148 +1,92 @@
-// ── Formatting toolbar ───────────────────────────────────────────────────────
-function getEditor() { return document.getElementById('editor'); }
+// ── Formázó eszköztár + "/" menü műveletei ──────────────────────────────────
+// Mindegyik a CodeMirror szerkesztőn dolgozik (lásd editor.js edSelection/edReplace).
 
+// Kijelölés körbevétele (pl. **félkövér**). Kijelölés nélkül egy "szöveg" helyőrzőt szúr be kijelölve.
 function fmtWrap(before, after) {
-  const ta = getEditor();
-  const start = ta.selectionStart, end = ta.selectionEnd;
-  const sel = ta.value.slice(start, end);
-  const replacement = before + (sel || 'szöveg') + after;
-  ta.value = ta.value.slice(0, start) + replacement + ta.value.slice(end);
-  // Select the inner text
-  const newStart = start + before.length;
-  const newEnd = newStart + (sel || 'szöveg').length;
-  ta.selectionStart = newStart;
-  ta.selectionEnd = newEnd;
-  ta.focus();
-  ta.dispatchEvent(new Event('input'));
+  const { from, to, text } = edSelection();
+  const inner = text || 'szöveg';
+  edReplace(from, to, before + inner + after, from + before.length, from + before.length + inner.length);
 }
 
+// Sor-előtag ki/be kapcsolása (címsor, kiemelt doboz) az aktuális sor(ok)on.
 function fmtLine(prefix) {
-  const ta = getEditor();
-  const start = ta.selectionStart;
-  // Find line start
-  const before = ta.value.slice(0, start);
-  const lineStart = before.lastIndexOf('\n') + 1;
-  const lineContent = ta.value.slice(lineStart);
-  const lineEnd = lineStart + (lineContent.indexOf('\n') === -1 ? lineContent.length : lineContent.indexOf('\n'));
-  const line = ta.value.slice(lineStart, lineEnd);
-
-  // Toggle: if already has prefix, remove it; else add
-  let newLine;
-  if (line.startsWith(prefix)) {
-    newLine = line.slice(prefix.length);
-  } else {
-    // Remove other heading prefixes first
-    const cleaned = line.replace(/^#+\s|^>\s/, '');
-    newLine = prefix + cleaned;
+  const st = edState();
+  const sel = st.selection.main;
+  const first = st.doc.lineAt(sel.from), last = st.doc.lineAt(sel.to);
+  const changes = [];
+  for (let n = first.number; n <= last.number; n++) {
+    const line = st.doc.line(n);
+    if (line.text.startsWith(prefix)) changes.push({ from: line.from, to: line.from + prefix.length, insert: '' });
+    else {
+      const m = line.text.match(/^(#{1,4}\s|>\s)/); // más címsor/doboz előtag cseréje
+      changes.push({ from: line.from, to: line.from + (m ? m[0].length : 0), insert: prefix });
+    }
   }
-
-  ta.value = ta.value.slice(0, lineStart) + newLine + ta.value.slice(lineEnd);
-  ta.selectionStart = ta.selectionEnd = lineStart + newLine.length;
-  ta.focus();
-  ta.dispatchEvent(new Event('input'));
+  editorView.dispatch({ changes });
+  editorView.focus();
 }
 
+// Lista: több kijelölt sornál mindegyik elé, egy sornál ki/be kapcsolás.
 function fmtList(prefix) {
-  const ta = getEditor();
-  const start = ta.selectionStart, end = ta.selectionEnd;
-  const selected = ta.value.slice(start, end);
-
-  if (selected.includes('\n')) {
-    // Multi-line: prefix each line
-    const lines = selected.split('\n');
-    let counter = 1;
-    const newLines = lines.map(l => {
-      if (!l.trim()) return l;
-      if (prefix === '1. ') return (counter++) + '. ' + l.replace(/^\d+\.\s|^-\s/, '');
-      return prefix + l.replace(/^\d+\.\s|^-\s/, '');
-    });
-    const replacement = newLines.join('\n');
-    ta.value = ta.value.slice(0, start) + replacement + ta.value.slice(end);
-    ta.selectionStart = start;
-    ta.selectionEnd = start + replacement.length;
-  } else {
-    // Single line
-    fmtLine(prefix);
+  const st = edState();
+  const sel = st.selection.main;
+  const first = st.doc.lineAt(sel.from), last = st.doc.lineAt(sel.to);
+  if (first.number === last.number) {
+    const line = first;
+    const stripped = line.text.replace(/^(\d+\.\s|[-*]\s)/, '');
+    const isSame = prefix === '1. ' ? /^\d+\.\s/.test(line.text) : /^[-*]\s/.test(line.text);
+    const insert = isSame ? stripped : prefix + stripped;
+    editorView.dispatch({ changes: { from: line.from, to: line.to, insert }, selection: { anchor: line.from + insert.length } });
+    editorView.focus();
     return;
   }
-  ta.focus();
-  ta.dispatchEvent(new Event('input'));
+  let counter = 1;
+  const changes = [];
+  for (let n = first.number; n <= last.number; n++) {
+    const line = st.doc.line(n);
+    if (!line.text.trim()) continue;
+    const stripped = line.text.replace(/^(\d+\.\s|[-*]\s)/, '');
+    changes.push({ from: line.from, to: line.to, insert: (prefix === '1. ' ? (counter++) + '. ' : prefix) + stripped });
+  }
+  editorView.dispatch({ changes });
+  editorView.focus();
 }
 
 function fmtLink() {
-  const ta = getEditor();
-  const start = ta.selectionStart, end = ta.selectionEnd;
-  const sel = ta.value.slice(start, end);
-  const url = prompt('URL:', 'https://');
+  const { from, to, text } = edSelection();
+  const url = prompt('URL (vagy #fejezet-azonosito):', 'https://');
   if (!url) return;
-  const text = sel || prompt('Link szövege:', 'link') || 'link';
-  const replacement = `[${text}](${url})`;
-  ta.value = ta.value.slice(0, start) + replacement + ta.value.slice(end);
-  ta.selectionStart = start;
-  ta.selectionEnd = start + replacement.length;
-  ta.focus();
-  ta.dispatchEvent(new Event('input'));
+  const label = text || prompt('Link szövege:', 'link') || 'link';
+  edReplace(from, to, `[${label}](${url})`);
 }
 
 function fmtCodeBlock() {
-  const ta = getEditor();
-  const start = ta.selectionStart, end = ta.selectionEnd;
-  const sel = ta.value.slice(start, end) || 'kód ide';
-  const q = String.fromCharCode(96);
-  const fence = q + q + q;
-  const replacement = fence + '\n' + sel + '\n' + fence;
-  ta.value = ta.value.slice(0, start) + replacement + ta.value.slice(end);
-  ta.selectionStart = start + 4;
-  ta.selectionEnd = start + 4 + sel.length;
-  ta.focus();
-  ta.dispatchEvent(new Event('input'));
+  const { text } = edSelection();
+  const body = text || 'kód ide';
+  const fence = '```';
+  edInsertBlock(fence + '\n' + body + '\n' + fence + '\n', fence.length + 1);
 }
 
-// Lenyíló elemek (accordion / harmonika) beszúrása egy induló sablonnal.
-// Szintaxis: <!-- accordion --> ... +++ Cím ... <!-- /accordion --> — lásd mdToHtml.
 function fmtAccordion() {
-  const ta = getEditor();
-  const pos = ta.selectionStart;
-  const before = ta.value.slice(0, pos);
-  const after = ta.value.slice(ta.selectionEnd);
-  const insertAt = before.endsWith('\n') || before === '' ? before : before + '\n';
-  const block =
-`<!-- accordion -->
-+++ Első kérdés vagy cím
-Ide jön az első elem szövege.
-
-+++ Második kérdés vagy cím
-Ide jön a második elem szövege.
-<!-- /accordion -->
-`;
-  ta.value = insertAt + block + after;
-  ta.selectionStart = ta.selectionEnd = insertAt.length + block.length;
-  ta.focus();
-  ta.dispatchEvent(new Event('input'));
-  updateLineNums();
-  toast('✓ Harmonika beszúrva — a "+++ " sorok a lenyíló elemek címei');
+  const block = '<!-- accordion -->\n+++ Első kérdés vagy cím\nIde jön az első elem szövege.\n\n+++ Második kérdés vagy cím\nIde jön a második elem szövege.\n<!-- /accordion -->\n';
+  edInsertBlock(block, '<!-- accordion -->\n+++ '.length);
 }
 
-// Szerkesztői jegyzet beszúrása. A <!-- jegyzet --> ... <!-- /jegyzet --> közötti szöveg
-// (vagy az egysoros <!-- jegyzet: ... --> forma) az élő előnézetben egy elkülönülő
-// buborékban látszik, de a végleges buildelt/exportált oldalra sosem kerül bele — lásd mdToHtml.
 function fmtNote() {
-  const ta = getEditor();
-  const pos = ta.selectionStart;
-  const before = ta.value.slice(0, pos);
-  const after = ta.value.slice(ta.selectionEnd);
-  const insertAt = before.endsWith('\n') || before === '' ? before : before + '\n';
-  const block =
-`<!-- jegyzet -->
-Ide írhatsz szerkesztői jegyzetet — ez nem kerül bele a végleges oldalba.
-<!-- /jegyzet -->
-`;
-  ta.value = insertAt + block + after;
-  ta.selectionStart = ta.selectionEnd = insertAt.length + block.length;
-  ta.focus();
-  ta.dispatchEvent(new Event('input'));
-  updateLineNums();
-  toast('✓ Jegyzet beszúrva — az előnézetben látszik, a végleges oldalon nem');
+  const block = '<!-- jegyzet -->\nIde írhatsz szerkesztői jegyzetet — ez nem kerül bele a végleges oldalba.\n<!-- /jegyzet -->\n';
+  edInsertBlock(block, '<!-- jegyzet -->\n'.length);
+}
+
+function fmtTable() {
+  const block = '| Oszlop 1 | Oszlop 2 |\n|---|---|\n| érték | érték |\n';
+  edInsertBlock(block, 2);
+}
+
+// Képsor: a közé kerülő képek egy közös keretben, egymás alatt jelennek meg.
+function fmtShotStack() {
+  const block = '<!-- shot-stack -->\n\n<!-- /shot-stack -->\n';
+  edInsertBlock(block, '<!-- shot-stack -->\n'.length);
+  toast('Illeszd be a képeket a két jelölés közé (Ctrl+V vagy 🖼 Kép)', '', 3500);
 }
 
 // ── Lucide ikon beszúró ──────────────────────────────────────────────────────
@@ -155,6 +99,19 @@ Ide írhatsz szerkesztői jegyzetet — ez nem kerül bele a végleges oldalba.
 const LUCIDE_TAGS_URL = 'https://unpkg.com/lucide-static@latest/tags.json';
 const LUCIDE_ICON_URL = name => `https://unpkg.com/lucide-static@latest/icons/${name}.svg`;
 
+// Az ikonlista egyszeri betöltése (az ikonválasztó és a ":ikon" javaslatok is ezt használják).
+let _lucidePromise = null;
+function ensureLucideIcons() {
+  if (state.lucideIcons) return Promise.resolve(true);
+  if (!_lucidePromise) {
+    _lucidePromise = fetch(LUCIDE_TAGS_URL).then(r => r.json()).then(data => {
+      state.lucideIcons = Object.keys(data).map(name => ({ name, tags: data[name] || [] }));
+      return true;
+    }).catch(() => { _lucidePromise = null; return false; });
+  }
+  return _lucidePromise;
+}
+
 async function openIconPicker() {
   document.getElementById('icon-picker-modal-backdrop').classList.add('open');
   const search = document.getElementById('icon-picker-search');
@@ -164,13 +121,8 @@ async function openIconPicker() {
   if (!state.lucideIcons) {
     hint.textContent = 'Ikonlista betöltése...';
     document.getElementById('icon-picker-grid').innerHTML = '';
-    try {
-      const res = await fetch(LUCIDE_TAGS_URL);
-      const data = await res.json();
-      state.lucideIcons = Object.keys(data).map(name => ({ name, tags: data[name] || [] }));
-    } catch (e) {
+    if (!await ensureLucideIcons()) {
       hint.textContent = 'Nem sikerült betölteni az ikonlistát — ellenőrizd az internetkapcsolatot.';
-      state.lucideIcons = null;
       return;
     }
   }
@@ -210,13 +162,8 @@ function renderIconPickerGrid(query) {
 }
 
 function insertIcon(name) {
-  const ta = getEditor();
-  const start = ta.selectionStart, end = ta.selectionEnd;
-  const token = `:${name}:`;
-  ta.value = ta.value.slice(0, start) + token + ta.value.slice(end);
-  ta.selectionStart = ta.selectionEnd = start + token.length;
-  ta.focus();
-  ta.dispatchEvent(new Event('input'));
+  const { from, to } = edSelection();
+  edReplace(from, to, `:${name}:`);
   closeIconPicker();
   toast(`✓ Ikon beszúrva: ${name}`);
 }

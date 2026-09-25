@@ -197,49 +197,25 @@ function resetAiResult() {
   hideAiResult();
 }
 
+// A generált fejezet beillesztése: a frontmatterből a cím/azonosító a mezőkbe kerül,
+// a szerkesztőbe csak a törzs (visszavonható Ctrl+Z-vel).
 function insertAiResult() {
-  if (!AI_STATE.result) return;
-
-  const ta = document.getElementById('editor');
-  const chapterId = document.getElementById('ai-chapter-id').value.trim();
-
-  // Ha van aktív fejezet aminek az id-je megegyezik, abba illesztjük
-  // Különben az aktuális fejezet tartalmát cseréljük
-  if (state.currentFile && state.currentProject) {
-    const proj = state.projects[state.currentProject];
-    const f = proj.files[state.currentFile];
-
-    // Keressük a megfelelő fejezetet id alapján
-    let targetFn = state.currentFile;
-    if (chapterId) {
-      for (const fn of proj.fileOrder) {
-        if (proj.files[fn].meta.id === chapterId) { targetFn = fn; break; }
-      }
-    }
-
-    // Frissítjük a fájl tartalmát
-    const targetFile = proj.files[targetFn];
-    targetFile.raw = AI_STATE.result;
-    const { meta, content: newContent } = parseFrontmatter(AI_STATE.result);
-    targetFile.meta = meta;
-    targetFile.content = newContent;
-    targetFile.dirty = true;
-
-    // Ha ez az aktív fájl, frissítjük a szerkesztőt is
-    if (targetFn === state.currentFile) {
-      ta.value = AI_STATE.result;
-      updateLineNums();
-      schedulePreview();
-    } else {
-      // Megnyitjuk a célfejezetet
-      openFile(targetFn);
-    }
-
-    renderSidebar();
-    setStatus('Nem mentett változás', 'unsaved');
-    scheduleAutosave();
-    toast('✓ Beillesztve: ' + targetFn);
-    closeAiPanel();
-    hideAiResult();
+  const proj = currentProj();
+  if (!AI_STATE.result || !proj || !state.currentFile) return;
+  const chapterIdWanted = document.getElementById('ai-chapter-id').value.trim();
+  let targetFn = state.currentFile;
+  if (chapterIdWanted) {
+    const hit = proj.fileOrder.find(fn => chapterId(proj, fn) === chapterIdWanted);
+    if (hit) targetFn = hit;
   }
+  const { meta, content } = parseFrontmatter(AI_STATE.result);
+  const f = proj.files[targetFn];
+  if (meta.title) f.meta.title = meta.title;
+  if (targetFn !== state.currentFile) openFile(targetFn);
+  replaceChapterContent(targetFn, content);
+  updateChapterHeader();
+  renderTree();
+  toast('✓ Beillesztve: ' + chapterTitle(proj, targetFn));
+  closeAiPanel();
+  hideAiResult();
 }

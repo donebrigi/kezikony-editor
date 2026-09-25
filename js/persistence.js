@@ -1,181 +1,109 @@
-// ── Mentés: egyetlen helyen dől el, hová kerül egy módosítás ─────────────────
+// ── Mentés (csak felhő) ──────────────────────────────────────────────────────
 //
-// Minden projekt-adat háromféle helyre mehet:
-//   1. IndexedDB (böngészőn belüli másolat)       — mindig
-//   2. Felhő (Supabase Storage)                   — ha proj.cloudFolder
-//   3. Helyi mappa (File System Access API)       — ha van írási jog (dirHandle / fájl-handle)
+// Minden módosítás a Supabase Storage-ba kerül, a Dokumentum mappájába:
+//   sections/*.md  – fejezetek (gépelés után ~1,5 mp-cel automatikusan)
+//   config.json    – cím, menü/fa, fejezetsorrend
+//   style.css      – megjelenés (a Megjelenés fül Mentés gombjával)
+//   logo.txt       – logó
+//   images/*       – képek (beillesztéskor azonnal, lásd images.js)
 //
-// A korábbi verzióban ez a döntés minden funkcióban külön, kézzel volt megírva, és
-// több helyről hiányzott egy-egy ág — pl. a Megjelenés fül "Egyszerű" nézetének
-// "✓ Mentés" gombja CSAK az IndexedDB-be mentett, a felhőbe és a mappába nem.
-// Ezért állt vissza a CSS alapértelmezettre, amikor a dokumentumot újra megnyitották
-// a felhőből / a mappából. Most minden mentés az alábbi save* függvényeken megy át.
+// Sikertelen mentésnél a fejezet "mentetlen" (●) marad, és a következő
+// automatikus mentés újra megpróbálja. Az oldal bezárása előtt a böngésző
+// figyelmeztet, ha van még ki nem mentett módosítás.
 
-// ── config.json ──────────────────────────────────────────────────────────────
 function serializeConfig(proj) {
-  const c = proj.config || {};
-  // Az ismeretlen (kézzel felvett) kulcsokat is megtartjuk — korábban ezek mentéskor elvesztek.
-  const out = Object.assign({}, c);
+  const out = Object.assign({}, proj.config || {});
   delete out.fileOrder;
-  if (!out.nav_groups) delete out.nav_groups;
-  // A fejezetek sorrendje: enélkül betöltéskor ábécésorrendbe rendeződnének vissza.
+  if (!out.nav_groups || !out.nav_groups.length) delete out.nav_groups;
   if (proj.fileOrder && proj.fileOrder.length) out.fileOrder = proj.fileOrder;
   return JSON.stringify(out, null, 2);
 }
 
-// Helyi mappa: egy gyökér szintű fájl (config.json, style.css, logo.txt) írása.
-// A handle-t a projekt objektumon megjegyezzük (handleKey), így legközelebb dialóg nélkül ír.
-async function writeRootFile(proj, filename, handleKey, text) {
-  if (proj[handleKey] && await writeFileHandle(proj[handleKey], text)) return true;
-  proj[handleKey] = null;
-  if (proj.dirHandle) {
-    try {
-      const fh = await proj.dirHandle.getFileHandle(filename, { create: true });
-      if (await writeFileHandle(fh, text)) { proj[handleKey] = fh; return true; }
-    } catch(e) { console.warn(filename + ' írása a mappába sikertelen:', e); }
-  }
-  return false;
-}
-
-
-// config.json mentése. interactive=true esetén (kézi mentés) írási jog híján
-// felajánlja a "Mentés másként" dialógust / letöltést is.
-async function saveProjectConfig(proj, { showToast = true, interactive = true } = {}) {
+// ── config.json ──
+async function saveProjectConfig(proj, { showToast = false } = {}) {
   if (!proj) return false;
-  await persistProjectMeta(proj);
-  const json = serializeConfig(proj);
-
-  if (proj.cloudFolder) {
-    const ok = await cloudSaveConfig(proj);
-    if (showToast && ok) toast('✓ config.json elmentve a felhőbe');
-    return ok;
-  }
-  if (await writeRootFile(proj, 'config.json', 'configHandle', json)) {
-    if (showToast) toast('✓ config.json elmentve a mappába');
-    return true;
-  }
-  if (!interactive) return false;
-
-  const fh = await saveAsWithPicker(json, 'config.json', 'JSON fájl', 'application/json', '.json');
-  if (fh === null) return false;
-  if (fh) { proj.configHandle = fh; if (showToast) toast('💾 config.json mentve: ' + fh.name); return true; }
-  downloadText(json, 'config.json', 'application/json');
-  if (showToast) toast('💾 config.json letöltve');
-  return true;
+  const ok = await cloudSaveConfig(proj);
+  if (ok && showToast) toast('✓ Beállítások mentve');
+  return ok;
 }
 
-// Visszafelé kompatibilis név (a régi kód így hívta, mindig az aktív projektre).
-async function saveConfigToDisk(showToast = true) {
-  return saveProjectConfig(currentProj(), { showToast });
+// A fa (menü + sorrend) gyakran változik egymás után (húzogatás) — összevonva mentjük.
+function scheduleConfigSave() {
+  const proj = currentProj();
+  if (!proj) return;
+  state._configDirty = true;
+  clearTimeout(state._configTimer);
+  state._configTimer = setTimeout(async () => {
+    const ok = await saveProjectConfig(proj);
+    if (ok) state._configDirty = false;
+  }, 800);
 }
 
-async function saveNavGroups() {
-  renderPreview();
-  await saveProjectConfig(currentProj());
-}
-
-// ── style.css ────────────────────────────────────────────────────────────────
-// A projekt CSS-ének mentése mindenhová, ahová lehet. Visszatérés: { ok, where }.
+// ── style.css ──
 async function saveProjectCss(proj) {
-  if (!proj) return { ok: false, where: [] };
-  const where = ['böngésző'];
-  await persistProjectMeta(proj);
-  let ok = true;
-  if (proj.cloudFolder) {
-    const cloudOk = await cloudSaveCss(proj);
-    ok = ok && cloudOk;
-    if (cloudOk) where.push('felhő');
-  } else if (proj.dirHandle || proj.cssHandle) {
-    const diskOk = await writeRootFile(proj, 'style.css', 'cssHandle', proj.css || getDefaultCSS());
-    ok = ok && diskOk;
-    if (diskOk) where.push('mappa');
-  }
-  return { ok, where };
+  if (!proj) return { ok: false };
+  return { ok: await cloudSaveCss(proj) };
 }
 
-// ── logo.txt ─────────────────────────────────────────────────────────────────
-// Korábban a logó sem a felhőbe, sem a mappába nem került ki, csak az IndexedDB-be.
+// ── logo.txt ──
 async function saveProjectLogo(proj) {
   if (!proj) return false;
-  await persistProjectMeta(proj);
-  if (proj.cloudFolder) return cloudSaveLogo(proj);
-  if (proj.dirHandle || proj.logoHandle) return writeRootFile(proj, 'logo.txt', 'logoHandle', proj.logo || '');
-  return true;
+  return cloudSaveLogo(proj);
 }
 
-// ── Fejezetek ────────────────────────────────────────────────────────────────
-// Egy fejezet mentése felhőbe / mappába dialógus nélkül. true, ha valahová kikerült
-// (a böngészőn kívül); false, ha nincs hová (csak olvasható helyi projekt).
-async function saveChapterSilently(proj, fn) {
-  const f = proj.files[fn];
-  if (!f) return false;
-  if (proj.cloudFolder) {
-    const ok = await cloudSaveSectionFile(proj, fn);
-    if (ok) f.dirty = false;
-    return ok;
-  }
-  if (!f.fileHandle && proj.sectionsDirHandle) {
-    try { f.fileHandle = await proj.sectionsDirHandle.getFileHandle(fn, { create: true }); } catch(e) {}
-  }
-  if (f.fileHandle && await writeFileHandle(f.fileHandle, f.raw)) {
-    f.dirty = false;
-    return true;
-  }
-  return false;
-}
-
-// Kézi mentés (💾 gomb / Ctrl+S) — az aktív fejezet.
-async function saveCurrentFile() {
-  const proj = currentProj();
-  if (!proj || !state.currentFile) return;
-  await saveChapter(proj, state.currentFile);
-}
-
+// ── Fejezetek ──
 async function saveChapter(proj, fn) {
   const f = proj.files[fn];
-  if (!f) return;
-
-  if (await saveChapterSilently(proj, fn)) {
-    renderSidebar();
-    flashStatus(proj.cloudFolder ? 'Mentve a felhőbe ✓' : 'Mentve ✓');
-    toast((proj.cloudFolder ? '☁️ Mentve: ' : '💾 Mentve: ') + fn);
-    await persistProject(proj);
-    return;
-  }
-  if (proj.cloudFolder) return; // a cloudUpload már jelezte a hibát
-
-  // Nincs írási jog: "Mentés másként" dialóg, végső esetben letöltés.
-  const fh = await saveAsWithPicker(f.raw, fn, 'Markdown fájl', 'text/markdown', '.md');
-  if (fh === null) return;
-  if (fh) {
-    f.fileHandle = fh; // megjegyzi, legközelebb nem kérdez
-    toast('💾 Mentve: ' + fh.name);
-  } else {
-    downloadText(f.raw, fn, 'text/markdown');
-    toast('💾 Letöltve: ' + fn);
-  }
-  f.dirty = false;
-  renderSidebar();
-  flashStatus(fh ? 'Mentve ✓' : 'Letöltve', 'saved', 2500);
-  await persistProject(proj);
+  if (!f) return true;
+  rebuildRaw(f);
+  const rawAtSave = f.raw;
+  const ok = await cloudSaveSectionFile(proj, fn);
+  // Ha mentés közben tovább gépeltek, a fejezet mentetlen marad (a következő kör viszi).
+  if (ok && f.raw === rawAtSave) f.dirty = false;
+  return ok;
 }
 
-// ── Automatikus mentés gépelés közben ────────────────────────────────────────
-// Csak az aktuális fejezetet írja ki (IndexedDB + felhő / mappa, ha van hova).
-async function autosaveCurrentFile() {
-  await persistCurrentFile();
+// Minden mentetlen fejezet + a config mentése (💾 gomb / Ctrl+S / build előtt).
+async function saveAllDirty({ quiet = false } = {}) {
   const proj = currentProj();
-  if (!proj || !state.currentFile) return;
-  const f = proj.files[state.currentFile];
-  if (!f) return;
-  if (!proj.cloudFolder && !f.fileHandle && !proj.sectionsDirHandle) return; // nincs hova írni
-  if (await saveChapterSilently(proj, state.currentFile)) {
-    renderSidebar();
-    flashStatus(proj.cloudFolder ? 'Automatikusan mentve a felhőbe ✓' : 'Automatikusan mentve a mappába ✓', 'saved', 1500);
+  if (!proj) return true;
+  clearTimeout(state._persistTimer);
+  let ok = true;
+  for (const fn of proj.fileOrder) {
+    if (proj.files[fn] && proj.files[fn].dirty) ok = (await saveChapter(proj, fn)) && ok;
   }
+  if (state._configDirty) {
+    clearTimeout(state._configTimer);
+    const cOk = await saveProjectConfig(proj);
+    if (cOk) state._configDirty = false;
+    ok = ok && cOk;
+  }
+  renderTree();
+  if (ok) { if (!quiet) flashStatus('Mentve a felhőbe ✓'); }
+  else setStatus('⚠ Mentés sikertelen — újrapróbálom', 'unsaved');
+  return ok;
 }
 
+async function saveCurrentFile() {
+  if (await saveAllDirty()) toast('☁️ Minden mentve');
+}
+
+// Automatikus mentés gépelés közben.
 function scheduleAutosave() {
   clearTimeout(state._persistTimer);
-  state._persistTimer = setTimeout(autosaveCurrentFile, 2000);
+  state._persistTimer = setTimeout(async () => {
+    const ok = await saveAllDirty({ quiet: true });
+    if (ok) flashStatus('Automatikusan mentve ✓', 'saved', 1500);
+    else scheduleAutosave(); // újrapróbálás
+  }, 1500);
 }
+
+function hasUnsavedWork() {
+  const proj = currentProj();
+  if (!proj) return false;
+  return state._configDirty || proj.fileOrder.some(fn => proj.files[fn] && proj.files[fn].dirty) || hasUnsavedCss();
+}
+
+window.addEventListener('beforeunload', e => {
+  if (hasUnsavedWork()) { e.preventDefault(); e.returnValue = ''; }
+});

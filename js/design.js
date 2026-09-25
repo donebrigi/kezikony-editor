@@ -208,13 +208,9 @@ async function commitCss() {
   if (!proj) return;
   if (state.cssDraft && state.cssDraft.project === proj.name) proj.css = state.cssDraft.css;
   discardCssDraft();
-  const { ok, where } = await saveProjectCss(proj);
+  const { ok } = await saveProjectCss(proj);
   renderPreview();
-  if (!ok) { toast('⚠ A megjelenés csak részben mentődött el (' + where.join(', ') + ')', 'err', 5000); return; }
-  const localOnly = !proj.cloudFolder && !proj.dirHandle && !proj.cssHandle;
-  toast(localOnly
-    ? '✓ Megjelenés mentve (csak a böngészőbe — a mappába íráshoz adj írási jogot)'
-    : '✓ Megjelenés mentve: ' + where.join(' + '), 'ok', localOnly ? 4500 : 2500);
+  toast(ok ? '✓ Megjelenés mentve a felhőbe' : '⚠ A megjelenés mentése nem sikerült — próbáld újra', ok ? 'ok' : 'err', ok ? 2500 : 5000);
 }
 
 // Modal bezárásakor: nem mentett CSS esetén rákérdezünk.

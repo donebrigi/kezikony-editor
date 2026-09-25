@@ -42,6 +42,7 @@ function enterEditorView() {
 }
 
 async function showHomeView() {
+  if (state.uiView === 'editor' && hasUnsavedWork()) saveAllDirty({ quiet: true }); // kilépés előtt minden felmegy
   state.uiView = 'home';
   state.currentTopProject = null;
   state.currentTopProjectMeta = null;
@@ -99,6 +100,7 @@ function renderHomeGrid() {
 }
 
 async function showProjectView(projectId) {
+  if (state.uiView === 'editor' && hasUnsavedWork()) saveAllDirty({ quiet: true }); // kilépés előtt minden felmegy
   state.uiView = 'project';
   state.currentTopProject = projectId;
   const home = document.getElementById('view-home'), proj = document.getElementById('view-project'), main = document.getElementById('main');
@@ -270,12 +272,9 @@ async function saveTopProject() {
   await showProjectView(id);
 }
 
-// Egy (felhőben törölt / áthelyezett) Dokumentum helyi másolatának eltávolítása:
-// memória, projekt-választó és IndexedDB. Korábban csak akkor tűnt el a memóriából,
-// ha épp az volt megnyitva — különben a választóban egy már nem létező dokumentum maradt.
+// Egy (felhőben törölt / áthelyezett) Dokumentum eltávolítása a memóriából.
 async function forgetLocalCopy(folderId) {
   unregisterProject(folderId);
-  await deleteProjectRecords(folderId);
 }
 
 async function deleteTopProjectFromHome(projectId, name) {
@@ -343,9 +342,7 @@ async function renameDocInProject(projectId, docId, currentTitle) {
   const openProj = state.projects[folder];
   if (openProj) {
     openProj.config.title = trimmed;
-    registerProject(openProj); // a választó feliratának frissítése
     if (state.currentProject === folder) updateBreadcrumb();
-    persistProjectMeta(openProj);
   }
 
   if (state.projectDocs) {
@@ -422,53 +419,76 @@ async function deleteDocInProject(projectId, docId, title) {
   toast('✓ Dokumentum törölve');
 }
 
-// ── Helyi projekt importálása egy Projektbe, dokumentumként ──
-function openMigrateModal() {
-  const sel = document.getElementById('migrate-source-select');
-  const localNames = Object.keys(state.projects).filter(n => !state.projects[n].cloudFolder);
-  if (!localNames.length) {
-    sel.innerHTML = '<option value="">— nincs helyi projekt betöltve —</option>';
-  } else {
-    sel.innerHTML = '';
-    localNames.forEach(name => {
-      const opt = document.createElement('option');
-      opt.value = name;
-      opt.textContent = state.projects[name].config?.title || name;
-      sel.appendChild(opt);
-    });
-  }
-  document.getElementById('migrate-doc-id').value = '';
-  document.getElementById('migrate-modal-backdrop').classList.add('open');
+// ── Importálás: mappából vagy a böngészőben tárolt régi helyi projektből ──────
+let _importFolderSource = null;
+let _legacyProjects = [];
+
+async function openImportModal() {
+  _importFolderSource = null;
+  document.getElementById('import-folder-input').value = '';
+  document.getElementById('import-folder-info').textContent = 'Nincs kiválasztva mappa';
+  document.getElementById('import-doc-id').value = '';
+  document.getElementById('import-doc-title').value = '';
+  setImportSource('folder');
+  document.getElementById('import-modal-backdrop').classList.add('open');
+
+  _legacyProjects = await listLegacyLocalProjects();
+  const row = document.getElementById('import-legacy-option');
+  const sel = document.getElementById('import-legacy-select');
+  row.style.display = _legacyProjects.length ? '' : 'none';
+  sel.innerHTML = '';
+  _legacyProjects.forEach((p, i) => {
+    const o = document.createElement('option');
+    o.value = i; o.textContent = p.title + ' (' + Object.keys(p.files).length + ' fejezet)';
+    sel.appendChild(o);
+  });
 }
-function closeMigrateModal() {
-  document.getElementById('migrate-modal-backdrop').classList.remove('open');
+function closeImportModal() {
+  document.getElementById('import-modal-backdrop').classList.remove('open');
 }
-async function runMigrateToProject() {
+function setImportSource(kind) {
+  document.querySelectorAll('input[name=import-source]').forEach(r => { r.checked = r.value === kind; });
+  document.getElementById('import-folder-box').style.display = kind === 'folder' ? '' : 'none';
+  document.getElementById('import-legacy-box').style.display = kind === 'legacy' ? '' : 'none';
+  if (kind === 'legacy') onLegacySelected();
+}
+function onLegacySelected() {
+  const p = _legacyProjects[document.getElementById('import-legacy-select').value];
+  if (!p) return;
+  if (!document.getElementById('import-doc-title').value) document.getElementById('import-doc-title').value = p.title;
+  if (!document.getElementById('import-doc-id').value) document.getElementById('import-doc-id').value = slugify(p.name);
+}
+async function onImportFolderPicked(input) {
+  if (!input.files.length) return;
+  _importFolderSource = await readFolderSource(input.files);
+  const n = Object.keys(_importFolderSource.files).length;
+  const imgs = Object.keys(_importFolderSource.images).length;
+  const root = input.files[0].webkitRelativePath.split('/')[0];
+  document.getElementById('import-folder-info').textContent = n
+    ? `${root}: ${n} fejezet${imgs ? ', ' + imgs + ' kép' : ''}`
+    : `${root}: nem találtam fejezetet (sections/*.md)`;
+  if (!document.getElementById('import-doc-title').value) document.getElementById('import-doc-title').value = _importFolderSource.config.title || root;
+  if (!document.getElementById('import-doc-id').value) document.getElementById('import-doc-id').value = slugify(root);
+}
+
+async function runImport() {
   const projectId = state.currentTopProject;
   if (!projectId) return;
-  const sourceName = document.getElementById('migrate-source-select').value;
-  if (!sourceName || !state.projects[sourceName]) { toast('Nincs kiválasztható helyi projekt!', 'err'); return; }
-  const source = state.projects[sourceName];
-  if (source.cloudFolder) { toast('Ez már felhő dokumentum.', 'err'); return; }
+  const kind = (document.querySelector('input[name=import-source]:checked') || {}).value;
+  let source = null;
+  if (kind === 'legacy') source = _legacyProjects[document.getElementById('import-legacy-select').value];
+  else source = _importFolderSource;
+  if (!source || !Object.keys(source.files || {}).length) { toast('Válassz egy mappát (vagy régi projektet), amiben vannak fejezetek!', 'err'); return; }
 
-  let docId = document.getElementById('migrate-doc-id').value.trim().replace(/\s+/g, '-') || slugify(sourceName);
+  const docId = slugify(document.getElementById('import-doc-id').value.trim());
+  const title = document.getElementById('import-doc-title').value.trim();
   if (!docId) { toast('Add meg a dokumentum azonosítóját!', 'err'); return; }
   if ((await cloudListDocuments(projectId)).find(d => d.id === docId)) { toast('Már létezik ilyen azonosítójú dokumentum ebben a projektben!', 'err'); return; }
 
-  toast('☁️ Migrálás folyamatban, ez eltarthat pár másodpercig...', 'ok', 6000);
-
-  const targetFolder = projectId + '/' + docId;
-  await cloudUpload(targetFolder + '/config.json', serializeConfig({ config: source.config, fileOrder: source.fileOrder }), 'application/json');
-  await cloudUpload(targetFolder + '/style.css', source.css || getDefaultCSS(), 'text/css');
-  if (source.logo) await cloudUpload(targetFolder + '/logo.txt', source.logo, 'text/plain');
-
-  for (const fn of source.fileOrder) {
-    const f = source.files[fn];
-    if (!f) continue;
-    await cloudUpload(targetFolder + '/sections/' + fn, f.raw, 'text/markdown');
-  }
-
-  toast('✓ Migrálva — megnyitás a felhőből...', 'ok', 3000);
-  closeMigrateModal();
-  await cloudLoadProject(targetFolder, projectId, docId);
+  toast('☁️ Importálás folyamatban, ez eltarthat pár másodpercig...', 'ok', 8000);
+  const ok = await importAsCloudDocument(projectId, docId, title, source);
+  if (!ok) { toast('⚠ Az importálás nem sikerült teljesen', 'err', 5000); return; }
+  closeImportModal();
+  toast('✓ Importálva — megnyitás...', 'ok', 2500);
+  await cloudLoadProject(projectId + '/' + docId, projectId, docId);
 }

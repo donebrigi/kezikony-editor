@@ -52,6 +52,8 @@ function renderPreview() {
     html = buildPreviewHtml(proj, buildAllSectionsHtml(proj, { showNotes: true }), true, getWorkingCss(proj));
     info.textContent = 'Teljes dokumentum';
   }
+  // images/… hivatkozások → a gyorsítótárazott képek (ha még töltődnek, betöltés után újrarajzol)
+  html = resolveImagesPreview(html, proj, schedulePreview);
 
   // A legenerált kézikönyv saját CSS-e "scroll-behavior:smooth"-t állít be (a
   // tartalomjegyzék-linkekhez) — ez a görgetési pozíció bármilyen programozott
@@ -120,7 +122,6 @@ function togglePreviewPopout() {
     editorPane.style.width = '';
     editorPane.style.maxWidth = '';
     btn.textContent = '🡵 Előnézet külön lapon';
-    scheduleLineNumsUpdate();
   } else {
     const win = window.open('', 'kk_preview_window');
     if (!win) {
@@ -136,7 +137,6 @@ function togglePreviewPopout() {
     editorPane.style.maxWidth = 'none';
     btn.textContent = '🡴 Vissza a beépített előnézetre';
     renderPreview();
-    scheduleLineNumsUpdate();
     win.focus();
   }
 }
@@ -218,64 +218,27 @@ ${iconScript}
 </body></html>`;
 }
 
+// A menü a bal oldali fából épül (lásd structure.js): előbb a csoport nélküli
+// fejezetek sima linkként, utána a csoportok lenyíló blokkokként.
 function buildNavHtml(proj) {
-  const groups = proj.config.nav_groups;
-  const idTitle = {};
-  proj.fileOrder.forEach(fn => {
-    const f = proj.files[fn];
-    if (f.meta.id) idTitle[f.meta.id] = f.meta.title || f.meta.id;
-  });
-  const allIds = new Set(Object.keys(idTitle));
-
-  if (!groups) {
-    return '<ul class="nav-acc-root">' +
-      proj.fileOrder.map(fn => {
-        const f = proj.files[fn];
-        const id = f.meta.id || fn;
-        const title = f.meta.title || id;
-        return `<li><a href="#${id}">${title}</a></li>`;
-      }).join('') + '</ul>';
-  }
-
-  let html = '<ul class="nav-acc-root">';
-  groups.forEach(g => {
-    const directSections = (g.sections || []).filter(id => allIds.has(id));
-    const subgroups = (g.subgroups || []).map(sg => ({
-      ...sg,
-      existing: (sg.sections || []).filter(id => allIds.has(id))
-    })).filter(sg => sg.existing.length > 0);
-
-    if (!directSections.length && !subgroups.length) return;
-
-    let innerHtml = '';
-
-    // Direct sections
-    if (directSections.length) {
-      innerHtml += directSections.map(id =>
-        `<li><a href="#${id}">${idTitle[id]||id}</a></li>`
-      ).join('');
-    }
-
-    // Subgroups as nested accordions
-    subgroups.forEach(sg => {
-      innerHtml += `<li>
+  const tree = getTree(proj);
+  const link = fn => `<li><a href="#${escapeHtml(chapterId(proj, fn))}">${escapeHtml(chapterTitle(proj, fn))}</a></li>`;
+  let html = '<ul class="nav-acc-root">' + tree.ungrouped.map(link).join('');
+  tree.groups.forEach(g => {
+    const subs = g.subgroups.filter(sg => sg.sections.length);
+    if (!g.sections.length && !subs.length) return;
+    let inner = g.sections.map(link).join('');
+    subs.forEach(sg => {
+      inner += `<li>
         <details class="nav-acc" data-nav-acc open>
-          <summary style="font-size:13px;padding:7px 10px">${sg.name}</summary>
-          <div class="nav-acc-panel">
-            <ul aria-label="${sg.name}">
-              ${sg.existing.map(id => `<li><a href="#${id}">${idTitle[id]||id}</a></li>`).join('')}
-            </ul>
-          </div>
+          <summary style="font-size:13px;padding:7px 10px">${escapeHtml(sg.name)}</summary>
+          <div class="nav-acc-panel"><ul aria-label="${escapeHtml(sg.name)}">${sg.sections.map(link).join('')}</ul></div>
         </details>
       </li>`;
     });
-
     html += `<li><details class="nav-acc" data-nav-acc open>
-      <summary>${g.name}</summary>
-      <div class="nav-acc-panel"><ul aria-label="${g.name}">
-        ${innerHtml}
-      </ul></div></details></li>`;
+      <summary>${escapeHtml(g.name)}</summary>
+      <div class="nav-acc-panel"><ul aria-label="${escapeHtml(g.name)}">${inner}</ul></div></details></li>`;
   });
-  html += '</ul>';
-  return html;
+  return html + '</ul>';
 }
