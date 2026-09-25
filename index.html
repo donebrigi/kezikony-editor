@@ -17,7 +17,8 @@
   <!-- Jobb oldal: Beállítások / Mentés / AI / Letöltés / Előnézet, ebben a sorrendben. -->
   <div id="topbar-editor-tools-right" style="display:none">
     <div class="sep"></div>
-    <button class="btn" onclick="openProjModal('doc')" title="A dokumentum címe, logója, megjelenése, fejezetek másolása" style="padding:5px 10px;font-size:13px">⚙ Beállítások</button>
+    <button class="btn" onclick="openProjModal('doc')" title="A dokumentum címe, logója, fejezetek másolása" style="padding:5px 10px;font-size:13px">⚙ Beállítások</button>
+    <button class="btn" id="btn-design" onclick="toggleDesignPanel()" title="Megjelenés: színek, betűk, méretek — oldalpanelben, a teljes előnézet mellett" style="padding:5px 10px;font-size:13px">🎨 Megjelenés</button>
     <button class="btn" onclick="saveCurrentFile()" title="Minden módosítás mentése most (Ctrl+S) — egyébként gépelés után automatikusan ment">💾 Mentés</button>
     <div class="dl-menu-wrap">
       <button class="btn primary" onclick="toggleDownloadMenu(event)" id="btn-download" title="A kész HTML letöltése — felhő Dokumentumnál emellett a publikált oldal is frissül">⬇ Letöltés</button>
@@ -115,92 +116,13 @@
     </div>
   </div>
 
-  <div id="resize-handle" title="Húzd az átméretezéshez"></div>
-
-  <div id="preview-pane" style="display:none">
-    <div id="preview-header">
-      <div id="preview-mode-btns">
-        <button class="mode-btn active" onclick="setPreviewMode('section')" id="mode-section">Fejezet</button>
-        <button class="mode-btn" onclick="setPreviewMode('full')" id="mode-full">Teljes dok</button>
-      </div>
-      <div class="spacer"></div>
-      <span style="font-size:11px;color:var(--text3)" id="preview-info"></span>
-      <button class="mode-btn" id="btn-preview-sync" onclick="togglePreviewSync()" title="Görgetés-szinkron: az előnézet követi a szerkesztőt. Az előnézetben egy bekezdésre kattintva a szerkesztő oda ugrik.">🔗 Szinkron</button>
-      <button class="mode-btn" onclick="renderPreview()" title="Csak az előnézet frissítése (az oldal nem töltődik újra)">🔄 Frissítés</button>
+  <!-- Megjelenés oldalpanel: megnyitva a fa és a szerkesztő helyére kerül, a teljes előnézet mellé -->
+  <div id="design-panel" style="display:none">
+    <div id="design-panel-header">
+      <span>🎨 Megjelenés — <strong id="css-proj-name"></strong></span>
+      <button class="btn" onclick="closeDesignPanel()" title="Vissza a szerkesztőhöz">✕ Bezárás</button>
     </div>
-    <iframe id="preview-frame"></iframe>
-  </div>
-
-</div>
-
-<div id="toast"></div>
-
-<!-- Projekt kezelő modal -->
-<div id="proj-modal-backdrop">
-  <div id="proj-modal" onclick="event.stopPropagation()">
-    <h3>⚙ Dokumentum beállításai</h3>
-    <div class="tab-bar">
-      <button class="tab active" onclick="switchModalTab('doc')">📄 Dokumentum</button>
-      <button class="tab" onclick="switchModalTab('css')">🎨 Megjelenés</button>
-      <button class="tab" onclick="switchModalTab('copy')">📋 Fejezetek másolása</button>
-    </div>
-
-    <!-- TAB: Dokumentum -->
-    <div class="tab-panel active" id="tab-doc">
-      <div class="form-grid">
-        <label>Cím <span class="hint">(a dokumentumlistában és a böngészőfülön)</span></label>
-        <input type="text" id="doc-title"/>
-        <label>Alcím <span class="hint">(a kész oldal bal felső sarkában)</span></label>
-        <input type="text" id="doc-subtitle"/>
-        <label>Rövid leírás <span class="hint">(az alcím alatt)</span></label>
-        <input type="text" id="doc-description"/>
-      </div>
-      <div style="display:flex;justify-content:flex-end;margin:10px 0 18px">
-        <button class="btn primary" onclick="saveDocSettings()">✓ Mentés</button>
-      </div>
-      <div class="section-label">🖼 Logó</div>
-      <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">
-        <div id="logo-preview-wrap" style="width:80px;height:40px;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0">
-          <img id="logo-preview-img" style="max-width:100%;max-height:100%;display:none" alt="logó"/>
-          <span id="logo-preview-empty" style="font-size:11px;color:var(--text3)">nincs</span>
-        </div>
-        <div style="display:flex;flex-direction:column;gap:6px">
-          <button class="btn" onclick="document.getElementById('logo-file-input').click()" style="font-size:12px;padding:5px 12px">📂 Logó feltöltése</button>
-          <button class="btn" onclick="removeLogo()" style="font-size:12px;padding:5px 12px;color:var(--red)">🗑 Eltávolítás</button>
-        </div>
-        <input id="logo-file-input" type="file" accept="image/*" style="display:none" onchange="handleLogoUpload(this)"/>
-      </div>
-      <div style="font-size:11px;color:var(--text3)">PNG, SVG, JPG — ajánlott: max 200×60px. A logó azonnal mentődik.</div>
-      <div class="section-label" style="margin-top:20px">🧹 Képek</div>
-      <div style="display:flex;align-items:center;gap:12px">
-        <button class="btn" onclick="cleanupUnusedImages()" style="font-size:12px">🧹 Nem használt képek törlése</button>
-        <span style="font-size:11px;color:var(--text3)">Törli a felhőből azokat a képfájlokat, amelyekre már egyik fejezet sem hivatkozik (pl. kicserélt vagy kitörölt képek).</span>
-      </div>
-    </div>
-
-    <!-- TAB: Fejezetek másolása -->
-    <div class="tab-panel" id="tab-copy">
-      <div style="font-size:12px;color:var(--text3);margin-bottom:10px">
-        Fejezetek átmásolása egy másik dokumentumból ebbe (a képeikkel együtt). A másolatok a lista végére kerülnek.
-      </div>
-      <div class="form-grid">
-        <label>Projekt</label>
-        <select id="copy-project-select" onchange="loadCopyDocs()"></select>
-        <label>Dokumentum</label>
-        <select id="copy-doc-select" onchange="loadCopyChapters()"></select>
-      </div>
-      <div id="copy-chapters-list"></div>
-      <div class="copy-dest" id="copy-dest-row" style="display:none">
-        <button class="btn primary" onclick="copySelectedChapters()" style="font-size:12px;padding:6px 16px">📋 Kijelöltek másolása ide</button>
-      </div>
-    </div>
-
-    <!-- TAB: Megjelenés -->
-    <div class="tab-panel" id="tab-css">
-      <div style="font-size:12px;color:var(--text3);margin-bottom:8px">
-        Aktív projekt megjelenése: <strong id="css-proj-name" style="color:var(--accent2)"></strong>
-      </div>
-
+    <div id="design-panel-body">
       <div class="css-mode-toggle">
         <button class="css-mode-btn active" id="css-mode-simple-btn" type="button" onclick="setCssMode('simple')">🎨 Egyszerű</button>
         <button class="css-mode-btn" id="css-mode-code-btn" type="button" onclick="setCssMode('code')">&lt;/&gt; Kód (haladó)</button>
@@ -390,6 +312,86 @@
           <button class="btn" onclick="resetToDefaultCss()" style="font-size:12px">↺ Alapértelmezett</button>
           <button class="btn primary" onclick="saveCss()" style="font-size:12px">✓ Mentés</button>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="resize-handle" title="Húzd az átméretezéshez"></div>
+
+  <div id="preview-pane" style="display:none">
+    <div id="preview-header">
+      <div id="preview-mode-btns">
+        <button class="mode-btn active" onclick="setPreviewMode('section')" id="mode-section">Fejezet</button>
+        <button class="mode-btn" onclick="setPreviewMode('full')" id="mode-full">Teljes dok</button>
+      </div>
+      <div class="spacer"></div>
+      <span style="font-size:11px;color:var(--text3)" id="preview-info"></span>
+      <button class="mode-btn" id="btn-preview-sync" onclick="togglePreviewSync()" title="Görgetés-szinkron: az előnézet követi a szerkesztőt. Az előnézetben egy bekezdésre kattintva a szerkesztő oda ugrik.">🔗 Szinkron</button>
+      <button class="mode-btn" onclick="renderPreview()" title="Csak az előnézet frissítése (az oldal nem töltődik újra)">🔄 Frissítés</button>
+    </div>
+    <iframe id="preview-frame"></iframe>
+  </div>
+
+</div>
+
+<div id="toast"></div>
+
+<!-- Projekt kezelő modal -->
+<div id="proj-modal-backdrop">
+  <div id="proj-modal" onclick="event.stopPropagation()">
+    <h3>⚙ Dokumentum beállításai</h3>
+    <div class="tab-bar">
+      <button class="tab active" onclick="switchModalTab('doc')">📄 Dokumentum</button>
+      <button class="tab" onclick="switchModalTab('copy')">📋 Fejezetek másolása</button>
+    </div>
+
+    <!-- TAB: Dokumentum -->
+    <div class="tab-panel active" id="tab-doc">
+      <div class="form-grid">
+        <label>Cím <span class="hint">(a dokumentumlistában és a böngészőfülön)</span></label>
+        <input type="text" id="doc-title"/>
+        <label>Alcím <span class="hint">(a kész oldal bal felső sarkában)</span></label>
+        <input type="text" id="doc-subtitle"/>
+        <label>Rövid leírás <span class="hint">(az alcím alatt)</span></label>
+        <input type="text" id="doc-description"/>
+      </div>
+      <div style="display:flex;justify-content:flex-end;margin:10px 0 18px">
+        <button class="btn primary" onclick="saveDocSettings()">✓ Mentés</button>
+      </div>
+      <div class="section-label">🖼 Logó</div>
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">
+        <div id="logo-preview-wrap" style="width:80px;height:40px;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0">
+          <img id="logo-preview-img" style="max-width:100%;max-height:100%;display:none" alt="logó"/>
+          <span id="logo-preview-empty" style="font-size:11px;color:var(--text3)">nincs</span>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <button class="btn" onclick="document.getElementById('logo-file-input').click()" style="font-size:12px;padding:5px 12px">📂 Logó feltöltése</button>
+          <button class="btn" onclick="removeLogo()" style="font-size:12px;padding:5px 12px;color:var(--red)">🗑 Eltávolítás</button>
+        </div>
+        <input id="logo-file-input" type="file" accept="image/*" style="display:none" onchange="handleLogoUpload(this)"/>
+      </div>
+      <div style="font-size:11px;color:var(--text3)">PNG, SVG, JPG — ajánlott: max 200×60px. A logó azonnal mentődik.</div>
+      <div class="section-label" style="margin-top:20px">🧹 Képek</div>
+      <div style="display:flex;align-items:center;gap:12px">
+        <button class="btn" onclick="cleanupUnusedImages()" style="font-size:12px">🧹 Nem használt képek törlése</button>
+        <span style="font-size:11px;color:var(--text3)">Törli a felhőből azokat a képfájlokat, amelyekre már egyik fejezet sem hivatkozik (pl. kicserélt vagy kitörölt képek).</span>
+      </div>
+    </div>
+
+    <!-- TAB: Fejezetek másolása -->
+    <div class="tab-panel" id="tab-copy">
+      <div style="font-size:12px;color:var(--text3);margin-bottom:10px">
+        Fejezetek átmásolása egy másik dokumentumból ebbe (a képeikkel együtt). A másolatok a lista végére kerülnek.
+      </div>
+      <div class="form-grid">
+        <label>Projekt</label>
+        <select id="copy-project-select" onchange="loadCopyDocs()"></select>
+        <label>Dokumentum</label>
+        <select id="copy-doc-select" onchange="loadCopyChapters()"></select>
+      </div>
+      <div id="copy-chapters-list"></div>
+      <div class="copy-dest" id="copy-dest-row" style="display:none">
+        <button class="btn primary" onclick="copySelectedChapters()" style="font-size:12px;padding:6px 16px">📋 Kijelöltek másolása ide</button>
       </div>
     </div>
 
@@ -631,6 +633,7 @@
 <script src="js/conflicts.js"></script>
 <script src="js/legacy-import.js"></script>
 <script src="js/design.js"></script>
+<script src="js/designpanel.js"></script>
 <script src="js/preview.js"></script>
 <script src="js/previewsync.js"></script>
 <script src="js/build.js"></script>

@@ -33,7 +33,7 @@ Minden automatikusan a felhőbe mentődik:
 - **Fejezetek:** gépelés után kb. 1,5 másodperccel. A még nem mentett fejezet mellett a bal oldali listában ● jel látszik. Ha a mentés nem sikerül (pl. megszakadt a net), a szerkesztő újrapróbálja.
 - **Szerkezet** (sorrend, csoportok, menü): húzás után azonnal.
 - **Képek:** beillesztéskor azonnal.
-- **Megjelenés:** a Megjelenés fül **✓ Mentés** gombjával (addig csak az előnézetben látszik).
+- **Megjelenés:** a Megjelenés panel **✓ Mentés** gombjával (addig csak az előnézetben látszik).
 
 A **💾 Mentés** gomb (Ctrl+S) mindent azonnal elment. Ha még van mentetlen módosítás, a böngésző bezárás előtt figyelmeztet.
 
@@ -46,6 +46,8 @@ Mentés előtt a szerkesztő megnézi, módosította-e valaki más a fejezetet, 
 - **Az övé legyen** — a te módosításaid elvesznek.
 - **Mindkettő megmarad** — az övé marad a fejezetben, a tiéd egy új „(saját változat)” fejezetbe kerül közvetlenül alá; utána kézzel összefésülhetők.
 - **Az enyém legyen** — az ő módosításai elvesznek.
+
+Ha az ablak valamiért nem látszik, de a felső sávban „⚠ Ütközés” áll, kattints a feliratra vagy a **💾 Mentés** gombra, és újra megjelenik.
 
 A szerkezetnél (sorrend, csoportok, cím) egy egyszerű kérdés jön fel. Ha egy fejezetre váltasz, és nálad nincs mentetlen módosítás, a szerkesztő csendben betölti a felhőben lévő legfrissebb változatát.
 
@@ -96,7 +98,7 @@ A szerkesztő egy leegyszerűsített markdown-változatot ért. Az eszköztár g
 |---|---|---|
 | Félkövér | `**szöveg**` | |
 | Dőlt | `*szöveg*` | |
-| Kiemelt szöveg | `==szöveg==` | színe a Megjelenés fülön külön állítható |
+| Kiemelt szöveg | `==szöveg==` | színe a Megjelenés panelen külön állítható |
 | Kód (inline) | `` `kód` `` | |
 | Címsor 1 | `# Cím` | HTML-ben `<h2>`, automatikusan kap egy hivatkozható azonosítót |
 | Címsor 2 | `## Cím` | HTML-ben `<h3>` |
@@ -104,7 +106,7 @@ A szerkesztő egy leegyszerűsített markdown-változatot ért. Az eszköztár g
 | Címsor 4 | `#### Cím` | HTML-ben `<h5>` (a legfrissebb szint) |
 | Felsorolás | `- elem` | |
 | Számozott lista | `1. elem` | |
-| Kiemelt doboz | `> szöveg` | színe a Megjelenés fülön állítható |
+| Kiemelt doboz | `> szöveg` | színe a Megjelenés panelen állítható |
 | Link | `[szöveg](url)` | |
 | Kép | `![alt szöveg](images/…)` | beillesztéssel jön létre, lásd [Képek](#képek) |
 | Képek egymás alatt, közös keretben | `<!-- shot-stack -->` ... képek ... `<!-- /shot-stack -->` | |
@@ -152,9 +154,9 @@ Az eszköztár **🧩 Ikon** gombja egy kereshető ikonválasztót nyit meg (a [
 :ikon-nev:
 ```
 
-jelölést szúr be a szövegbe (pl. `:house:`), ami egy valódi, az oldalba ágyazott SVG-vé alakul mind az előnézetben, mind a végleges buildelt oldalon (nem egy külső képfájl — ezért lehet a megjelenését CSS-ből, azaz a Megjelenés fülről is szabályozni).
+jelölést szúr be a szövegbe (pl. `:house:`), ami egy valódi, az oldalba ágyazott SVG-vé alakul mind az előnézetben, mind a végleges buildelt oldalon (nem egy külső képfájl — ezért lehet a megjelenését CSS-ből, azaz a Megjelenés panelről is szabályozni).
 
-Az ikonok kinézete a Megjelenés fülön, az "Ikonok" mezőknél állítható: szín, vastagság (px), valamint szélesség és magasság (px) külön-külön. Alapból a szöveg színét és a Lucide gyári kb. 2px-es vonalvastagságát/20px-es méretét örökli, amíg felül nem írod.
+Az ikonok kinézete a Megjelenés panelen, az "Ikonok" mezőknél állítható: szín, vastagság (px), valamint szélesség és magasság (px) külön-külön. Alapból a szöveg színét és a Lucide gyári kb. 2px-es vonalvastagságát/20px-es méretét örökli, amíg felül nem írod.
 
 **Fontos:** az ikonok (és az ikonlista is) egy külső CDN-ről (unpkg.com) töltődnek be futásidőben — ehhez internetkapcsolat kell, ugyanúgy, mint a Google Fonts betűtípusokhoz. Ha valaki teljesen internet nélkül nyitja meg a végleges oldalt, az ikonok helyén üres hely marad.
 
@@ -178,13 +180,14 @@ A jegyzet az **élő előnézetben** egy szaggatott keretű, elkülönülő bubo
 
 A **⚙ Beállítások** ablak fülei:
 
-- **📄 Dokumentum:** cím, alcím, rövid leírás, logó.
-- **🎨 Megjelenés:** lásd lent.
+- **📄 Dokumentum:** cím, alcím, rövid leírás, logó, nem használt képek törlése.
 - **📋 Fejezetek másolása:** fejezetek átmásolása egy másik dokumentumból (a képeikkel együtt).
 
 ## Megjelenés testreszabása
 
-A **⚙ Beállítások** ablak **🎨 Megjelenés** fülén két nézet van:
+A topbar **🎨 Megjelenés** gombja egy oldalpanelt nyit: a panel a fa és a szerkesztő helyére kerül, az előnézet pedig közben a **teljes kézikönyvet** mutatja mellette (menüvel, borítóval), így minden módosítás hatása rögtön az egész oldalon látszik. A **✕ Bezárás** (vagy újra a 🎨 gomb) visszaállítja a szerkesztőt és a korábbi előnézeti módot; ha van nem mentett módosítás, előtte rákérdez.
+
+A panelen két nézet van:
 
 - **🎨 Egyszerű** (alapértelmezett): magyar nyelvű, egyenként állítható mezők — nincs szükség CSS-tudásra.
   - Kiemelő szín (linkek, címek, gombok)
@@ -269,7 +272,7 @@ title: Telepítés
 - Az ütközésjelzés mentéskor lép működésbe; azt nem mutatja élőben, ha valaki épp ugyanazt a fejezetet szerkeszti.
 - Egy kolléga által közben létrehozott új fejezet a dokumentum újranyitásakor jelenik meg.
 - Az ikonok és a betűtípusok külső CDN-ről töltődnek, ezekhez internet kell a kész oldalon is.
-- A "Címsor 1" mező a Megjelenés fülön a borító (első fejezet) fejlécére vonatkozik — a markdown `#` szintje `Címsor 2`-nek megfelelő HTML-elemet hoz létre.
+- A "Címsor 1" mező a Megjelenés panelen a borító (első fejezet) fejlécére vonatkozik — a markdown `#` szintje `Címsor 2`-nek megfelelő HTML-elemet hoz létre.
 
 ## Kód szerkezete
 
@@ -291,7 +294,8 @@ js/
   persistence.js        # mentések (automatikus és kézi)
   conflicts.js          # ütközésjelzés, ha ketten szerkesztik ugyanazt
   legacy-import.js      # régi, böngészőben tárolt helyi projektek olvasása (importhoz)
-  design.js             # Megjelenés fül
+  design.js             # Megjelenés beállítások (egyszerű + kód nézet, piszkozat/mentés)
+  designpanel.js        # a Megjelenés oldalpanel megnyitása/bezárása
   preview.js            # élő előnézet, HTML összeállítás, menü
   previewsync.js        # görgetés-szinkron, kattintás az előnézetben
   build.js              # HTML letöltés, nyomtatás/PDF, ZIP letöltés
@@ -309,6 +313,16 @@ js/
 A fájlok sima (nem ES-modul) szkriptek; a betöltési sorrend az `index.html` alján van.
 
 ## Változásnapló
+
+### 3.2.1 — Ütközés-javítás
+
+- **Hamis ütközés:** a Supabase egy fájl felülírása után még kb. egy percig a régi változatot is visszaadhatta (CDN-gyorsítótár), ezért a szerkesztő a saját, pár másodperccel korábbi szövegedet „kolléga változatának” nézte — akkor is, ha senki más nem szerkesztett. Javítva: a letöltések mindig a friss változatot kérik, és a saját korábbi változataidat a szerkesztő nem tekinti ütközésnek.
+
+- Ha „Az enyém legyen” választása közben a kolléga újra mentett, a szerkesztő beragadt a „⚠ Ütközés — döntésre vár” állapotba, döntési ablak nélkül. Javítva: „Az enyém” most mindenképp felülír, és a felirat vagy a 💾 Mentés gomb újra előhozza az ablakot, ha függőben van egy döntés.
+
+### 3.2 — Megjelenés oldalpanelben
+
+- A Megjelenés a ⚙ Beállítások ablakból egy saját oldalpanelbe került (topbar: **🎨 Megjelenés**). A panel mellett a teljes kézikönyv előnézete látszik.
 
 ### 3.1 — AI funkciók eltávolítva
 
