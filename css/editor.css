@@ -699,27 +699,62 @@ body { font-family: var(--sans); background: var(--bg); color: var(--text); disp
 #imged-canvas { max-width: 100%; max-height: 64vh; cursor: crosshair; box-shadow: 0 6px 24px rgba(0,0,0,.4); touch-action: none; }
 .imged-bottom { display: flex; align-items: center; gap: 10px; margin-top: 12px; }
 
-/* ══ Megjelenés oldalpanel ══════════════════════════════════════════════════ */
-#main.design-mode #sidebar,
-#main.design-mode #editor-pane,
-#main.design-mode #empty-state,
-#main.design-mode #resize-handle { display: none !important; }
-#design-panel {
-  width: 400px; min-width: 340px; flex-shrink: 0; flex-direction: column;
-  background: var(--bg2); border-right: 1px solid var(--border); overflow: hidden;
-}
-#design-panel-header {
-  display: flex; align-items: center; gap: 10px; padding: 10px 14px;
-  border-bottom: 1px solid var(--border); font-size: 13px; color: var(--text2);
-}
-#design-panel-header > span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-#design-panel-header strong { color: var(--accent2); }
-#design-panel-body { flex: 1; overflow-y: auto; padding: 14px 16px 24px; }
-#design-panel .css-actions {
-  position: sticky; bottom: -24px; background: var(--bg2); padding: 10px 0 12px;
-  margin-top: 12px; border-top: 1px solid var(--border); z-index: 2; flex-wrap: wrap;
-}
-#design-panel #proj-css-editor { min-height: 60vh; }
-#btn-design.active { background: var(--accent-soft); border-color: var(--accent); color: var(--accent2); }
 
 #status.conflict { cursor: pointer; text-decoration: underline; }
+
+/* ══ Megjelenés oldal (projekt téma) ════════════════════════════════════════ */
+#view-theme { display: none; flex: 1; flex-direction: column; overflow: hidden; }
+#view-theme.active { display: flex; }
+.theme-head {
+  display: flex; align-items: center; gap: 16px; padding: 14px 20px;
+  border-bottom: 1px solid var(--border); background: var(--bg2);
+}
+.theme-head h1 { font-size: 17px; font-weight: 600; margin: 0 0 3px; color: var(--text); }
+.theme-head .sub { font-size: 12px; color: var(--text3); }
+.theme-head-actions { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+#theme-dirty { font-size: 12px; color: var(--text3); margin-right: 6px; }
+#theme-dirty.unsaved { color: var(--amber); font-weight: 600; }
+.theme-body { flex: 1; display: flex; min-height: 0; }
+.theme-form { width: 420px; flex-shrink: 0; overflow-y: auto; padding: 14px 18px 30px; border-right: 1px solid var(--border); background: var(--bg2); }
+.theme-preview { flex: 1; min-width: 0; background: #e9ebef; }
+.theme-preview iframe { width: 100%; height: 100%; border: 0; display: block; }
+.tf-group { margin-bottom: 18px; }
+.tf-title { font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--text3); margin-bottom: 6px; }
+.tf-row {
+  display: grid; grid-template-columns: 1fr 34px 86px 44px; align-items: center; gap: 8px;
+  padding: 5px 0; border-bottom: 1px solid rgba(255,255,255,.04);
+}
+.tf-row label { font-size: 13px; color: var(--text); }
+.tf-hint { display: block; color: var(--text3); font-size: 11px; margin-top: 1px; }
+.tf-row input[type=color] { width: 34px; height: 26px; padding: 0; border: 1px solid var(--border2); border-radius: 6px; background: none; cursor: pointer; }
+.tf-row.is-auto input[type=color] { opacity: .55; }
+.tf-hex, .tf-num {
+  width: 100%; box-sizing: border-box; padding: 4px 7px; font-family: var(--mono); font-size: 12px;
+  background: var(--bg); color: var(--text); border: 1px solid var(--border2); border-radius: 6px;
+}
+.tf-num { grid-column: 2 / span 2; }
+.tf-unit { font-size: 11px; color: var(--text3); }
+.tf-auto { font-size: 11px; padding: 3px 0; border-radius: 6px; border: 1px solid var(--border2); background: var(--bg3); color: var(--text2); cursor: pointer; }
+.tf-auto:disabled { background: var(--accent-soft); color: var(--accent2); border-color: var(--accent); cursor: default; }
+.tf-fixed .tf-note { font-size: 12px; color: var(--text2); line-height: 1.7; background: var(--bg3); border-radius: 8px; padding: 10px 12px; }
+
+/* ══ Kezdőlap: nézetválasztó + dokumentumlista ══════════════════════════════ */
+.hp-header-tools { display: flex; align-items: center; gap: 10px; }
+.view-toggle { display: flex; border: 1px solid var(--border2); border-radius: 8px; overflow: hidden; }
+.view-toggle button { background: var(--bg2); color: var(--text2); border: none; padding: 7px 12px; font-size: 13px; cursor: pointer; white-space: nowrap; }
+.view-toggle button + button { border-left: 1px solid var(--border2); }
+.view-toggle button.active { background: var(--accent); color: #fff; }
+.doc-table { width: 100%; border-collapse: collapse; background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+.doc-table th { text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--text3); padding: 10px 14px; border-bottom: 1px solid var(--border); background: var(--bg3); }
+.doc-table td { padding: 10px 14px; border-bottom: 1px solid var(--border); vertical-align: middle; font-size: 14px; }
+.doc-table tr:last-child td { border-bottom: none; }
+.doc-table tr:hover td { background: rgba(255,255,255,.02); }
+.doc-table a { color: var(--text); text-decoration: none; }
+.doc-table a:hover { color: var(--accent2); text-decoration: underline; }
+.dt-title a { font-weight: 600; }
+.dt-meta { font-size: 11px; color: var(--text3); margin-top: 2px; }
+.dt-project { white-space: nowrap; }
+.dt-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 8px; vertical-align: middle; }
+.dt-actions { text-align: right; white-space: nowrap; }
+.dt-actions .btn-sm { margin-left: 3px; }
+.btn-xs { padding: 4px 10px !important; font-size: 12px !important; margin-right: 4px; }
