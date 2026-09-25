@@ -29,6 +29,7 @@
           <span>🖼 Képek optimalizálása<br><small>WebP, max 1440px — kisebb fájl, de a képek minősége kicsit romlik</small></span>
         </label>
         <button class="btn primary" onclick="confirmDownload()" style="width:100%">⬇ HTML letöltése</button>
+        <button class="btn" onclick="confirmPrint()" style="width:100%" title="Nyomtatási nézet: minden fejezet új oldalon, tartalomjegyzékkel, kinyitott lenyíló elemekkel. PDF-hez válaszd a „Mentés PDF-ként” nyomtatót.">🖨 Nyomtatás / PDF</button>
         <div class="dl-menu-sep"></div>
         <div class="dl-menu-title">Forrásfájlok</div>
         <button class="btn" onclick="confirmDownloadZip()" style="width:100%">📦 Markdown + képek (ZIP)</button>
@@ -108,6 +109,8 @@
       <button class="fmt-btn" onclick="pickImageFile()" title="Kép beillesztése fájlból (Ctrl+V és húzás is működik)">🖼 Kép</button>
       <button class="fmt-btn" onclick="fmtLink()" title="Link beszúrása (Ctrl+K)">🔗 Link</button>
       <button class="fmt-btn" onclick="fmtTable()" title="Táblázat">▦ Táblázat</button>
+      <div class="fmt-sep"></div>
+      <button class="fmt-btn ai-fmt" id="btn-ai-text" onclick="toggleAiTextMenu(event)" title="AI a kijelölt szövegre (kijelölés nélkül: a kurzor alatti bekezdésre)">✨ Szöveg ▾</button>
       <span class="fmt-tip">Tipp: írj „/”-t a sor elején</span>
     </div>
     <div id="editor-wrap">
@@ -125,6 +128,7 @@
       </div>
       <div class="spacer"></div>
       <span style="font-size:11px;color:var(--text3)" id="preview-info"></span>
+      <button class="mode-btn" id="btn-preview-sync" onclick="togglePreviewSync()" title="Görgetés-szinkron: az előnézet követi a szerkesztőt. Az előnézetben egy bekezdésre kattintva a szerkesztő oda ugrik.">🔗 Szinkron</button>
       <button class="mode-btn" onclick="renderPreview()" title="Csak az előnézet frissítése (az oldal nem töltődik újra)">🔄 Frissítés</button>
     </div>
     <iframe id="preview-frame"></iframe>
@@ -142,9 +146,11 @@
   </div>
   <div id="ai-panel-body">
 
-    <!-- API Key -->
-    <div>
+    <!-- API Key (csak ha nincs szerveroldali kulcs) -->
+    <div id="ai-proxy-status" class="ai-key-status ok" style="display:none">✓ Szerveroldali AI kulcs használatban — nem kell saját kulcs</div>
+    <div id="ai-key-section">
       <div class="ai-section-label">🔑 API kulcs</div>
+      <div class="hint" style="font-size:11px;margin-bottom:6px">A szerveroldali AI nincs beállítva (lásd README → AI), ezért most a saját kulcsod kell. Ez csak ebben a böngészőben tárolódik.</div>
       <div id="ai-key-row">
         <input id="ai-api-key" type="password" placeholder="sk-ant-..." autocomplete="off"/>
         <button id="ai-key-save" onclick="saveApiKey()">Mentés</button>
@@ -241,6 +247,11 @@
         <input id="logo-file-input" type="file" accept="image/*" style="display:none" onchange="handleLogoUpload(this)"/>
       </div>
       <div style="font-size:11px;color:var(--text3)">PNG, SVG, JPG — ajánlott: max 200×60px. A logó azonnal mentődik.</div>
+      <div class="ai-section-label" style="margin-top:20px">🧹 Képek</div>
+      <div style="display:flex;align-items:center;gap:12px">
+        <button class="btn" onclick="cleanupUnusedImages()" style="font-size:12px">🧹 Nem használt képek törlése</button>
+        <span style="font-size:11px;color:var(--text3)">Törli a felhőből azokat a képfájlokat, amelyekre már egyik fejezet sem hivatkozik (pl. kicserélt vagy kitörölt képek).</span>
+      </div>
     </div>
 
     <!-- TAB: Fejezetek másolása -->
@@ -483,6 +494,86 @@
   </div>
 </div>
 
+<!-- Ütközés: valaki más is módosította a fejezetet -->
+<div class="hp-modal-backdrop" id="conflict-modal-backdrop">
+  <div class="hp-modal conflict-modal" onclick="event.stopPropagation()">
+    <h3>⚠ Valaki más is módosította: „<span id="conflict-title"></span>”</h3>
+    <p class="hint">Mióta megnyitottad ezt a fejezetet, egy kolléga is mentett bele. Melyik változat maradjon?</p>
+    <div class="conflict-cols">
+      <div><label>Az ő változata (a felhőben)</label><textarea id="conflict-theirs" readonly></textarea></div>
+      <div><label>A te változatod</label><textarea id="conflict-mine" readonly></textarea></div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap">
+      <button class="btn" onclick="resolveConflict('theirs')" style="flex:1" title="A te módosításaid elvesznek">⬅ Az övé legyen</button>
+      <button class="btn" onclick="resolveConflict('both')" style="flex:1" title="Az övé marad itt, a tiéd egy új „(saját változat)” fejezetbe kerül — utána kézzel összefésülheted">⧉ Mindkettő megmarad</button>
+      <button class="btn primary" onclick="resolveConflict('mine')" style="flex:1" title="Az ő módosításai elvesznek">Az enyém legyen ➡</button>
+    </div>
+  </div>
+</div>
+
+<!-- AI szöveg-műveletek menü -->
+<div id="ai-text-menu" class="dl-menu ai-text-menu">
+  <button onclick="runAiTextAction('fix')">✔ Helyesírás és nyelvtan javítása</button>
+  <button onclick="runAiTextAction('clarify')">💡 Érthetőbbé tétel</button>
+  <button onclick="runAiTextAction('shorten')">✂ Tömörítés</button>
+  <button onclick="runAiTextAction('expand')">➕ Bővítés, részletesebb leírás</button>
+  <button onclick="runAiTextAction('steps')">1. Számozott lépésekké alakítás</button>
+  <button onclick="runAiTextAction('formal')">🎩 Egységes, magázó hangnem</button>
+  <button onclick="runAiTextAction('informal')">🙂 Egységes, tegező hangnem</button>
+  <div class="dl-menu-sep"></div>
+  <button onclick="runAiTextAction('custom')">✍ Egyéni utasítás…</button>
+</div>
+
+<!-- AI szöveg-javaslat -->
+<div class="hp-modal-backdrop" id="ai-text-backdrop">
+  <div class="hp-modal conflict-modal" onclick="event.stopPropagation()">
+    <h3>✨ <span id="ai-text-title"></span></h3>
+    <div class="conflict-cols">
+      <div><label>Eredeti</label><textarea id="ai-text-original" readonly></textarea></div>
+      <div><label>Javaslat <span class="hint">(szerkeszthető)</span></label><textarea id="ai-text-result"></textarea></div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:14px">
+      <button class="btn" onclick="closeAiTextModal()" style="flex:1">Mégse</button>
+      <button class="btn" id="ai-text-insert" onclick="applyAiText('below')" style="flex:1">Beszúrás az eredeti alá</button>
+      <button class="btn primary" id="ai-text-accept" onclick="applyAiText('replace')" style="flex:1">✓ Csere</button>
+    </div>
+  </div>
+</div>
+
+<!-- Képszerkesztő -->
+<div class="hp-modal-backdrop" id="imged-backdrop">
+  <div class="hp-modal imged-modal" onclick="event.stopPropagation()">
+    <div class="imged-top">
+      <div id="imged-tools" class="imged-group">
+        <button data-tool="crop" onclick="setImgedTool('crop')" title="Vágás: húzz ki egy téglalapot">✂ Vágás</button>
+        <button data-tool="arrow" onclick="setImgedTool('arrow')" title="Nyíl: húzd a kezdőponttól a hegyéig">➚ Nyíl</button>
+        <button data-tool="rect" onclick="setImgedTool('rect')" title="Keret egy terület kiemelésére">▭ Keret</button>
+        <button data-tool="marker" onclick="setImgedTool('marker')" title="Számozott jelölő (1, 2, 3 …) — kattints a helyére">① Szám</button>
+        <button data-tool="pixel" onclick="setImgedTool('pixel')" title="Kitakarás (pixelezés) — nevek, személyes adatok elrejtésére">▦ Kitakarás</button>
+      </div>
+      <div id="imged-colors" class="imged-group"></div>
+      <div id="imged-sizes" class="imged-group" title="Vonalvastagság">
+        <button data-size="0.6" onclick="setImgedSize(0.6)">S</button>
+        <button data-size="1" onclick="setImgedSize(1)">M</button>
+        <button data-size="1.7" onclick="setImgedSize(1.7)">L</button>
+      </div>
+      <div class="imged-group">
+        <button id="imged-undo" onclick="imgedUndo()" title="Visszavonás (Ctrl+Z)">↶</button>
+        <button onclick="imgedReset()" title="Minden jelölés és vágás törlése — vissza az eredeti képhez">⟲ Eredeti</button>
+      </div>
+    </div>
+    <div class="imged-canvas-wrap"><canvas id="imged-canvas"></canvas></div>
+    <div class="imged-bottom">
+      <button class="btn" onclick="pickReplacementImage()" title="Új képernyőkép ugyanoda — a képaláírás megmarad. Ctrl+V is működik.">🔄 Kép cseréje…</button>
+      <input id="imged-replace-input" type="file" accept="image/*" style="display:none" onchange="onReplacementPicked(this)"/>
+      <span id="imged-status" class="hint"></span>
+      <span style="flex:1"></span>
+      <button class="btn" onclick="closeImageEditor()">Mégse</button>
+      <button class="btn primary" onclick="saveImageEditor()">✓ Mentés</button>
+    </div>
+  </div>
+</div>
+
 <!-- Kezdőlap nézet: Projektek listája -->
 <div id="view-home">
   <div id="home-page">
@@ -640,11 +731,15 @@
 <script src="js/cloud.js"></script>
 <script src="js/structure.js"></script>
 <script src="js/images.js"></script>
+<script src="js/imageeditor.js"></script>
 <script src="js/persistence.js"></script>
+<script src="js/conflicts.js"></script>
 <script src="js/legacy-import.js"></script>
 <script src="js/design.js"></script>
 <script src="js/preview.js"></script>
+<script src="js/previewsync.js"></script>
 <script src="js/build.js"></script>
+<script src="js/links.js"></script>
 <script src="js/editor.js"></script>
 <script src="js/toolbar.js"></script>
 <script src="js/tree.js"></script>
@@ -653,6 +748,7 @@
 <script src="js/views.js"></script>
 <script src="js/auth.js"></script>
 <script src="js/ai.js"></script>
+<script src="js/aitext.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>

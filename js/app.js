@@ -45,6 +45,7 @@ async function initApp() {
     return;
   }
   initEditor();
+  initImageEditorEvents();
   const session = await cloudCheckSession();
   state.booting = false;
 

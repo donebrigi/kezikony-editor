@@ -44,12 +44,12 @@ function renderPreview() {
   if (state.previewMode === 'section') {
     const f = state.currentFile ? proj.files[state.currentFile] : null;
     if (!f) return;
-    const sectionHtml = mdToHtml(f.content, {showNotes:true});
-    const secId = f.meta.id || 'section';
-    html = buildPreviewHtml(proj, `<section class="section" id="${secId}">${sectionHtml}</section>`, false, getWorkingCss(proj));
+    const sectionHtml = mdToHtml(f.content, { showNotes: true, lines: true });
+    const secId = escapeHtml(f.meta.id || 'section');
+    html = buildPreviewHtml(proj, `<section class="section" id="${secId}" data-fn="${escapeHtml(state.currentFile)}">${sectionHtml}</section>`, false, getWorkingCss(proj));
     info.textContent = f.meta.title || state.currentFile;
   } else {
-    html = buildPreviewHtml(proj, buildAllSectionsHtml(proj, { showNotes: true }), true, getWorkingCss(proj));
+    html = buildPreviewHtml(proj, buildAllSectionsHtml(proj, { showNotes: true, lines: true }), true, getWorkingCss(proj));
     info.textContent = 'Teljes dokumentum';
   }
   // images/… hivatkozások → a gyorsítótárazott képek (ha még töltődnek, betöltés után újrarajzol)
@@ -61,9 +61,12 @@ function renderPreview() {
   // beleértve, ami gépelés közben, minden újrarenderelésnél zökkenős csúszást
   // okozna. Ezért a visszaállításhoz ideiglenesen "auto"-ra kapcsoljuk, hogy azonnali
   // (nem animált) legyen — a felhasználó így nem is érzékeli, hogy újratöltődött.
-  if (scrollX || scrollY) {
-    frame.onload = () => {
-      frame.onload = null;
+  const syncOn = isPreviewSyncOn();
+  frame.onload = () => {
+    frame.onload = null;
+    attachPreviewInteractions(frame.contentDocument);
+    if (syncOn) { syncPreviewToEditor(true); return; }
+    if (scrollX || scrollY) {
       try {
         const d = frame.contentDocument;
         if (d && d.documentElement) {
@@ -72,10 +75,8 @@ function renderPreview() {
         }
         if (d && d.body) { d.body.scrollTop = scrollY; d.body.scrollLeft = scrollX; }
       } catch(e) {}
-    };
-  } else {
-    frame.onload = null;
-  }
+    }
+  };
   frame.srcdoc = html;
 
   // Ha van külön lapra kiugrasztott előnézet ablak (lásd togglePreviewPopout), azt is
@@ -85,6 +86,7 @@ function renderPreview() {
       popWin.document.open();
       popWin.document.write(html);
       popWin.document.close();
+      attachPreviewInteractions(popWin.document);
       if (popScrollX || popScrollY) {
         // A document.write utáni layout nem mindig kész azonnal (pl. betűtípus-betöltés
         // miatt) — egy rAF-fal várunk egy festési ciklust, mielőtt visszaállítjuk a görgetést.
@@ -149,9 +151,10 @@ function buildAllSectionsHtml(proj, mdOpts) {
     if (!f) return '';
     const id = f.meta.id || fn;
     const body = mdToHtml(f.content, mdOpts);
+    const fnAttr = mdOpts && mdOpts.lines ? ` data-fn="${escapeHtml(fn)}"` : '';
     return idx === 0
-      ? `<header class="hero" id="${id}">${body}</header>`
-      : `<section class="section" id="${id}">${body}</section>`;
+      ? `<header class="hero" id="${escapeHtml(id)}"${fnAttr}>${body}</header>`
+      : `<section class="section" id="${escapeHtml(id)}"${fnAttr}>${body}</section>`;
   }).join('\n\n');
 }
 
@@ -159,7 +162,7 @@ function buildAllSectionsHtml(proj, mdOpts) {
 // a build viszont mindig a mentett proj.css-t használja.
 function buildPreviewHtml(proj, mainContent, full, cssOverride) {
   const projectCss = cssOverride || proj.css || getDefaultCSS();
-  const css = projectCss + getSearchbarCSS();
+  const css = projectCss + getSearchbarCSS() + getPrintCSS();
   const title = proj.config.title || 'Előnézet';
   const subtitle = proj.config.subtitle || title;
   const description = proj.config.description || '';
@@ -178,6 +181,8 @@ function buildPreviewHtml(proj, mainContent, full, cssOverride) {
       </div>` : '';
   const searchScript = full ? ['<scr','ipt>'].join('') + SEARCH_JS + ['</',  'script>'].join('') : '';
   const iconScript = ['<scr','ipt>'].join('') + ICON_HYDRATE_JS + ['</',  'script>'].join('');
+  const printScript = full ? ['<scr','ipt>'].join('') + PRINT_JS + ['</',  'script>'].join('') : '';
+  const printToc = full ? buildPrintTocHtml(proj) : '';
 
   // A betűtípus-link a projekt design-blokkjában kiválasztott betűtípus-párhoz igazodik
   // (lásd az Egyszerű megjelenés-szerkesztőt); rendszer-betűtípusnál nincs szükség Google Fonts-ra.
@@ -211,10 +216,11 @@ ${full ? `<aside>
     <nav aria-label="Tartalomjegyzék">${navHtml}</nav>
   </div>
 </aside>` : ''}
-<main>${mainContent}</main>
+<main>${printToc}${mainContent}</main>
 </div>
 ${searchScript}
 ${iconScript}
+${printScript}
 </body></html>`;
 }
 
@@ -241,4 +247,17 @@ function buildNavHtml(proj) {
       <div class="nav-acc-panel"><ul aria-label="${escapeHtml(g.name)}">${inner}</ul></div></details></li>`;
   });
   return html + '</ul>';
+}
+
+// Nyomtatáshoz: tartalomjegyzék (csak nyomtatásban látszik, lásd getPrintCSS).
+function buildPrintTocHtml(proj) {
+  const tree = getTree(proj);
+  const item = fn => `<li>${escapeHtml(chapterTitle(proj, fn))}</li>`;
+  let html = tree.ungrouped.map(item).join('');
+  tree.groups.forEach(g => {
+    const all = [...g.sections, ...g.subgroups.flatMap(sg => sg.sections)];
+    if (!all.length) return;
+    html += `<li class="toc-group">${escapeHtml(g.name)}</li>` + all.map(item).join('');
+  });
+  return `<nav class="print-toc" aria-hidden="true"><h1>${escapeHtml(proj.config.title || 'Tartalom')}</h1><ol>${html}</ol></nav>`;
 }

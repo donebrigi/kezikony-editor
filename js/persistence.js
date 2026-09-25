@@ -20,9 +20,21 @@ function serializeConfig(proj) {
 }
 
 // ── config.json ──
+// Ütközésjelzéssel: ha a config.json a felhőben megváltozott, mióta betöltöttük (valaki
+// más is átrendezte / átnevezte), rákérdezünk, melyik maradjon.
 async function saveProjectConfig(proj, { showToast = false } = {}) {
   if (!proj) return false;
+  if (proj.remoteConfig != null) {
+    const remote = await cloudDownloadText(proj.cloudFolder + '/config.json');
+    const mine = serializeConfig(proj);
+    if (remote != null && remote !== proj.remoteConfig && remote !== mine) {
+      const keepMine = await resolveConfigConflict(proj);
+      if (!keepMine) return false; // a dokumentum újratöltődött a felhőből
+    }
+  }
+  const json = serializeConfig(proj);
   const ok = await cloudSaveConfig(proj);
+  if (ok) proj.remoteConfig = json;
   if (ok && showToast) toast('✓ Beállítások mentve');
   return ok;
 }
@@ -52,15 +64,34 @@ async function saveProjectLogo(proj) {
 }
 
 // ── Fejezetek ──
+// Egy fejezet mentése, ütközésjelzéssel: mentés előtt megnézzük, a felhőben lévő
+// változat azonos-e azzal, amit utoljára betöltöttünk/mentettünk (f.remoteRaw). Ha nem,
+// valaki más is módosította közben → a felhasználó dönt (lásd conflicts.js).
 async function saveChapter(proj, fn) {
   const f = proj.files[fn];
   if (!f) return true;
-  rebuildRaw(f);
-  const rawAtSave = f.raw;
-  const ok = await cloudSaveSectionFile(proj, fn);
-  // Ha mentés közben tovább gépeltek, a fejezet mentetlen marad (a következő kör viszi).
-  if (ok && f.raw === rawAtSave) f.dirty = false;
-  return ok;
+  if (f.conflict) return false;          // döntésre vár
+  if (f._saving) return f._saving;       // már fut egy mentés erre a fejezetre
+  f._saving = (async () => {
+    rebuildRaw(f);
+    const rawAtSave = f.raw;
+    if (f.remoteRaw != null) {
+      const remote = await cloudDownloadText(proj.cloudFolder + '/sections/' + fn);
+      if (remote != null && remote !== f.remoteRaw && remote !== rawAtSave) {
+        f.conflict = true;
+        queueChapterConflict(proj, fn, remote);
+        return false;
+      }
+    }
+    const ok = await cloudUpload(proj.cloudFolder + '/sections/' + fn, rawAtSave, 'text/markdown');
+    if (ok) {
+      f.remoteRaw = rawAtSave;
+      // Ha mentés közben tovább gépeltek, a fejezet mentetlen marad (a következő kör viszi).
+      if (serializeChapter(f.meta, f.content) === rawAtSave) f.dirty = false;
+    }
+    return ok;
+  })();
+  try { return await f._saving; } finally { f._saving = null; }
 }
 
 // Minden mentetlen fejezet + a config mentése (💾 gomb / Ctrl+S / build előtt).
@@ -68,9 +99,14 @@ async function saveAllDirty({ quiet = false } = {}) {
   const proj = currentProj();
   if (!proj) return true;
   clearTimeout(state._persistTimer);
-  let ok = true;
+  let ok = true, conflicts = 0;
   for (const fn of proj.fileOrder) {
-    if (proj.files[fn] && proj.files[fn].dirty) ok = (await saveChapter(proj, fn)) && ok;
+    const f = proj.files[fn];
+    if (!f || !f.dirty) continue;
+    if (f.conflict) { conflicts++; continue; }
+    const r = await saveChapter(proj, fn);
+    if (f.conflict) conflicts++;
+    else ok = r && ok;
   }
   if (state._configDirty) {
     clearTimeout(state._configTimer);
@@ -79,7 +115,8 @@ async function saveAllDirty({ quiet = false } = {}) {
     ok = ok && cOk;
   }
   renderTree();
-  if (ok) { if (!quiet) flashStatus('Mentve a felhőbe ✓'); }
+  if (conflicts) setStatus('⚠ Ütközés — döntésre vár', 'unsaved');
+  else if (ok) { if (!quiet) flashStatus('Mentve a felhőbe ✓'); }
   else setStatus('⚠ Mentés sikertelen — újrapróbálom', 'unsaved');
   return ok;
 }
@@ -93,7 +130,7 @@ function scheduleAutosave() {
   clearTimeout(state._persistTimer);
   state._persistTimer = setTimeout(async () => {
     const ok = await saveAllDirty({ quiet: true });
-    if (ok) flashStatus('Automatikusan mentve ✓', 'saved', 1500);
+    if (ok) { if (!hasPendingConflicts()) flashStatus('Automatikusan mentve ✓', 'saved', 1500); }
     else scheduleAutosave(); // újrapróbálás
   }, 1500);
 }

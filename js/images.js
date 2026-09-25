@@ -115,7 +115,7 @@ function resolveImagesPreview(html, proj, onLoaded) {
   if (!proj || !proj.cloudFolder) return html;
   return html.replace(/src="(images\/[^"]+)"/g, (m, path) => {
     const url = getImageUrl(proj, path);
-    if (url) return `src="${url}"`;
+    if (url) return `src="${url}" data-path="${path}"`;
     const entry = _imageCache.get(imageCacheKey(proj, path));
     if (entry.missing) return `src="${BLANK_PIXEL}" data-missing="${path}"`;
     // Még töltődik: helykitöltő, és ha megjött, újrarajzolás (a hívó ütemezi/összevonja).

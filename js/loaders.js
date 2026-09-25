@@ -24,8 +24,10 @@ async function cloudLoadProject(folderId, topProjectId, docId) {
   project.config = data.config;
   project.css = data.css || getDefaultCSS();
   project.logo = data.logo;
+  project.remoteConfig = data.configText != null ? data.configText : null;
   for (const [fn, raw] of Object.entries(data.files)) {
     const f = makeFileEntry(raw);
+    f.remoteRaw = raw; // ütközésjelzéshez: a felhőben lévő változat
     ensureChapterMeta(fn, f);
     project.files[fn] = f;
   }

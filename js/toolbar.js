@@ -52,12 +52,19 @@ function fmtList(prefix) {
   editorView.focus();
 }
 
+// Link: [szöveg]() beszúrása, a kurzor a zárójelben — ott a szerkesztő felajánlja a
+// dokumentum fejezeteit/címsorait, vagy begépelhető egy webcím (https://…).
 function fmtLink() {
   const { from, to, text } = edSelection();
-  const url = prompt('URL (vagy #fejezet-azonosito):', 'https://');
-  if (!url) return;
-  const label = text || prompt('Link szövege:', 'link') || 'link';
-  edReplace(from, to, `[${label}](${url})`);
+  const label = text || 'link szövege';
+  const insert = `[${label}]()`;
+  if (text) {
+    edReplace(from, to, insert, from + insert.length - 1);
+    CM.startCompletion(editorView);
+  } else {
+    // Kijelölés nélkül a link szövege lesz kijelölve, hogy azonnal átírható legyen.
+    edReplace(from, to, insert, from + 1, from + 1 + label.length);
+  }
 }
 
 function fmtCodeBlock() {

@@ -27,7 +27,7 @@ const SEARCH_JS = `(function () {
             if (!node.nodeValue.trim()) return NodeFilter.FILTER_REJECT;
             const p = node.parentElement;
             if (!p) return NodeFilter.FILTER_REJECT;
-            if (p.closest("aside")) return NodeFilter.FILTER_REJECT;
+            if (p.closest("aside, .print-toc")) return NodeFilter.FILTER_REJECT;
             if (["SCRIPT", "STYLE", "NOSCRIPT"].includes(p.tagName)) return NodeFilter.FILTER_REJECT;
             return NodeFilter.FILTER_ACCEPT;
           },
@@ -144,4 +144,17 @@ const ICON_HYDRATE_JS = `(function () {
         hydrate();
       }
       window.__kkHydrateIcons = hydrate;
+    })();`;
+
+
+// ── Nyomtatás: nyomtatás előtt minden lenyíló elem kinyílik, utána visszaáll ───
+const PRINT_JS = `(function () {
+      var opened = [];
+      window.addEventListener('beforeprint', function () {
+        opened = [];
+        document.querySelectorAll('details:not([open])').forEach(function (d) { d.open = true; opened.push(d); });
+      });
+      window.addEventListener('afterprint', function () {
+        opened.forEach(function (d) { d.open = false; });
+      });
     })();`;

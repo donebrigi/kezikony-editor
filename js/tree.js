@@ -120,7 +120,8 @@ function renderChapterItem(proj, fn, addr, index) {
   const item = el('div', 'tree-ch' + (fn === state.currentFile ? ' active' : '') + (f.dirty ? ' unsaved' : ''));
   item.draggable = true;
   item.title = chapterTitle(proj, fn) + '  (#' + chapterId(proj, fn) + ')';
-  item.innerHTML = `<span class="tree-ch-title">${escapeHtml(chapterTitle(proj, fn))}</span>
+  const broken = brokenLinksIn(f.content);
+  item.innerHTML = `<span class="tree-ch-title">${escapeHtml(chapterTitle(proj, fn))}</span>${broken.length ? `<span class="tree-warn" title="${broken.length} nem létező belső hivatkozás: ${escapeHtml(broken.map(b => '#' + b).join(', '))}">⚠</span>` : ''}
     <span class="tree-actions">
       <button class="tree-btn" title="Letöltés .md fájlként (a képek beágyazva)" data-act="dl">⬇</button>
       <button class="tree-btn del" title="Fejezet törlése" data-act="del">🗑</button>
@@ -225,6 +226,7 @@ function endDrag() {
 
 // Szerkezetváltozás után: újrarajzolás, config mentés (összevonva), előnézet.
 function afterTreeChange() {
+  invalidateAnchors();
   renderTree();
   scheduleConfigSave();
   schedulePreview();
@@ -263,6 +265,7 @@ async function deleteChapter(fn) {
     if (proj.fileOrder.length) openFile(proj.fileOrder[0]);
     else showEmptyDocState();
   }
+  refreshEditorDecorations();
   renderTree();
   await saveProjectConfig(proj);
   schedulePreview();

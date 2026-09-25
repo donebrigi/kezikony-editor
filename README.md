@@ -9,6 +9,11 @@ Nincs build lépés és nincs saját szerver: az `index.html` mellé a `css/`, `
 - [Mentés](#mentés)
 - [Fejezetek szerkesztése](#fejezetek-szerkesztése)
 - [Képek](#képek)
+- [Képszerkesztő](#képszerkesztő)
+- [Linkek](#linkek)
+- [Előnézet](#előnézet)
+- [AI](#ai)
+- [Ütközések (ha ketten szerkesztik)](#ütközések-ha-ketten-szerkesztik)
 - [Markdown szintaxis](#markdown-szintaxis)
 - [Fejezetek, csoportok, menü (bal oldali fa)](#fejezetek-csoportok-menü-bal-oldali-fa)
 - [Dokumentum beállításai](#dokumentum-beállításai)
@@ -35,6 +40,16 @@ A **💾 Mentés** gomb (Ctrl+S) mindent azonnal elment. Ha még van mentetlen m
 
 Induláskor az utoljára megnyitott dokumentum nyílik meg újra, mindig a felhőben lévő legfrissebb változattal.
 
+## Ütközések (ha ketten szerkesztik)
+
+Mentés előtt a szerkesztő megnézi, módosította-e valaki más a fejezetet, mióta megnyitottad. Ha igen, nem írja felül vakon, hanem megmutatja a két változatot egymás mellett:
+
+- **Az övé legyen** — a te módosításaid elvesznek.
+- **Mindkettő megmarad** — az övé marad a fejezetben, a tiéd egy új „(saját változat)” fejezetbe kerül közvetlenül alá; utána kézzel összefésülhetők.
+- **Az enyém legyen** — az ő módosításai elvesznek.
+
+A szerkezetnél (sorrend, csoportok, cím) egy egyszerű kérdés jön fel. Ha egy fejezetre váltasz, és nálad nincs mentetlen módosítás, a szerkesztő csendben betölti a felhőben lévő legfrissebb változatát.
+
 ## Fejezetek szerkesztése
 
 Bal oldalt a fejezetek fája, középen a szerkesztő, jobbra az élő előnézet.
@@ -53,6 +68,44 @@ Bal oldalt a fejezetek fája, középen a szerkesztő, jobbra az élő előnéze
 - A kép alatti `*dőlt sor*` a képaláírás.
 - A **régi dokumentumokban** beágyazott (base64) képeket a szerkesztő az első megnyitáskor magától átalakítja külön fájllá. Ez egyszeri, és ha bármelyik kép feltöltése nem sikerül, az a kép változatlanul a szövegben marad.
 - A letöltött HTML-be és az egyedi `.md` letöltésbe a képek beágyazva kerülnek, így azok önállóan is teljesek.
+- A **⚙ Beállítások → Dokumentum → 🧹 Nem használt képek törlése** gomb eltávolítja a felhőből azokat a képfájlokat, amelyekre már egyik fejezet sem hivatkozik (a 10 percnél frissebbeket biztonságból kihagyja).
+
+## Képszerkesztő
+
+A szerkesztőben a kép-címkére (**✏ kép**) kattintva, vagy az előnézetben a képre duplán kattintva nyílik meg:
+
+- **✂ Vágás**, **➚ Nyíl**, **▭ Keret**, **① Számozott jelölő** (1, 2, 3… a lépésekhez), **▦ Kitakarás** (pixelezés — nevek, e-mail címek, személyes adatok elrejtésére).
+- 6 szín, 3 vonalvastagság, **↶** visszavonás (Ctrl+Z), **⟲ Eredeti** (minden jelölés törlése).
+- **🔄 Kép cseréje…** (vagy Ctrl+V az ablakban): új képernyőkép ugyanoda — a képaláírás megmarad, és rögtön jelölhető.
+- A jelölések **utólag is szerkeszthetők**: a szerkesztett kép mellé egy leíró fájl mentődik (`images/<név>.edit.json`), így újranyitáskor az eredeti képből és a meglévő nyilakból/keretekből indul.
+
+## Linkek
+
+- A **🔗 Link** gomb (Ctrl+K) után, vagy kézzel `](` beírásakor a szerkesztő felajánlja a dokumentum fejezeteit és címsorait — nem kell fejből tudni az azonosítókat. Webcím is beírható.
+- A **nem létező belső hivatkozások** (pl. egy átnevezett fejezetre mutató `#régi-azonosító`) pirosan aláhúzva látszanak, a fában pedig ⚠ jelzi, melyik fejezetben van ilyen.
+
+## Előnézet
+
+- **🔗 Szinkron** (alapból bekapcsolva): az előnézet követi a szerkesztő görgetését.
+- Az előnézetben egy bekezdésre **kattintva** a szerkesztő oda ugrik (teljes dokumentum nézetben a másik fejezetet is megnyitja); egy képre **duplán kattintva** a képszerkesztő nyílik meg.
+
+## AI
+
+- **✨ AI** (topbar): fejezet generálása képernyőképből.
+- **✨ Szöveg ▾** (eszköztár): a kijelölt szövegre — vagy kijelölés nélkül a kurzor alatti bekezdésre — helyesírás-javítás, érthetőbbé tétel, tömörítés, bővítés, számozott lépésekké alakítás, egységes magázó/tegező hangnem, vagy egyéni utasítás. Az eredmény az eredeti mellett jelenik meg, szerkeszthető, és csak a **Csere** / **Beszúrás alá** gombbal kerül a szövegbe (Ctrl+Z visszavonja).
+
+### Szerveroldali AI kulcs (ajánlott)
+
+Alapból mindenkinek a saját böngészőjében kell megadnia egy Claude API kulcsot. Ehelyett egyszer, központilag is beállítható — ekkor a kulcs a Supabase-en marad titkosan, csak bejelentkezett felhasználó használhatja, és senkinek nem kell saját kulcs. A függvény kódja: `supabase/functions/ai-proxy/index.ts`. Telepítés (a [Supabase CLI](https://supabase.com/docs/guides/cli) kell hozzá):
+
+```bash
+supabase login
+supabase link --project-ref xnycxkbegnbaxkhtpcev
+supabase secrets set ANTHROPIC_API_KEY=sk-ant-...
+supabase functions deploy ai-proxy
+```
+
+Ha a függvény telepítve van, a szerkesztő automatikusan azt használja (az ✨ AI panelen ez ki is van írva); ha nincs, visszaesik a saját kulcsra.
 
 ## Markdown szintaxis
 
@@ -186,6 +239,7 @@ A bal oldali fa egyszerre a fejezetek listája, a sorrendjük és a kész oldal 
 
 A **⬇ Letöltés** menüben:
 
+- **🖨 Nyomtatás / PDF:** nyomtatási nézet egy új lapon — tartalomjegyzékkel, minden fejezet új oldalon, kinyitott lenyíló elemekkel, menü és kereső nélkül. PDF-hez a nyomtatóválasztóban a „Mentés PDF-ként” lehetőséget válaszd. (A letöltött HTML-ből nyomtatva is ugyanígy néz ki.)
 - **⬇ HTML letöltése:** a végleges, önálló HTML fájl (képekkel együtt). Egyúttal a felhőben is frissül a publikált változat — erre épül a megosztható link és a Projekt nézet **⬇ HTML** gombja. A *Képek optimalizálása* opció kisebb fájlt ad.
 - **📦 Markdown + képek (ZIP):** a dokumentum összes forrásfájlja (fejezetek, képek, `config.json`, `style.css`) — archiváláshoz, vagy máshová importáláshoz.
 
@@ -231,8 +285,8 @@ title: Telepítés
 
 ## Ismert korlátok
 
-- Ha ketten egyszerre ugyanazt a fejezetet szerkesztik, az utolsó mentés nyer (nincs ütközésjelzés).
-- A fejezetből kitörölt képek fájljai a felhőben maradnak (nem zavarnak, csak helyet foglalnak).
+- Az ütközésjelzés mentéskor lép működésbe; azt nem mutatja élőben, ha valaki épp ugyanazt a fejezetet szerkeszti.
+- Egy kolléga által közben létrehozott új fejezet a dokumentum újranyitásakor jelenik meg.
 - Az ikonok és a betűtípusok külső CDN-ről töltődnek, ezekhez internet kell a kész oldalon is.
 - A "Címsor 1" mező a Megjelenés fülön a borító (első fejezet) fejlécére vonatkozik — a markdown `#` szintje `Címsor 2`-nek megfelelő HTML-elemet hoz létre.
 
@@ -252,11 +306,15 @@ js/
   cloud.js              # Supabase kliens és Storage műveletek
   structure.js          # fa = menü = sorrend (csoportok, áthelyezés)
   images.js             # képek feltöltése, gyorsítótár, beágyazás, régi képek átalakítása
+  imageeditor.js        # képszerkesztő (vágás, nyíl, keret, számozás, kitakarás), csere, takarítás
   persistence.js        # mentések (automatikus és kézi)
+  conflicts.js          # ütközésjelzés, ha ketten szerkesztik ugyanazt
   legacy-import.js      # régi, böngészőben tárolt helyi projektek olvasása (importhoz)
   design.js             # Megjelenés fül
   preview.js            # élő előnézet, HTML összeállítás, menü
-  build.js              # HTML letöltés, ZIP letöltés
+  previewsync.js        # görgetés-szinkron, kattintás az előnézetben
+  build.js              # HTML letöltés, nyomtatás/PDF, ZIP letöltés
+  links.js              # link-javaslatok, hibás hivatkozások jelzése
   editor.js             # CodeMirror szerkesztő, "/" menü, kép-beillesztés
   toolbar.js            # formázó műveletek, ikonválasztó
   tree.js               # bal oldali fa, húzás, fejezet létrehozás/törlés/letöltés
@@ -264,13 +322,26 @@ js/
   loaders.js            # dokumentum betöltése, importálás
   views.js              # Kezdőlap, Projekt nézet, projekt/dokumentum kezelés
   auth.js               # bejelentkezés, megosztott link
-  ai.js                 # AI fejezet generálás
+  ai.js                 # AI hívás (szerveroldali kulccsal vagy sajáttal), fejezet generálás
+  aitext.js             # AI a kijelölt szövegre
   app.js                # indítás
+supabase/functions/ai-proxy/index.ts   # opcionális szerveroldali AI (lásd AI fejezet)
 ```
 
-A fájlok sima (nem ES-modul) szkriptek; a betöltési sorrend az `index.html` alján van.
+A fájlok sima (nem ES-modul) szkriptek; a betöltési sorrend az `index.html` alján van. A `supabase/` mappát nem kell a GitHub Pages-re feltölteni (de nem is árt).
 
 ## Változásnapló
+
+### 3. verzió — együttműködés, képszerkesztő, AI
+
+- **Ütközésjelzés**, ha ketten szerkesztik ugyanazt a fejezetet (az övé / mindkettő / az enyém), és frissítés fejezetváltáskor.
+- **Képszerkesztő:** vágás, nyíl, keret, számozott jelölő, kitakarás; utólag is szerkeszthető jelölések.
+- **Kép cseréje** egy kattintással, a képaláírás megtartásával.
+- **Nem használt képek takarítása.**
+- **Link-javaslatok** és **hibás hivatkozások jelzése** (szerkesztőben és a fában).
+- **Görgetés-szinkron** és kattintás az előnézetben → ugrás a szerkesztőben.
+- **AI a kijelölt szövegre**, és opcionális **szerveroldali API kulcs** (Supabase Edge Function).
+- **Nyomtatás / PDF** tartalomjegyzékkel, fejezetenként új oldallal.
 
 ### 2. verzió — kényelmesebb szerkesztés, csak felhő
 

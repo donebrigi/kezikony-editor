@@ -123,6 +123,10 @@ async function confirmDownload() {
   closeDownloadMenu();
   await buildAndDownload(optimize);
 }
+async function confirmPrint() {
+  closeDownloadMenu();
+  await printDocument();
+}
 async function confirmDownloadZip() {
   closeDownloadMenu();
   await downloadMarkdownZip();

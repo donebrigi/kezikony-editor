@@ -23,6 +23,29 @@ async function buildAndDownload(optimize = false) {
   toast(ok ? `✓ HTML letöltve és publikálva (${Math.round(html.length / 1024)} KB)` : '⚠ HTML letöltve, de a felhőbe publikálás nem sikerült', ok ? 'ok' : 'err', 3500);
 }
 
+// ── Nyomtatás / PDF ──────────────────────────────────────────────────────────
+// A teljes kézikönyvet egy új lapon nyitja meg, és elindítja a nyomtatást — itt a
+// "Mentés PDF-ként" célt választva PDF készíthető.
+async function printDocument() {
+  const proj = currentProj();
+  if (!proj) return;
+  const win = window.open('', '_blank');
+  if (!win) { toast('A böngésző blokkolta az új lapot — engedélyezd a felugró ablakokat.', 'err', 5000); return; }
+  win.document.write('<p style="font-family:sans-serif;padding:40px">Nyomtatási nézet előkészítése…</p>');
+  await saveAllDirty({ quiet: true });
+  let html = buildPreviewHtml(proj, buildAllSectionsHtml(proj), true);
+  html = await resolveImagesBuild(html, proj);
+  win.document.open(); win.document.write(html); win.document.close();
+  // Megvárjuk a képeket, a betűtípusokat és az ikonokat, mielőtt a nyomtatás elindul.
+  const imgs = [...win.document.images].filter(i => !i.complete).map(i => new Promise(r => { i.onload = i.onerror = r; }));
+  await Promise.race([Promise.all(imgs), new Promise(r => setTimeout(r, 4000))]);
+  try { await Promise.race([win.document.fonts.ready, new Promise(r => setTimeout(r, 3000))]); } catch(e) {}
+  // Ebben a nyomtatási lapon a lenyíló elemek eleve nyitva vannak (a letöltött HTML-ben ezt
+  // a beágyazott PRINT_JS intézi nyomtatáskor).
+  win.document.querySelectorAll('details').forEach(d => { d.open = true; });
+  setTimeout(() => { win.focus(); win.print(); }, 700);
+}
+
 // ── Markdown + képek egy ZIP-ben (mentés / archiválás / visszaimportálás) ──────
 // Szerkezete megegyezik a Dokumentum felhőbeli mappájával, így a kicsomagolt mappa
 // a Projekt nézet "📤 Importálás" gombjával újra betölthető.

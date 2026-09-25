@@ -57,12 +57,14 @@ class ImageChipWidget extends CM.WidgetType {
     } else if (isImageRef(this.src) && proj) {
       const url = getImageUrl(proj, this.src, () => { const u = getImageUrl(proj, this.src); if (u) img.src = u; });
       if (url) img.src = url;
-      label.textContent = '🖼 kép';
+      label.textContent = '✏ kép';
+      wrap.classList.add('editable');
+      wrap.addEventListener('mousedown', e => { e.preventDefault(); e.stopPropagation(); openImageEditor(this.src); });
     } else {
       img.src = this.src;
       label.textContent = this.src.length > 30 ? this.src.slice(0, 28) + '…' : this.src;
     }
-    wrap.title = this.src.startsWith('data:') ? 'Beágyazott kép' : this.src;
+    wrap.title = this.src.startsWith('data:') ? 'Beágyazott kép' : 'Kattints a kép szerkesztéséhez (vágás, nyíl, keret, számozás, kitakarás) vagy cseréjéhez';
     wrap.appendChild(img);
     wrap.appendChild(label);
     return wrap;
@@ -87,10 +89,20 @@ function buildImageDecorations(view) {
   return CM.Decoration.set(decos, true);
 }
 
+// Dekorációk újraszámolása kívülről (pl. ha egy másik fejezet címsora/azonosítója változott).
+let refreshDecoEffect = null;
+function refreshEditorDecorations() {
+  invalidateAnchors();
+  if (editorView && refreshDecoEffect) editorView.dispatch({ effects: refreshDecoEffect.of(null) });
+}
+
 function decorationPlugin(builder) {
   return CM.ViewPlugin.fromClass(class {
     constructor(view) { this.decorations = builder(view); }
-    update(u) { if (u.docChanged || u.viewportChanged) this.decorations = builder(u.view); }
+    update(u) {
+      const forced = u.transactions.some(tr => tr.effects.some(e => e.is(refreshDecoEffect)));
+      if (u.docChanged || u.viewportChanged || forced) this.decorations = builder(u.view);
+    }
   }, { decorations: v => v.decorations });
 }
 
@@ -215,7 +227,7 @@ function editorExtensions() {
     CM.markdown(),
     CM.syntaxHighlighting(KK_HIGHLIGHT),
     CM.highlightSelectionMatches(),
-    CM.autocompletion({ override: [slashCompletionSource, iconCompletionSource], icons: false, activateOnTyping: true }),
+    CM.autocompletion({ override: [slashCompletionSource, iconCompletionSource, linkCompletionSource], icons: false, activateOnTyping: true }),
     CM.placeholder('Kezdj el írni… Tipp: írj be egy "/" jelet a sor elején a beszúrható elemekhez.'),
     CM.keymap.of([
       { key: 'Mod-s', preventDefault: true, run: () => { saveCurrentFile(); return true; } },
@@ -229,6 +241,7 @@ function editorExtensions() {
       CM.indentWithTab,
     ]),
     decorationPlugin(buildMarkerDecorations),
+    decorationPlugin(buildLinkDecorations),
     imageDecoPlugin,
     CM.EditorView.atomicRanges.of(view => { const p = view.plugin(imageDecoPlugin); return p ? p.decorations : CM.Decoration.none; }),
     CM.EditorView.domEventHandlers({
@@ -255,6 +268,7 @@ function editorExtensions() {
 
 let imageDecoPlugin, KK_HIGHLIGHT;
 function initEditor() {
+  refreshDecoEffect = CM.StateEffect.define();
   imageDecoPlugin = decorationPlugin(buildImageDecorations);
   const t = CM.tags;
   KK_HIGHLIGHT = CM.HighlightStyle.define([
@@ -274,6 +288,8 @@ function initEditor() {
     parent: document.getElementById('editor-host'),
     state: CM.EditorState.create({ doc: '', extensions: editorExtensions() }),
   });
+  editorView.scrollDOM.addEventListener('scroll', onEditorScroll, { passive: true });
+  updateSyncButton();
 }
 
 function stateForChapter(fn) {
@@ -313,6 +329,7 @@ function openFile(fn) {
   renderTree();
   schedulePreview();
   editorView.focus();
+  refreshChapterFromCloud(proj, fn); // ha közben valaki más módosította, frissítünk
 }
 
 function updateChapterHeader() {
@@ -326,6 +343,7 @@ function onEditorDocChanged(text) {
   const f = currentFileEntry();
   if (!f) return;
   f.content = text;
+  invalidateAnchors();
   if (!f.dirty) { f.dirty = true; renderTree(); }
   setStatus('Nem mentett változás', 'unsaved');
   schedulePreview();
@@ -372,6 +390,8 @@ function editChapterId() {
   scheduleAutosave();
   scheduleConfigSave();
   schedulePreview();
+  refreshEditorDecorations();
+  renderTree();
 }
 
 // Ugrás egy sorra (a fában egy címsorra kattintva) + az előnézetben a címsorhoz.

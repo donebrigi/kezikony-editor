@@ -160,6 +160,7 @@ async function cloudListDocuments(projectId) {
 async function cloudFetchDocument(folderId) {
   const out = { config: {}, css: '', logo: '', files: {} };
   const configText = await cloudDownloadText(folderId + '/config.json');
+  out.configText = configText;
   if (configText) { try { out.config = JSON.parse(configText); } catch(e) {} }
   out.css = (await cloudDownloadText(folderId + '/style.css')) || '';
   out.logo = ((await cloudDownloadText(folderId + '/logo.txt')) || '').trim();
